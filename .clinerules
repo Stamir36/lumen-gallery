@@ -1,0 +1,39 @@
+# LUMEN — Always-on rules
+
+## Stack (mandatory)
+- Tauri v2 (Rust) + React 18 + Vite + TypeScript **strict**.
+- Tailwind v4 + shadcn/ui; zustand; @tanstack/react-query; framer-motion;
+  lucide-react; react-virtuoso; SQLite via tauri-plugin-sql.
+- Inter + JetBrains Mono bundled locally — never CDN.
+- Rust does ONLY: fs walk, watch, volumes info, db, cache file io, open-external,
+  single-instance, associations, bundling.
+- Thumbnails + metadata extracted on the frontend (webp 480w → appCacheDir/thumbs,
+  4-worker queue; exifreader for images). No ffmpeg sidecar in v1.
+
+## Design tokens
+- Canvas #0A0A0C; surface-1 #121216; surface-2 #1A1A20.
+- Border rgba(255,255,255,.06), hover .12. Text #F2F2F4 / 62% / 38%.
+- Accent #6EC1FF — interactive states + progress ONLY.
+- success #3ECF8E, danger #FF5C5C, warning #F5B85C.
+- Radius: card 14, control 10, viewer bar 12, pill 999.
+- Inter 400/500/600 UI; JetBrains Mono for micro-labels (11px uppercase,
+  ls .12em), timecodes, counts, paths, logs. H1 20/600; body 14/400 lh 1.55.
+- 4pt grid; gutters 24; grid gap 8; no shadows except popovers
+  0 12px 32px rgba(0,0,0,.55); 2% grain overlay; vignette only in viewers.
+- framer-motion springs 260/26; hover 160ms ease-out; pressed scale .98;
+  route cross-fade 180ms; honor prefers-reduced-motion.
+- Primary button: white bg + black text; ghost: hairline; icon buttons 32px.
+  Focus-visible: 2px accent/40 offset 2. Hit areas >= 32px.
+- Scrollbars 8px, thumb white/12 hover /20.
+- Empty state: dashed hairline + mono label. Loading: surface-2 shimmer
+  skeletons matching final layout.
+
+## Process
+- **Re-read docs/DESIGN.md before ANY UI work.**
+- **Run typecheck (`tsc --noEmit`) + `cargo clippy` before every commit.**
+- Conventional Commits: `feat:`, `fix:`, `docs:`, `refactor:`, `chore:`, etc.
+  One conventional commit per phase.
+- After every UI phase: run dev server, screenshot, self-review token-by-token
+  against docs/DESIGN.md, fix discrepancies BEFORE committing.
+- Offline-first: zero network, zero telemetry. All state in SQLite.
+- Work phase-by-phase per TODO.md; docs in docs/ are source of truth.
