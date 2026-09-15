@@ -2,11 +2,12 @@
 @import "@fontsource-variable/jetbrains-mono";
 @import "tailwindcss";
 
-/* ============ DESIGN.md tokens as CSS vars ============ */
+/* ============ DESIGN.md v2 tokens as CSS vars ============ */
 :root {
   --canvas: #0a0a0c;
-  --surface-1: #121216;
-  --surface-2: #1a1a20;
+  --surface-1: #141518;
+  --surface-2: #1e2023;
+  --surface-3: #26282c;
   --border: rgba(255, 255, 255, 0.06);
   --border-hover: rgba(255, 255, 255, 0.12);
   --text-primary: #f2f2f4;
@@ -17,19 +18,23 @@
   --danger: #ff5c5c;
   --warning: #f5b85c;
 
-  --radius-card: 14px;
-  --radius-control: 10px;
-  --radius-viewer-bar: 12px;
+  --radius-card: 22px;
+  --radius-control: 14px;
+  --radius-viewer: 16px;
   --radius-pill: 999px;
 
-  --shadow-popover: 0 12px 32px rgba(0, 0, 0, 0.55);
+  --shadow-elev1: 0 8px 24px rgba(0, 0, 0, 0.35);
+  --shadow-elev3: 0 12px 32px rgba(0, 0, 0, 0.55);
+  --shadow-hover: 0 12px 28px rgba(0, 0, 0, 0.4);
+  --glow-hover: 0 0 0 1px rgba(110, 193, 255, 0.18);
 }
 
 /* ============ Tailwind v4 theme ============ */
 @theme {
   --color-canvas: #0a0a0c;
-  --color-surface-1: #121216;
-  --color-surface-2: #1a1a20;
+  --color-surface-1: #141518;
+  --color-surface-2: #1e2023;
+  --color-surface-3: #26282c;
   --color-hairline: rgba(255, 255, 255, 0.06);
   --color-hairline-hover: rgba(255, 255, 255, 0.12);
   --color-tprimary: #f2f2f4;
@@ -40,42 +45,33 @@
   --color-danger: #ff5c5c;
   --color-warning: #f5b85c;
 
-  --radius-card: 14px;
-  --radius-control: 10px;
-  --radius-viewer: 12px;
+  --radius-card: 22px;
+  --radius-control: 14px;
+  --radius-viewer: 16px;
   --radius-pill: 999px;
 
   --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono Variable", ui-monospace, monospace;
 
-  --shadow-popover: 0 12px 32px rgba(0, 0, 0, 0.55);
-
-  --ease-out-soft: cubic-bezier(0, 0, 0.2, 1);
-  --transition-duration-fast: 160ms;
+  --shadow-elev1: 0 8px 24px rgba(0, 0, 0, 0.35);
+  --shadow-elev3: 0 12px 32px rgba(0, 0, 0, 0.55);
+  --shadow-hover: 0 12px 28px rgba(0, 0, 0, 0.4);
 
   --animate-shimmer: shimmer 1.6s linear infinite;
   @keyframes shimmer {
-    0% {
-      background-position: -200% 0;
-    }
-    100% {
-      background-position: 200% 0;
-    }
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
   }
 }
 
 /* ============ Base ============ */
-html,
-body,
-#root {
-  height: 100%;
-}
+html, body, #root { height: 100%; }
 
 body {
   background: var(--canvas);
   color: var(--text-primary);
   font-family: var(--font-sans);
-  font-size: 14px;
+  font-size: 14.5px;
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
@@ -99,27 +95,17 @@ body::after {
   border-radius: var(--radius-control);
 }
 
-::selection {
-  background: rgba(110, 193, 255, 0.25);
-}
+::selection { background: rgba(110, 193, 255, 0.25); }
 
 /* Scrollbars: 8px, thumb white/12 hover /20 */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
-  border-radius: 999px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,.12); border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.2); }
 
-/* ============ Utility classes ============ */
+/* ============ Utilities (v2) ============ */
+
+/* editorial micro-label — max 1-2 per screen */
 @utility micro-label {
   font-family: var(--font-mono);
   font-size: 11px;
@@ -129,36 +115,56 @@ body::after {
   color: var(--text-tertiary);
 }
 
+/* matte frosted glass: white 5% + blur(28) saturate(1.2) + top highlight */
 @utility glass {
-  background: rgba(10, 10, 12, 0.7);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(28px) saturate(1.2);
+  -webkit-backdrop-filter: blur(28px) saturate(1.2);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+/* tonal elevated card */
+@utility elev-1 {
+  background: var(--surface-1);
+  box-shadow: var(--shadow-elev1);
+}
+
+@utility elev-3 {
+  background: var(--surface-3);
+  box-shadow: var(--shadow-elev3);
+}
+
+/* hover: lift -2px + soft shadow + faint accent glow */
+@utility hover-lift {
+  transition: transform 160ms cubic-bezier(0, 0, 0.2, 1),
+    box-shadow 160ms cubic-bezier(0, 0, 0.2, 1);
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-hover), var(--glow-hover);
+  }
+  &:active { transform: translateY(-2px) scale(0.97); }
 }
 
 @utility viewer-bar {
-  background: rgba(18, 18, 22, 0.85);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-viewer-bar);
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(28px) saturate(1.2);
+  border-radius: var(--radius-viewer);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.06), var(--shadow-elev1);
 }
 
 @utility shimmer-bg {
-  background: linear-gradient(
-    100deg,
-    var(--surface-1) 40%,
-    var(--surface-2) 50%,
-    var(--surface-1) 60%
-  );
+  background: linear-gradient(100deg, var(--surface-1) 40%, var(--surface-2) 50%, var(--surface-1) 60%);
   background-size: 200% 100%;
   animation: var(--animate-shimmer);
 }
 
-/* Reduced motion */
+/* editorial divider — one of the few hairline uses */
+@utility divider {
+  border-top: 1px solid var(--border);
+}
+
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
