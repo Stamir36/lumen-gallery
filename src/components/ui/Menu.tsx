@@ -10,19 +10,20 @@ export const Menu = MenuPrimitive.Root;
 export const MenuTrigger = MenuPrimitive.Trigger;
 
 /**
- * Menu per DESIGN.md §6.11: surface-1, hairline border, radius-control,
- * popover shadow; items 32px, hover surface-2.
+ * Menu v2 (DESIGN.md v2 §10): matte frosted glass, elev-3,
+ * radius-control, items 40px, hover surface-2.
  */
 export const MenuContent = forwardRef<
   ElementRef<typeof MenuPrimitive.Content>,
   ComponentPropsWithoutRef<typeof MenuPrimitive.Content>
->(({ className, sideOffset = 6, ...props }, ref) => (
+>(({ className, sideOffset = 8, ...props }, ref) => (
   <MenuPrimitive.Portal>
     <MenuPrimitive.Content
       ref={ref}
       sideOffset={sideOffset}
       className={cn(
-        "z-50 min-w-44 rounded-control border border-hairline bg-surface-1 p-1 shadow-popover",
+        "glass z-50 min-w-52 rounded-control p-2",
+        "shadow-[inset_0_1px_0_rgba(255,255,255,.06),0_12px_32px_rgba(0,0,0,.55)]",
         className,
       )}
       {...props}
@@ -38,7 +39,7 @@ export const MenuItem = forwardRef<
   <MenuPrimitive.Item
     ref={ref}
     className={cn(
-      "flex h-8 cursor-default select-none items-center gap-2.5 rounded-control px-2.5 text-[13px] text-tsecondary outline-none",
+      "flex h-10 cursor-default select-none items-center gap-3 rounded-control px-3.5 text-sm text-tsecondary outline-none",
       "transition-colors duration-[160ms] ease-out",
       "data-[highlighted]:bg-surface-2 data-[highlighted]:text-tprimary",
       "data-[disabled]:pointer-events-none data-[disabled]:opacity-40",
@@ -55,7 +56,7 @@ export const MenuSeparator = forwardRef<
 >(({ className, ...props }, ref) => (
   <MenuPrimitive.Separator
     ref={ref}
-    className={cn("my-1 h-px border-t border-hairline", className)}
+    className={cn("my-2 h-px border-t border-hairline", className)}
     {...props}
   />
 ));
@@ -67,7 +68,7 @@ export const MenuLabel = forwardRef<
 >(({ className, ...props }, ref) => (
   <MenuPrimitive.Label
     ref={ref}
-    className={cn("micro-label px-2.5 py-1.5", className)}
+    className={cn("micro-label px-3.5 py-2", className)}
     {...props}
   />
 ));

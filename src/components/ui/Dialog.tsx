@@ -1,9 +1,4 @@
-import {
-  forwardRef,
-  type ComponentPropsWithoutRef,
-  type ElementRef,
-  type HTMLAttributes,
-} from "react";
+import { forwardRef, type ComponentPropsWithoutRef, type ElementRef, type HTMLAttributes } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -13,8 +8,7 @@ export const DialogTrigger = DialogPrimitive.Trigger;
 export const DialogClose = DialogPrimitive.Close;
 
 /**
- * Dialog per DESIGN.md §6.11: surface-1, hairline border, radius-card
- * (panels/modals), popover shadow only.
+ * Dialog v2 (DESIGN.md v2 §10): glass elev-3, radius-card, generous padding.
  */
 export const DialogContent = forwardRef<
   ElementRef<typeof DialogPrimitive.Content>,
@@ -25,9 +19,9 @@ export const DialogContent = forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2",
-        "rounded-card border border-hairline bg-surface-1 p-6",
-        "shadow-popover focus:outline-none",
+        "fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2",
+        "glass rounded-card p-8",
+        "shadow-[inset_0_1px_0_rgba(255,255,255,.06),0_12px_32px_rgba(0,0,0,.55)] focus:outline-none",
         className,
       )}
       {...props}
@@ -35,7 +29,7 @@ export const DialogContent = forwardRef<
       {children}
       <DialogPrimitive.Close
         aria-label="Close"
-        className="absolute right-4 top-4 inline-flex h-8 w-8 items-center justify-center rounded-control text-tsecondary transition-colors duration-[160ms] hover:bg-surface-2 hover:text-tprimary"
+        className="absolute right-5 top-5 inline-flex h-10 w-10 items-center justify-center rounded-control text-tsecondary transition-all duration-[160ms] hover:bg-surface-2 hover:text-tprimary active:scale-[.97]"
       >
         <X size={16} />
       </DialogPrimitive.Close>
@@ -45,7 +39,7 @@ export const DialogContent = forwardRef<
 DialogContent.displayName = "DialogContent";
 
 export function DialogHeader({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("mb-4 flex flex-col gap-1", className)} {...props} />;
+  return <div className={cn("mb-6 flex flex-col gap-1.5", className)} {...props} />;
 }
 
 export const DialogTitle = forwardRef<
@@ -54,7 +48,7 @@ export const DialogTitle = forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Title
     ref={ref}
-    className={cn("text-base font-semibold text-tprimary", className)}
+    className={cn("text-lg font-semibold text-tprimary", className)}
     {...props}
   />
 ));

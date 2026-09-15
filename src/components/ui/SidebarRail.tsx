@@ -17,9 +17,8 @@ export interface SidebarItem {
 }
 
 /**
- * Sidebar per DESIGN.md §6.6: 240px, collapsed rail 64px.
- * Items 32px height, icon 16px, hover surface-2, radius-control.
- * Bottom section: settings / scan status.
+ * Sidebar v2 (DESIGN.md v2 §10): 260px / 68px rail, matte glass,
+ * rows 44-48, capacity bar 6px accent, tonal active state (no hairlines).
  */
 export function SidebarRail({
   items,
@@ -37,15 +36,15 @@ export function SidebarRail({
     <TooltipProvider delayDuration={200}>
       <nav
         className={cn(
-          "flex h-full flex-col border-r border-hairline bg-surface-1 transition-[width] duration-[160ms] ease-out",
-          wide ? "w-60" : "w-16",
+          "glass flex h-full flex-col transition-[width] duration-[160ms] ease-out",
+          wide ? "w-[260px]" : "w-[68px]",
           className,
         )}
       >
-        <div className="flex h-12 shrink-0 items-center border-b border-hairline px-3">
+        <div className="flex h-16 shrink-0 items-center px-4">
           {wide ? (
             <>
-              <span className="micro-label flex-1">Library</span>
+              <span className="micro-label flex-1 pl-2">Library</span>
               <IconButton
                 label="Collapse sidebar"
                 onClick={() => setCollapsed(true)}
@@ -64,15 +63,13 @@ export function SidebarRail({
           )}
         </div>
 
-        <div className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto p-2">
+        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-4">
           {items.map((item) => (
             <SidebarRow key={item.id} item={item} wide={wide} />
           ))}
         </div>
 
-        {bottom && (
-          <div className="shrink-0 border-t border-hairline p-2">{bottom}</div>
-        )}
+        {bottom && <div className="shrink-0 p-4">{bottom}</div>}
       </nav>
     </TooltipProvider>
   );
@@ -83,17 +80,19 @@ function SidebarRow({ item, wide }: { item: SidebarItem; wide: boolean }) {
     <button
       onClick={item.onSelect}
       className={cn(
-        "flex h-8 w-full items-center gap-2.5 rounded-control px-2 text-left transition-colors duration-[160ms] ease-out hover:bg-surface-2",
-        item.active ? "bg-surface-2 text-tprimary" : "text-tsecondary hover:text-tprimary",
+        "flex h-11 w-full items-center gap-3 rounded-control px-3 text-left transition-all duration-[160ms] ease-out",
+        item.active
+          ? "bg-surface-2 text-tprimary shadow-elev1"
+          : "text-tsecondary hover:bg-surface-2/60 hover:text-tprimary",
         !wide && "justify-center px-0",
       )}
     >
-      <span className="flex h-4 w-4 shrink-0 items-center justify-center [&_svg]:size-4">
+      <span className="flex h-5 w-5 shrink-0 items-center justify-center [&_svg]:size-5">
         {item.icon}
       </span>
       {wide && (
         <>
-          <span className="min-w-0 flex-1 truncate text-[13px] font-medium">
+          <span className="min-w-0 flex-1 truncate text-sm font-medium">
             {item.label}
           </span>
           {item.badge && (
@@ -116,14 +115,14 @@ function SidebarRow({ item, wide }: { item: SidebarItem; wide: boolean }) {
         </NavTooltip>
       )}
       {wide && item.capacity && (
-        <div className="mb-1 mt-1 px-2.5">
-          <div className="h-1 w-full overflow-hidden rounded-pill bg-surface-2">
+        <div className="mb-1 mt-1.5 px-3">
+          <div className="h-1.5 w-full overflow-hidden rounded-pill bg-surface-2">
             <div
               className="h-full rounded-pill bg-accent"
               style={{ width: `${Math.round(item.capacity.ratio * 100)}%` }}
             />
           </div>
-          <div className="mt-1 font-mono text-[10px] text-ttertiary">
+          <div className="mt-1.5 font-mono text-[10px] text-ttertiary">
             {item.capacity.caption}
           </div>
         </div>
