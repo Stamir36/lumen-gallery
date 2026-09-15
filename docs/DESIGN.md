@@ -1,161 +1,126 @@
-# LUMEN — Design System (Phase 0)
+# LUMEN — Design System v2 «Soft Glass Editorial»
 
 > **READ THIS FILE BEFORE ANY UI WORK.** Every UI decision must trace back to a
-> token or rule in this document. If a rule is missing, propose it here first.
-
-Visual language extracted from references (dark minimalist UIs): near-black
-canvas, 1px hairline borders, monospace uppercase micro-labels, pill segmented
-controls, glassy bars, generous negative space, one restrained accent.
-Layouts/content of references are NOT copied.
-
----
+> token or rule here. Feel: Material You softness + matte frosted glass +
+> andidea editorial whitespace. NOT a dense developer-tool.
 
 ## 1. Color Tokens
 
 | Token | Value | Usage |
 |---|---|---|
 | `canvas` | `#0A0A0C` | app background |
-| `surface-1` | `#121216` | cards, sidebar, panels |
-| `surface-2` | `#1A1A20` | hover fills, inputs, icon-button hover |
-| `border` | `rgba(255,255,255,.06)` | 1px hairlines, dividers |
-| `border-hover` | `rgba(255,255,255,.12)` | hairline on hover |
+| `surface-1` | `#141518` | cards, panels (tonal elevated) |
+| `surface-2` | `#1E2023` | raised tonal surfaces, hover fills, inputs |
+| `surface-3` | `#26282C` | highest elevation (dialogs, popovers) |
+| `border` | `rgba(255,255,255,.06)` | hairlines — editorial dividers ONLY |
+| `border-hover` | `rgba(255,255,255,.12)` | rare hover hairline |
 | `text-primary` | `#F2F2F4` | headings, primary text |
-| `text-secondary` | 62% white | body, labels |
-| `text-tertiary` | 38% white | micro-labels, meta, placeholders |
+| `text-secondary` | 62% white | body |
+| `text-tertiary` | 38% white | micro-labels, meta |
 | `accent` | `#6EC1FF` | interactive states + progress ONLY |
-| `success` | `#3ECF8E` | positive status |
-| `danger` | `#FF5C5C` | destructive actions |
-| `warning` | `#F5B85C` | warnings |
+| `success` | `#3ECF8E` · `danger` `#FF5C5C` · `warning` `#F5B85C` | status |
 
-Accent discipline: `#6EC1FF` is reserved for focus/active/progress. Never use it
-for large decorative surfaces.
+Accent discipline unchanged: focus/active/progress only, never decoration.
+Prefer **tonal elevation over borders**: replace most hairlines with surface
+steps + soft ambient shadow. Hairlines remain only as editorial dividers
+(section separators, table rows).
 
-## 2. Radius
+## 2. Elevation Levels
+
+| Level | Recipe |
+|---|---|
+| `elev-0` | flat on canvas |
+| `elev-1` | surface-1 + shadow `0 8px 24px rgba(0,0,0,.35)` |
+| `elev-2` | surface-2 + shadow `0 8px 24px rgba(0,0,0,.35)` |
+| `elev-3` | surface-3 + shadow `0 12px 32px rgba(0,0,0,.55)` (dialogs, popovers) |
+| hover | lift −2px + shadow `0 12px 28px rgba(0,0,0,.4)` + faint accent glow `0 0 0 1px rgba(110,193,255,.18)` |
+
+## 3. Glass Recipe (matte frosted)
+
+For topbar, sidebar, floating bars, menus, dialogs:
+
+```
+background: rgba(255,255,255,0.05);      /* white 4–6% */
+backdrop-filter: blur(28px) saturate(1.2);
+box-shadow: inset 0 1px 0 rgba(255,255,255,.06);  /* inner top highlight */
+border-radius: per component;
+```
+
+Dark matte, not smoky — keep text contrast at secondary+.
+
+## 4. Radii
 
 | Token | Value | Applies to |
 |---|---|---|
-| `radius-card` | 14px | cards, panels, modals |
-| `radius-control` | 10px | inputs, small controls |
-| `radius-viewer-bar` | 12px | floating viewer bars |
-| `radius-pill` | 999px | buttons, chips, segmented controls |
+| `radius-card` | 22px | cards, panels, dialogs (20–24 range) |
+| `radius-control` | 14px | inputs, buttons, menus (14–16) |
+| `radius-viewer` | 16px | floating viewer bars |
+| `radius-pill` | 999px | pills, chips, segmented |
 
-## 3. Typography
+## 5. Spacing & Layout (4pt grid)
 
-- **UI:** Inter 400/500/600.
-- **Mono:** JetBrains Mono 400/500 — micro-labels, timecodes, counts, paths, logs.
-- **Micro-label:** 11px mono, uppercase, `letter-spacing: .12em`, tertiary color.
-- **H1:** 20px / 600.
-- **Body:** 14px / 400, line-height 1.55.
-- Fonts bundled locally (woff2 in repo). No CDN.
+- Card padding: 24–28. Grid gap: 12–16 (grid cards 12, sections 16).
+- Sidebar row height: 44–48, gap 12 between groups.
+- Page gutters: 32–40. Section rhythm: 48–64 vertical between sections.
+- Grain overlay 2% app-wide; vignette only in viewers.
 
-## 4. Spacing & Layout
+## 6. Typography (editorial contrast)
 
-- 4pt spacing grid (4 / 8 / 12 / 16 / 24 / 32 / 48 …).
-- Page gutters: 24px.
-- Grid gap: 8px.
-- No shadows except popovers: `0 12px 32px rgba(0,0,0,.55)`.
-- 2% grain overlay app-wide (subtle SVG/noise, `opacity: .02`).
-- Vignette only inside photo/video viewers.
+- **Display (page titles):** 28–40px / 650, tight leading (1.1).
+- **Section titles:** 18–20px / 600.
+- **Body:** 14–15px / 400, lh 1.55. Inter Variable.
+- **Mono (JetBrains Mono):** ONLY metadata, counters, timecodes, paths, logs.
+- Micro-labels: 11px mono uppercase ls .12em, tertiary — **max 1–2 per screen**.
+- Andidea touch: oversized thin accent section numbers ("01", 28–40px,
+  weight 300, accent color) next to section titles.
 
-## 5. Motion
+## 7. Control Heights (chunky)
 
-- framer-motion springs: `stiffness: 260, damping: 26`.
-- Hover transitions: 160ms ease-out.
-- Pressed scale: `.98`.
-- Grid reflow: layout animations.
-- Route cross-fade: 180ms.
-- Always honor `prefers-reduced-motion` (disable springs/layout animations,
-  fall back to opacity-only or none).
+| Control | Height |
+|---|---|
+| Button (pill) | 44 (desktop default), 48 (page-level primary) |
+| Icon button | 40 (44 for primary floating actions) |
+| Input / search | 44 |
+| Sidebar row | 44–48 |
+| Segmented | 44, segments 40 |
+| Slider | track 4px, thumb 18px white, accent fill left |
+| Menu item | 40 |
+| FAB | 56, radius 20 |
 
-## 6. Components
+## 8. Motion
 
-### 6.1 Buttons
-- Pill shape (`radius-pill`), height 32px minimum.
-- **Primary:** white bg, black text.
-- **Ghost:** hairline border, transparent bg.
-- Pressed: `scale(.98)`.
+- framer-motion springs 260/26; hover 160ms ease-out.
+- Hover: lift −2px (translateY) + soft shadow + faint accent glow.
+- Pressed: scale .97. Route cross-fade 180ms.
+- Honor `prefers-reduced-motion`.
 
-### 6.2 Icon buttons
-- 32×32px, `radius-control`.
-- Hover: `surface-2` fill.
-- Hit area ≥ 32px (pad visually-smaller glyphs).
+## 9. Focus & Scrollbars
 
-### 6.3 Segmented control (pill)
-- Pill container, `surface-1` bg, hairline border.
-- Active segment: `surface-2` fill + primary text; inactive: secondary text.
-- Mono uppercase micro-labels allowed for view modes.
+- Focus-visible: 2px accent/40, offset 2. Hit areas ≥ 40px for chunky controls.
+- Scrollbars 8px, thumb white/12 → hover /20.
 
-### 6.4 Chips / badges
-- Pill, hairline border, 11–12px. Mono for numeric/meta chips (duration,
-  resolution, res-fps-codec).
+## 10. Components (v2 summary)
 
-### 6.5 Top bar
-- 48px height, glass: `canvas` at ~70% opacity + `backdrop-blur`.
-- Hairline bottom border.
-- Contains: breadcrumb/title + mono count, search, segmented view control,
-  sort menu, selection toggle.
+- **PillButton:** h-44 pill. Primary white/black; ghost = tonal surface-2 (no
+  border), hover surface-3; danger text-only.
+- **IconButton:** 40×40, radius-control, tonal, hover surface-2 + lift.
+- **GlassCard:** radius-card, surface-1, elev-1, padding 24–28; hover lift.
+- **Chip:** pill, glass tonal fill, mono for meta; 12px.
+- **Segmented (chunky):** h-44 pill, glass bg, active segment surface-3 +
+  primary text, layout-animated thumb.
+- **Slider (soft):** 4px track surface-2, accent fill, 18px white thumb,
+  shadow-popover on thumb; value chip mono.
+- **GlassTopBar:** 64px, glass recipe, no bottom hairline (glass edge enough).
+- **Sidebar:** 260px / 68px rail, glass, rows 44–48, capacity bar 6px accent.
+- **FAB:** 56px, radius 20, glass-elev-2, accent glyph for primary action.
+- **Dialog / Menu:** glass elev-3, radius-card / radius-control, items 40px.
+- **Empty state:** dashed hairline + mono label (kept).
+- **Skeletons:** surface-2 shimmer (kept).
 
-### 6.6 Sidebar
-- 240px; collapsed rail 64px (icons only, tooltips on hover).
-- Items: 32px height, icon 16px, radius-control hover `surface-2`.
-- Capacity bars: 4px track (`surface-2`), accent fill, mono digits
-  `free / total`.
-- Bottom section: Settings, scan status (mono).
+## 11. Do / Don't
 
-### 6.7 Status line
-- Bottom-left, mono, tertiary color:
-  `12,482 items - 348 GB - scanned 2s ago`.
-
-### 6.8 Cards (grid)
-- Radius-card; overflow hidden.
-- Hover: inner image `scale(1.03)` (160ms ease-out), bottom gradient
-  (transparent → rgba(0,0,0,.6)), mono chips bottom-left, heart button
-  top-right appears, checkbox top-left appears.
-- Video hover: preview loop after 400ms delay, center play glyph at 40% opacity.
-
-### 6.9 Floating action bar (selection)
-- Glass pill bottom-center, popover shadow allowed, radius-pill.
-- Actions: favorite, add to album, collage, open containing folder, trash.
-
-### 6.10 Viewer bars
-- Floating, `radius-viewer-bar` (12px), surface-1/85 + blur, hairline border.
-- Video controls auto-hide after 2s idle; any pointer movement reveals.
-
-### 6.11 Popovers / menus
-- `surface-1`, hairline border, radius-control, shadow
-  `0 12px 32px rgba(0,0,0,.55)`.
-- Items: 32px, hover `surface-2`.
-
-### 6.12 Inputs / search
-- `surface-2` fill, hairline border, radius-control, height 32px.
-- Search focuses with `/`; Esc clears/blurs.
-
-### 6.13 Empty states
-- Dashed hairline box + mono uppercase label, tertiary color, centered,
-  generous padding.
-
-### 6.14 Loading
-- `surface-2` shimmer skeletons matching the final layout exactly
-  (grid rows, headers, bars).
-
-### 6.15 Progress (scan, capacity, video)
-- Track `surface-2`; fill `accent`; 2px default, 6px interactive
-  (video progress on hover); buffered segment = ghost (white/12).
-
-## 7. Focus & Accessibility
-
-- `:focus-visible` ring: 2px `accent` at 40% opacity, offset 2px.
-- All hit areas ≥ 32px.
-- Full keyboard support in viewers (see SPEC §11).
-
-## 8. Scrollbars
-
-- 8px wide, transparent track, thumb white/12, hover white/20.
-
-## 9. Do / Don't
-
-- DO use mono uppercase micro-labels for section headers and meta.
-- DO keep large negative space; don't cram controls.
-- DON'T use accent for decoration, large fills, or non-interactive color.
-- DON'T add shadows beyond the popover rule.
-- DON'T import fonts from CDN.
+- DO prefer tonal elevation + glass; borders only as editorial dividers.
+- DO give elements air: 24+ padding, 12+ gaps, 48+ section rhythm.
+- DON'T use mono for UI copy; metadata only.
+- DON'T use more than 1–2 uppercase micro-labels per screen.
+- DON'T flatten hover states — always lift + glow.

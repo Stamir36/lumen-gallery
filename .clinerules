@@ -10,23 +10,25 @@
 - Thumbnails + metadata extracted on the frontend (webp 480w → appCacheDir/thumbs,
   4-worker queue; exifreader for images). No ffmpeg sidecar in v1.
 
-## Design tokens
-- Canvas #0A0A0C; surface-1 #121216; surface-2 #1A1A20.
-- Border rgba(255,255,255,.06), hover .12. Text #F2F2F4 / 62% / 38%.
-- Accent #6EC1FF — interactive states + progress ONLY.
+## Design tokens (v2 soft glass editorial — full spec in docs/DESIGN.md)
+- Canvas #0A0A0C; surface-1 #141518; surface-2 #1E2023; surface-3 #26282C.
+- Tonal elevation over borders; hairlines only as editorial dividers.
+- Glass (topbar/sidebar/floating/menus): white 5% + blur(28) saturate(1.2)
+  + inner top highlight white/6.
+- Radii: card 22, control 14, viewer 16, pill 999.
+- Chunky controls: buttons h44/48, icon buttons 40, inputs 44, menu items 40, FAB 56.
+- Air: card padding 24-28, grid gap 12-16, sidebar rows 44-48, gutters 32-40,
+  section rhythm 48-64.
+- Type: display 28-40/650; section 18-20/600; body 14-15/400 lh 1.55.
+  Mono ONLY for metadata/counters/timecodes/paths. Max 1-2 mono micro-labels
+  per screen; oversized thin accent section numbers ("01", 300).
+- Text #F2F2F4 / 62% / 38%. Accent #6EC1FF — interactive + progress ONLY.
 - success #3ECF8E, danger #FF5C5C, warning #F5B85C.
-- Radius: card 14, control 10, viewer bar 12, pill 999.
-- Inter 400/500/600 UI; JetBrains Mono for micro-labels (11px uppercase,
-  ls .12em), timecodes, counts, paths, logs. H1 20/600; body 14/400 lh 1.55.
-- 4pt grid; gutters 24; grid gap 8; no shadows except popovers
-  0 12px 32px rgba(0,0,0,.55); 2% grain overlay; vignette only in viewers.
-- framer-motion springs 260/26; hover 160ms ease-out; pressed scale .98;
-  route cross-fade 180ms; honor prefers-reduced-motion.
-- Primary button: white bg + black text; ghost: hairline; icon buttons 32px.
-  Focus-visible: 2px accent/40 offset 2. Hit areas >= 32px.
-- Scrollbars 8px, thumb white/12 hover /20.
-- Empty state: dashed hairline + mono label. Loading: surface-2 shimmer
-  skeletons matching final layout.
+- Elevation: 0 8px 24px rgba(0,0,0,.35); dialogs 0 12px 32px .55.
+- Hover: lift -2px + soft shadow + accent glow; pressed scale .97.
+- framer-motion springs 260/26; route cross-fade 180ms; prefers-reduced-motion.
+- Focus-visible 2px accent/40 offset 2. Scrollbars 8px thumb white/12→/20.
+- 2% grain overlay; vignette only in viewers. Inter + JetBrains Mono local only.
 
 ## Process
 - **Re-read docs/DESIGN.md before ANY UI work.**
