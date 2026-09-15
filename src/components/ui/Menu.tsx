@@ -3,7 +3,7 @@ import {
   type ComponentPropsWithoutRef,
   type ElementRef,
 } from "react";
-import * as MenuPrimitive from "@radix-ui/react-menu";
+import * as MenuPrimitive from "@radix-ui/react-dropdown-menu";
 import { cn } from "@/lib/utils";
 
 export const Menu = MenuPrimitive.Root;

@@ -1,0 +1,15 @@
+✓ Lockfile passes supply-chain policies (verified 6m ago)
+Packages: +1
++
+Progress: resolved 1, reused 91, downloaded 1, added 1, done
+
+dependencies:
++ @radix-ui/react-dropdown-menu 2.1.24
+
+Error: ERR_PNPM_IGNORED_BUILDS
+
+  × adding a new package
+  ╰─▶ Ignored build scripts: esbuild@0.25.12
+  help: Run "pnpm approve-builds" to pick which dependencies should be allowed
+        to run scripts.
+
