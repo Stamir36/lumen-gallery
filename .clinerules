@@ -31,8 +31,10 @@
 ## Process
 - **Re-read docs/DESIGN.md before ANY UI work.**
 - **Run typecheck (`tsc --noEmit`) + `cargo clippy` before every commit.**
+- **Checkpoint commit after EVERY completed checklist item** (`chore: checkpoint ...`)
+  so a stream drop never loses more than one step.
 - Conventional Commits: `feat:`, `fix:`, `docs:`, `refactor:`, `chore:`, etc.
-  One conventional commit per phase.
+  One conventional commit per phase (checkpoints are `chore:` and allowed in addition).
 - After every UI phase: run dev server, screenshot, self-review token-by-token
   against docs/DESIGN.md, fix discrepancies BEFORE committing.
 - Offline-first: zero network, zero telemetry. All state in SQLite.
