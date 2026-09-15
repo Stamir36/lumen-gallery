@@ -8,8 +8,8 @@ Phase 0 (docs) — done: `docs/SPEC.md`, `docs/DESIGN.md`, `.clinerules`, `TODO.
 - [x] Bundle Inter + JetBrains Mono locally (@fontsource-variable, no CDN)
 - [x] Define design tokens in Tailwind v4 `@theme` per docs/DESIGN.md (also as CSS vars)
 - [ ] tauri-plugin-sql wired, SQLite migrations v1 (items, roots, albums, album_items, favorites, trash flag, watch_progress, settings) — planned next in Phase 2 (DB is scanning-related)
-- [x] App shell: canvas + grain overlay + scrollbars; /style living style sheet (screenshot QA pending first build)
-- [ ] Conventional commit `feat: design system`
+- [x] App shell: canvas + grain overlay + scrollbars; /style living style sheet — **v2 soft glass editorial** (screenshot QA pending: no browser tool in env; code-level token self-review done)
+- [x] Conventional commit `feat: design system` + `feat: design system v2 - soft glass editorial`
 
 ## Phase 2 — Libraries & scanning
 - [ ] Rust: fs walk (whitelist, skip hidden/system), volumes info, fs watch (2s debounce)
