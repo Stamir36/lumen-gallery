@@ -82,8 +82,9 @@ function SidebarRow({ item, wide }: { item: SidebarItem; wide: boolean }) {
       className={cn(
         "flex h-11 w-full items-center gap-3 rounded-control px-3 text-left transition-all duration-[160ms] ease-out",
         item.active
-          ? "bg-surface-2 text-tprimary shadow-elev1"
-          : "text-tsecondary hover:bg-surface-2/60 hover:text-tprimary",
+          ? // accent anchor: 14% tinted glass + accent icon + accent counter
+            "bg-accent/[.14] text-tprimary shadow-[inset_0_1px_0_rgba(110,193,255,.15)] [&_svg]:text-accent"
+          : "text-tsecondary hover:bg-white/[.06] hover:text-tprimary",
         !wide && "justify-center px-0",
       )}
     >
@@ -96,7 +97,12 @@ function SidebarRow({ item, wide }: { item: SidebarItem; wide: boolean }) {
             {item.label}
           </span>
           {item.badge && (
-            <span className="font-mono text-[11px] text-ttertiary">
+            <span
+              className={cn(
+                "font-mono text-[11px]",
+                item.active ? "text-accent" : "text-ttertiary",
+              )}
+            >
               {item.badge}
             </span>
           )}

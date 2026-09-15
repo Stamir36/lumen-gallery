@@ -42,14 +42,16 @@ export function Segmented<T extends string>({
             className={cn(
               "relative inline-flex h-10 items-center gap-2 rounded-pill px-5",
               "transition-colors duration-[160ms] ease-out active:scale-[.97]",
-              active ? "text-tprimary" : "text-tsecondary hover:text-tprimary",
+              active
+                ? "text-[#0A0A0C]" // solid accent anchor: accent bg, canvas text
+                : "text-tsecondary hover:bg-white/[.08] hover:text-tprimary",
             )}
           >
             {active && (
               <motion.span
                 layoutId={`segmented-${id}`}
                 transition={{ type: "spring", stiffness: 260, damping: 26 }}
-                className="absolute inset-0 rounded-pill bg-surface-3 shadow-elev1"
+                className="absolute inset-0 rounded-pill bg-accent shadow-[inset_0_1px_0_rgba(255,255,255,.35),0_4px_12px_rgba(110,193,255,.25)]"
               />
             )}
             {opt.icon && <span className="relative z-10">{opt.icon}</span>}

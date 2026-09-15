@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import {
   Heart,
   Images,
@@ -108,7 +108,7 @@ function SectionsDemo({
 }) {
   return (
     <>
-      {/* 01 — Color */}
+      {/* 01 вЂ” Color */}
       <Section index="01" title="Color tokens">
         <div className="grid w-full grid-cols-4 gap-3">
           {swatches.map((s) => (
@@ -124,27 +124,27 @@ function SectionsDemo({
         </div>
       </Section>
 
-      {/* 02 — Typography */}
+      {/* 02 вЂ” Typography */}
       <Section index="02" title="Typography">
         <GlassCard className="w-full">
           <div className="mb-2 text-3xl font-semibold tracking-tight text-tprimary">
-            Display — 30px / 650
+            Display вЂ” 30px / 650
           </div>
           <div className="mb-3 text-lg font-semibold text-tprimary">
-            Section title — 20px / 600
+            Section title вЂ” 20px / 600
           </div>
           <div className="text-[14.5px] text-tsecondary">
-            Body — 14.5px / 400, line-height 1.55. Inter Variable for all UI copy;
+            Body вЂ” 14.5px / 400, line-height 1.55. Inter Variable for all UI copy;
             generous whitespace is part of the design.
           </div>
           <div className="mt-6 font-mono text-sm text-tprimary">
-            JetBrains Mono — 12,482 items · 00:04:32 · 3840×2160 · 60fps
+            JetBrains Mono вЂ” 12,482 items В· 00:04:32 В· 3840Г—2160 В· 60fps
           </div>
         </GlassCard>
       </Section>
 
-      {/* 03 — Buttons */}
-      <Section index="03" title="Buttons — chunky pills">
+      {/* 03 вЂ” Buttons */}
+      <Section index="03" title="Buttons вЂ” chunky pills">
         <PillButton onClick={() => toast.success("Primary action")}>Primary</PillButton>
         <PillButton variant="ghost">Ghost</PillButton>
         <PillButton variant="danger">Danger</PillButton>
@@ -158,17 +158,17 @@ function SectionsDemo({
         <PillButton disabled>Disabled</PillButton>
       </Section>
 
-      {/* 04 — Chips */}
+      {/* 04 вЂ” Chips */}
       <Section index="04" title="Chips">
         <Chip>Type chip</Chip>
         <Chip mono>00:04:32</Chip>
-        <Chip mono>3840×2160</Chip>
+        <Chip mono>3840Г—2160</Chip>
         <Chip mono accent>
-          H.264 · 60FPS
+          H.264 В· 60FPS
         </Chip>
       </Section>
 
-      {/* 05 — Segmented */}
+      {/* 05 вЂ” Segmented */}
       <Section index="05" title="Segmented control">
         <Segmented
           aria-label="Demo view mode"
@@ -178,7 +178,7 @@ function SectionsDemo({
         />
       </Section>
 
-      {/* 06 — Slider & FAB */}
+      {/* 06 вЂ” Slider & FAB */}
       <Section index="06" title="Slider & FAB">
         <GlassCard className="w-full max-w-xl">
           <div className="mb-4 text-base font-medium text-tprimary">Preview size</div>
@@ -190,8 +190,52 @@ function SectionsDemo({
           />
         </GlassCard>
         <FAB label="Collage">
-          <Star size={22} className="text-accent" />
+          <Star size={22} className="text-tprimary" />
         </FAB>
+      </Section>
+
+      {/* 07 вЂ” Glass over content: blur is only visible over colorful media */}
+      <Section index="07" title="Glass over content">
+        <div className="relative w-full overflow-hidden rounded-card">
+          {/* colorful media stand-in */}
+          <div
+            className="h-72 w-full"
+            style={{
+              background:
+                "radial-gradient(circle at 20% 30%, #6EC1FF 0%, transparent 45%)," +
+                "radial-gradient(circle at 80% 20%, #F5B85C 0%, transparent 40%)," +
+                "radial-gradient(circle at 70% 85%, #3ECF8E 0%, transparent 45%)," +
+                "radial-gradient(circle at 30% 90%, #FF5C5C 0%, transparent 40%)," +
+                "#141518",
+            }}
+          />
+          {/* glass panels floating on top */}
+          <div className="absolute inset-x-8 top-8">
+            <div className="glass rounded-pill px-5 py-2.5">
+              <span className="text-sm font-medium text-tprimary">
+                Top bar glass
+              </span>
+            </div>
+          </div>
+          <div className="absolute inset-x-8 bottom-8 flex items-center gap-3">
+            <div className="glass flex items-center gap-2 rounded-pill px-3 py-2">
+              <IconButton label="Favorite">
+                <Heart size={18} />
+              </IconButton>
+              <IconButton label="Add to album">
+                <Images size={18} />
+              </IconButton>
+              <IconButton label="Collage">
+                <Star size={18} />
+              </IconButton>
+            </div>
+            <div className="glass flex-1 rounded-control px-4 py-2.5">
+              <span className="font-mono text-[12px] text-tsecondary">
+                00:04:32 / 00:12:08 В· 3840Г—2160
+              </span>
+            </div>
+          </div>
+        </div>
       </Section>
     </>
   );
@@ -200,8 +244,8 @@ function SectionsDemo({
 function ExtraSections() {
   return (
     <>
-      {/* 07 — Dialog & Menu */}
-      <Section index="07" title="Dialog & Menu">
+      {/* 07 вЂ” Dialog & Menu */}
+      <Section index="08" title="Dialog & Menu">
         <Dialog>
           <DialogTrigger asChild>
             <PillButton variant="ghost">Open dialog</PillButton>
@@ -210,7 +254,7 @@ function ExtraSections() {
             <DialogHeader>
               <DialogTitle>Add library</DialogTitle>
               <DialogDescription>
-                Choose a folder or drive to scan. LUMEN never copies your files —
+                Choose a folder or drive to scan. LUMEN never copies your files вЂ”
                 everything stays in place.
               </DialogDescription>
             </DialogHeader>
@@ -250,8 +294,8 @@ function ExtraSections() {
         </Menu>
       </Section>
 
-      {/* 08 — Empty / loading / progress */}
-      <Section index="08" title="Empty state · Loading · Progress">
+      {/* 08 вЂ” Empty / loading / progress */}
+      <Section index="09" title="Empty state В· Loading В· Progress">
         <div className="flex w-full flex-col gap-6">
           <div className="flex flex-col items-center justify-center rounded-card border border-dashed border-hairline-hover py-16">
             <span className="text-sm text-ttertiary">No items yet</span>
@@ -291,7 +335,7 @@ export default function StylePage() {
               Settings
             </button>
             <div className="px-3 font-mono text-[10px] leading-relaxed text-ttertiary">
-              SCANNING… 3,412 / 12,482
+              SCANNINGвЂ¦ 3,412 / 12,482
             </div>
           </div>
         }
@@ -338,7 +382,7 @@ export default function StylePage() {
               LUMEN Design System
             </h1>
             <p className="mb-16 mt-3 text-[15px] text-tsecondary">
-              Living style sheet — every token and base component, per
+              Living style sheet вЂ” every token and base component, per
               docs/DESIGN.md v2.
             </p>
             <SectionsDemo view={view} setView={setView} />
@@ -368,7 +412,7 @@ export default function StylePage() {
           </div>
         </div>
 
-        {/* bottom-left status line — mono metadata only */}
+        {/* bottom-left status line вЂ” mono metadata only */}
         <div className="pointer-events-none absolute bottom-7 left-10 font-mono text-[11px] text-ttertiary">
           12,482 items - 348 GB - scanned 2s ago
         </div>
@@ -376,3 +420,5 @@ export default function StylePage() {
     </div>
   );
 }
+
+

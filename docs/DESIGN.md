@@ -35,18 +35,38 @@ steps + soft ambient shadow. Hairlines remain only as editorial dividers
 | `elev-3` | surface-3 + shadow `0 12px 32px rgba(0,0,0,.55)` (dialogs, popovers) |
 | hover | lift −2px + shadow `0 12px 28px rgba(0,0,0,.4)` + faint accent glow `0 0 0 1px rgba(110,193,255,.18)` |
 
-## 3. Glass Recipe (matte frosted)
+## 3. Glass Recipe (matte frosted) — v2.1
 
-For topbar, sidebar, floating bars, menus, dialogs:
+For topbar, sidebar, segmented track, floating bars, menus, dialogs:
 
 ```
-background: rgba(255,255,255,0.05);      /* white 4–6% */
-backdrop-filter: blur(28px) saturate(1.2);
-box-shadow: inset 0 1px 0 rgba(255,255,255,.06);  /* inner top highlight */
+background: linear-gradient(180deg, rgba(255,255,255,.09), rgba(255,255,255,.03));
+backdrop-filter: blur(28px) saturate(1.4) brightness(1.08);
+border: 1px solid rgba(255,255,255,.08);
+box-shadow: inset 0 1px 0 rgba(255,255,255,.10),   /* inner top highlight */
+            0 8px 24px rgba(0,0,0,.35);
 border-radius: per component;
 ```
 
-Dark matte, not smoky — keep text contrast at secondary+.
+Glass must be tested over colorful content (see /style "glass over content"
+section) — over flat dark canvas it reads as a gray slab. Dark matte, not
+smoky; text contrast stays secondary+.
+
+## 3.1 Accent Anchor Rule (v2.1)
+
+Colorfulness without breaking monochrome discipline: **exactly 3–5 accent
+anchors per screen**, nothing else:
+
+1. **Active Segmented pill** — solid `#6EC1FF`, text `#0A0A0C`; inactive
+   hover = white 8% pill.
+2. **Active sidebar row** — accent 14% tinted glass + accent icon + accent
+   counter.
+3. **Capacity/progress bars** — accent fill/gradient.
+4. **Editorial section numbers** ("01", thin 300).
+5. **Hover glow + focus ring.**
+
+NO other accent usage anywhere (no accent text, icons, borders, fills outside
+this list).
 
 ## 4. Radii
 
