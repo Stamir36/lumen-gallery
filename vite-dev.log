@@ -24,3 +24,11 @@ $ vite
 [2m02:27:14[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/ui/Menu.tsx, /src/index.css[22m
 [2m02:28:27[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/StylePage.tsx, /src/index.css[22m
 [2m02:29:19[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2mTODO.md[22m
+[2m02:38:30[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/index.css[22m
+[2m02:38:42[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32m✨ new dependencies optimized: [33m@tauri-apps/api/core, @tauri-apps/api/window, @tauri-apps/api/event[32m[39m
+[2m02:38:42[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32m✨ optimized dependencies changed. reloading[39m
+[2m02:41:57[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/@fs/C:\Develop\Agents AI\Gallary\src\components\WindowTitleBar.tsx, /src/index.css[22m
+[2m02:42:46[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/@fs/C:\Develop\Agents AI\Gallary\src\components\WindowTitleBar.tsx, /src/index.css[22m
+[2m02:43:29[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/@fs/C:\Develop\Agents AI\Gallary\src\components\WindowTitleBar.tsx, /src/index.css[22m
+[2m02:43:47[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/@fs/C:\Develop\Agents AI\Gallary\src\components\WindowTitleBar.tsx, /src/index.css[22m
+[2m02:45:00[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/@fs/C:\Develop\Agents AI\Gallary\src\components\WindowTitleBar.tsx, /src/index.css[22m

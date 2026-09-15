@@ -5,7 +5,15 @@
   "windows": [
     "main"
   ],
-  "permissions": [
-    "core:default"
+    "permissions": [
+    "core:default",
+    "dialog:allow-open",
+    "dialog:allow-open-file",
+    "window:allow-maximize",
+    "window:allow-unminimize",
+    "window:allow-toggle-maximize",
+    "window:allow-set-size",
+    "window:allow-set-position",
+    "window:allow-brush-for-dialog"
   ]
 }

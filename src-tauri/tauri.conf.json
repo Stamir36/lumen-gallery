@@ -12,17 +12,18 @@
   "app": {
     "windows": [
       {
-        "title": "LUMEN",
+                "title": "LUMEN",
         "width": 1280,
         "height": 800,
         "minWidth": 720,
         "minHeight": 480,
         "resizable": true,
         "fullscreen": false,
+        "decorations": false,
         "backgroundColor": "#0A0A0C"
       }
     ],
-    "security": {
+            "security": {
       "csp": null
     }
   },
