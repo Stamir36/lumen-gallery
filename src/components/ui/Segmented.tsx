@@ -3,9 +3,8 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 /**
- * Segmented control (pill) per DESIGN.md §6.3:
- * pill container, surface-1 bg, hairline border;
- * active segment surface-2 fill + primary text; inactive secondary.
+ * Chunky Segmented v2 (DESIGN.md v2 §7, §10): h-44 pill, glass bg,
+ * active segment surface-3 + primary text, layout-animated thumb.
  */
 export interface SegmentedProps<T extends string> {
   options: { value: T; label: string; icon?: React.ReactNode }[];
@@ -28,7 +27,7 @@ export function Segmented<T extends string>({
       role="tablist"
       aria-label={ariaLabel}
       className={cn(
-        "inline-flex h-8 items-center gap-0.5 rounded-pill border border-hairline bg-surface-1 p-0.5",
+        "glass inline-flex h-11 items-center gap-1 rounded-pill p-1",
         className,
       )}
     >
@@ -41,22 +40,20 @@ export function Segmented<T extends string>({
             aria-selected={active}
             onClick={() => onChange(opt.value)}
             className={cn(
-              "relative inline-flex h-7 items-center gap-1.5 rounded-pill px-3",
-              "transition-colors duration-[160ms] ease-out active:scale-[.98]",
-              active
-                ? "text-tprimary"
-                : "text-tsecondary hover:text-tprimary",
+              "relative inline-flex h-10 items-center gap-2 rounded-pill px-5",
+              "transition-colors duration-[160ms] ease-out active:scale-[.97]",
+              active ? "text-tprimary" : "text-tsecondary hover:text-tprimary",
             )}
           >
             {active && (
               <motion.span
                 layoutId={`segmented-${id}`}
                 transition={{ type: "spring", stiffness: 260, damping: 26 }}
-                className="absolute inset-0 rounded-pill bg-surface-2"
+                className="absolute inset-0 rounded-pill bg-surface-3 shadow-elev1"
               />
             )}
             {opt.icon && <span className="relative z-10">{opt.icon}</span>}
-            <span className="relative z-10 text-[13px] font-medium whitespace-nowrap">
+            <span className="relative z-10 text-sm font-medium whitespace-nowrap">
               {opt.label}
             </span>
           </button>

@@ -2,8 +2,8 @@ import type { HTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * Chip: pill, hairline border, 11–12px. Mono variant for numeric/meta
- * chips (duration, resolution, res-fps-codec) per DESIGN.md §6.4.
+ * Chip v2: pill, glass tonal fill, mono for meta (duration, resolution,
+ * res-fps-codec). 12px. No hairline — tonal fill only.
  */
 export interface ChipProps extends HTMLAttributes<HTMLSpanElement> {
   mono?: boolean;
@@ -14,13 +14,11 @@ export function Chip({ className, mono, accent, ...props }: ChipProps) {
   return (
     <span
       className={cn(
-        "inline-flex h-6 items-center rounded-pill border border-hairline bg-black/30 px-2.5",
+        "inline-flex h-8 items-center rounded-pill bg-white/5 px-3 backdrop-blur-xl",
         mono
-          ? "font-mono text-[11px] tracking-[0.04em]"
+          ? "font-mono text-[12px] tracking-[0.04em]"
           : "text-xs text-tsecondary",
-        accent
-          ? "text-accent border-accent/30"
-          : "text-tsecondary",
+        accent ? "text-accent" : "text-tsecondary",
         className,
       )}
       {...props}

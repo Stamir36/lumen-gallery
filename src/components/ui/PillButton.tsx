@@ -3,24 +3,25 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const pillButtonVariants = cva(
-  // Pill shape, height 32px min, pressed scale .98, hover 160ms ease-out
-  "inline-flex h-8 items-center justify-center gap-2 rounded-pill px-4 text-sm font-medium " +
+  // Chunky pill h-44, tonal, pressed .97, hover lift (DESIGN.md v2 §7, §8)
+  "inline-flex h-11 items-center justify-center gap-2 rounded-pill px-6 text-sm font-medium " +
     "transition-all duration-[160ms] ease-out " +
-    "active:scale-[.98] disabled:pointer-events-none disabled:opacity-40 select-none whitespace-nowrap",
+    "active:scale-[.97] disabled:pointer-events-none disabled:opacity-40 select-none whitespace-nowrap",
   {
     variants: {
       variant: {
-        // Primary: white bg + black text
-        primary: "bg-white text-black hover:bg-white/90",
-        // Ghost: hairline border, transparent bg
+        // Primary: white bg + black text, elev-1, hover lift
+        primary:
+          "bg-white text-black shadow-elev1 hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(0,0,0,.4),0_0_0_1px_rgba(110,193,255,.18)] active:translate-y-0",
+        // Ghost: tonal surface-2 (no border), hover surface-3 + lift
         ghost:
-          "border border-hairline text-tprimary hover:border-hairline-hover hover:bg-surface-2",
-        danger: "border border-hairline text-danger hover:bg-surface-2",
+          "bg-surface-2 text-tprimary hover:bg-surface-3 hover:-translate-y-0.5 hover:shadow-elev1 active:translate-y-0",
+        danger: "bg-surface-2 text-danger hover:bg-surface-3",
       },
       size: {
-        sm: "h-7 px-3 text-[13px]",
-        md: "h-8 px-4",
-        lg: "h-10 px-5",
+        sm: "h-9 px-4 text-[13px]",
+        md: "h-11 px-6",
+        lg: "h-12 px-7",
       },
     },
     defaultVariants: { variant: "primary", size: "md" },
