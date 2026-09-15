@@ -3,13 +3,13 @@
 Phase 0 (docs) — done: `docs/SPEC.md`, `docs/DESIGN.md`, `.clinerules`, `TODO.md`.
 
 ## Phase 1 — Project skeleton
-- [ ] Scaffold Tauri v2 + React 18 + Vite + TS strict + Tailwind v4 + shadcn/ui
-- [ ] Install zustand, @tanstack/react-query, framer-motion, lucide-react, react-virtuoso, exifreader
-- [ ] Bundle Inter + JetBrains Mono locally (woff2)
-- [ ] Define design tokens in Tailwind v4 `@theme` per docs/DESIGN.md
-- [ ] tauri-plugin-sql wired, SQLite migrations v1 (items, roots, albums, album_items, favorites, trash flag, watch_progress, settings)
-- [ ] App shell: canvas + grain overlay + scrollbars; empty shell screenshot QA pass
-- [ ] Conventional commit `feat: project skeleton`
+- [x] Scaffold Tauri v2 + React 18 + Vite + TS strict + Tailwind v4 + shadcn/ui (hand-rolled shadcn-style on Radix)
+- [x] Install zustand, @tanstack/react-query, framer-motion, lucide-react, react-virtuoso, exifreader (exifreader deferred to Phase 4 — metadata phase)
+- [x] Bundle Inter + JetBrains Mono locally (@fontsource-variable, no CDN)
+- [x] Define design tokens in Tailwind v4 `@theme` per docs/DESIGN.md (also as CSS vars)
+- [ ] tauri-plugin-sql wired, SQLite migrations v1 (items, roots, albums, album_items, favorites, trash flag, watch_progress, settings) — planned next in Phase 2 (DB is scanning-related)
+- [x] App shell: canvas + grain overlay + scrollbars; /style living style sheet (screenshot QA pending first build)
+- [ ] Conventional commit `feat: design system`
 
 ## Phase 2 — Libraries & scanning
 - [ ] Rust: fs walk (whitelist, skip hidden/system), volumes info, fs watch (2s debounce)

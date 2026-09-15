@@ -1,0 +1,1 @@
+$ tauri "init" "--ci" "--app-name" "lumen" "--window-title" "LUMEN" "--frontend-dist" "../dist" "--dev-url" "http://localhost:1420" "--before-dev-command" "pnpm dev" "--before-build-command" "pnpm build"
