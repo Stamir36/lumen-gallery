@@ -20,6 +20,9 @@ import { PillButton } from "@/components/ui/PillButton";
 import { IconButton } from "@/components/ui/IconButton";
 import { Chip } from "@/components/ui/Chip";
 import { Segmented } from "@/components/ui/Segmented";
+import { GlassCard } from "@/components/ui/GlassCard";
+import { FAB } from "@/components/ui/FAB";
+import { Slider } from "@/components/ui/Slider";
 import { GlassTopBar, TopBarTitle } from "@/components/ui/GlassTopBar";
 import { SidebarRail, type SidebarItem } from "@/components/ui/SidebarRail";
 import { ScrollArea } from "@/components/ui/ScrollArea";
@@ -62,19 +65,19 @@ const sidebarItems: SidebarItem[] = [
 
 const swatches: { name: string; css: string; note: string }[] = [
   { name: "canvas", css: "var(--canvas)", note: "#0A0A0C" },
-  { name: "surface-1", css: "var(--surface-1)", note: "#121216" },
-  { name: "surface-2", css: "var(--surface-2)", note: "#1A1A20" },
-  { name: "border", css: "transparent", note: "white / 6%" },
-  { name: "border-hover", css: "transparent", note: "white / 12%" },
+  { name: "surface-1", css: "var(--surface-1)", note: "#141518" },
+  { name: "surface-2", css: "var(--surface-2)", note: "#1E2023" },
+  { name: "surface-3", css: "var(--surface-3)", note: "#26282C" },
   { name: "text-primary", css: "var(--text-primary)", note: "#F2F2F4" },
   { name: "text-secondary", css: "var(--text-secondary)", note: "62%" },
   { name: "text-tertiary", css: "var(--text-tertiary)", note: "38%" },
-  { name: "accent", css: "var(--accent)", note: "#6EC1FF — interactive + progress only" },
+  { name: "accent", css: "var(--accent)", note: "#6EC1FF" },
   { name: "success", css: "var(--success)", note: "#3ECF8E" },
   { name: "danger", css: "var(--danger)", note: "#FF5C5C" },
   { name: "warning", css: "var(--warning)", note: "#F5B85C" },
 ];
 
+/** editorial section: oversized thin accent number + section title */
 function Section({
   index,
   title,
@@ -86,11 +89,10 @@ function Section({
 }) {
   return (
     <section className="mb-16">
-      <div className="mb-5 flex items-baseline gap-3">
-        <span className="font-mono text-[11px] tracking-[0.12em] text-accent">
-          {index}
-        </span>
-        <h2 className="text-base font-semibold text-tprimary">{title}</h2>
+      <div className="mb-8 flex items-center gap-5">
+        <span className="font-sans text-3xl font-light text-accent">{index}</span>
+        <h2 className="text-xl font-semibold text-tprimary">{title}</h2>
+        <div className="divider mt-4 flex-1" />
       </div>
       <div className="flex flex-wrap items-start gap-8">{children}</div>
     </section>
@@ -108,52 +110,50 @@ function SectionsDemo({
     <>
       {/* 01 — Color */}
       <Section index="01" title="Color tokens">
-        <div className="grid w-full grid-cols-4 gap-2">
+        <div className="grid w-full grid-cols-4 gap-3">
           {swatches.map((s) => (
-            <div key={s.name} className="rounded-card border border-hairline p-2">
+            <GlassCard key={s.name} hover className="!p-5">
               <div
-                className="h-12 w-full rounded-control border border-hairline"
-                style={{
-                  background: s.css,
-                  backgroundImage: s.name.startsWith("border")
-                    ? "repeating-linear-gradient(45deg, rgba(255,255,255,.06) 0 1px, transparent 1px 6px)"
-                    : undefined,
-                }}
+                className="h-14 w-full rounded-control border border-hairline"
+                style={{ background: s.css }}
               />
-              <div className="mt-2 font-mono text-[11px] text-tprimary">{s.name}</div>
-              <div className="font-mono text-[10px] text-ttertiary">{s.note}</div>
-            </div>
+              <div className="mt-3 text-sm font-medium text-tprimary">{s.name}</div>
+              <div className="font-mono text-[11px] text-ttertiary">{s.note}</div>
+            </GlassCard>
           ))}
         </div>
       </Section>
 
       {/* 02 — Typography */}
       <Section index="02" title="Typography">
-        <div className="w-full">
-          <div className="mb-1 text-xl font-semibold text-tprimary">H1 — 20px / 600</div>
-          <div className="mb-1 text-sm text-tprimary">
-            Body — 14px / 400, line-height 1.55. Inter Variable for all UI text.
+        <GlassCard className="w-full">
+          <div className="mb-2 text-3xl font-semibold tracking-tight text-tprimary">
+            Display — 30px / 650
           </div>
-          <div className="mb-3 text-sm text-tsecondary">
-            Secondary text — 62% white for supporting copy.
+          <div className="mb-3 text-lg font-semibold text-tprimary">
+            Section title — 20px / 600
           </div>
-          <div className="micro-label">Micro-label — 11px mono uppercase ls .12em</div>
-          <div className="mt-2 font-mono text-sm text-tprimary">
+          <div className="text-[14.5px] text-tsecondary">
+            Body — 14.5px / 400, line-height 1.55. Inter Variable for all UI copy;
+            generous whitespace is part of the design.
+          </div>
+          <div className="mt-6 font-mono text-sm text-tprimary">
             JetBrains Mono — 12,482 items · 00:04:32 · 3840×2160 · 60fps
           </div>
-        </div>
+        </GlassCard>
       </Section>
 
       {/* 03 — Buttons */}
-      <Section index="03" title="Buttons — pill, primary / ghost / icon">
+      <Section index="03" title="Buttons — chunky pills">
         <PillButton onClick={() => toast.success("Primary action")}>Primary</PillButton>
         <PillButton variant="ghost">Ghost</PillButton>
         <PillButton variant="danger">Danger</PillButton>
+        <PillButton size="lg">Page-level</PillButton>
         <IconButton label="Favorite" onClick={() => toast("Favorited")}>
-          <Heart size={16} />
+          <Heart size={18} />
         </IconButton>
         <IconButton label="Search">
-          <Search size={16} />
+          <Search size={18} />
         </IconButton>
         <PillButton disabled>Disabled</PillButton>
       </Section>
@@ -166,8 +166,6 @@ function SectionsDemo({
         <Chip mono accent>
           H.264 · 60FPS
         </Chip>
-        <Chip className="text-success">Success</Chip>
-        <Chip className="text-danger">Danger</Chip>
       </Section>
 
       {/* 05 — Segmented */}
@@ -178,7 +176,22 @@ function SectionsDemo({
           value={view}
           onChange={setView}
         />
-        <span className="micro-label">Selected: {view}</span>
+      </Section>
+
+      {/* 06 — Slider & FAB */}
+      <Section index="06" title="Slider & FAB">
+        <GlassCard className="w-full max-w-xl">
+          <div className="mb-4 text-base font-medium text-tprimary">Preview size</div>
+          <Slider
+            value={40}
+            onChange={() => {}}
+            valueLabel="170px"
+            aria-label="Preview size"
+          />
+        </GlassCard>
+        <FAB label="Collage">
+          <Star size={22} className="text-accent" />
+        </FAB>
       </Section>
     </>
   );
@@ -187,8 +200,8 @@ function SectionsDemo({
 function ExtraSections() {
   return (
     <>
-      {/* 06 — Dialog & Menu */}
-      <Section index="06" title="Dialog & Menu">
+      {/* 07 — Dialog & Menu */}
+      <Section index="07" title="Dialog & Menu">
         <Dialog>
           <DialogTrigger asChild>
             <PillButton variant="ghost">Open dialog</PillButton>
@@ -201,10 +214,10 @@ function ExtraSections() {
                 everything stays in place.
               </DialogDescription>
             </DialogHeader>
-            <div className="flex items-center justify-center rounded-control border border-dashed border-hairline-hover py-10">
-              <span className="micro-label">Drop folder here</span>
+            <div className="flex items-center justify-center rounded-control border border-dashed border-hairline-hover py-12">
+              <span className="text-sm text-ttertiary">Drop folder here</span>
             </div>
-            <div className="mt-4 flex justify-end gap-2">
+            <div className="mt-6 flex justify-end gap-3">
               <PillButton variant="ghost">Cancel</PillButton>
               <PillButton>Add</PillButton>
             </div>
@@ -218,53 +231,46 @@ function ExtraSections() {
           <MenuContent>
             <MenuLabel>Actions</MenuLabel>
             <MenuItem>
-              <Heart size={14} /> Favorite
+              <Heart size={16} /> Favorite
             </MenuItem>
             <MenuItem>
-              <CopyPlus size={14} /> Add to album
+              <CopyPlus size={16} /> Add to album
             </MenuItem>
             <MenuItem>
-              <Play size={14} /> Collage
+              <Play size={16} /> Collage
             </MenuItem>
             <MenuItem>
-              <Folder size={14} /> Open containing folder
+              <Folder size={16} /> Open containing folder
             </MenuItem>
             <MenuSeparator />
             <MenuItem className="text-danger">
-              <Trash2 size={14} /> Move to trash
+              <Trash2 size={16} /> Move to trash
             </MenuItem>
           </MenuContent>
         </Menu>
       </Section>
 
-      {/* 07 — Empty / loading / progress */}
-      <Section index="07" title="Empty state · Loading · Progress">
+      {/* 08 — Empty / loading / progress */}
+      <Section index="08" title="Empty state · Loading · Progress">
         <div className="flex w-full flex-col gap-6">
-          <div className="flex flex-col items-center justify-center rounded-card border border-dashed border-hairline-hover py-12">
-            <span className="micro-label">No items yet</span>
+          <div className="flex flex-col items-center justify-center rounded-card border border-dashed border-hairline-hover py-16">
+            <span className="text-sm text-ttertiary">No items yet</span>
           </div>
-          <div className="flex gap-2">
-            <div className="shimmer-bg h-24 flex-1 rounded-card" />
-            <div className="shimmer-bg h-24 flex-1 rounded-card" />
-            <div className="shimmer-bg h-24 flex-1 rounded-card" />
+          <div className="flex gap-3">
+            <div className="shimmer-bg h-28 flex-1 rounded-card" />
+            <div className="shimmer-bg h-28 flex-1 rounded-card" />
+            <div className="shimmer-bg h-28 flex-1 rounded-card" />
           </div>
           <div>
-            <div className="mb-2 flex justify-between">
-              <span className="micro-label">Scan progress</span>
-              <span className="font-mono text-[11px] text-ttertiary">3,412 / 12,482</span>
+            <div className="mb-3 flex justify-between">
+              <span className="text-sm text-tsecondary">Scan progress</span>
+              <span className="font-mono text-[12px] text-ttertiary">3,412 / 12,482</span>
             </div>
-            <div className="h-0.5 w-full rounded-pill bg-surface-2">
+            <div className="h-1 w-full rounded-pill bg-surface-2">
               <div className="h-full w-[27%] rounded-pill bg-accent" />
             </div>
           </div>
         </div>
-      </Section>
-
-      {/* 08 — Status line */}
-      <Section index="08" title="Status line (mono)">
-        <span className="font-mono text-[11px] text-ttertiary">
-          12,482 items - 348 GB - scanned 2s ago
-        </span>
       </Section>
     </>
   );
@@ -279,12 +285,12 @@ export default function StylePage() {
       <SidebarRail
         items={sidebarItems}
         bottom={
-          <div className="flex flex-col gap-2">
-            <button className="flex h-8 w-full items-center gap-2.5 rounded-control px-2 text-left text-[13px] text-tsecondary transition-colors hover:bg-surface-2 hover:text-tprimary">
-              <Settings size={16} />
+          <div className="flex flex-col gap-3">
+            <button className="flex h-11 w-full items-center gap-3 rounded-control px-3 text-left text-sm text-tsecondary transition-all duration-[160ms] hover:bg-surface-2/60 hover:text-tprimary">
+              <Settings size={18} />
               Settings
             </button>
-            <div className="px-2 font-mono text-[10px] leading-relaxed text-ttertiary">
+            <div className="px-3 font-mono text-[10px] leading-relaxed text-ttertiary">
               SCANNING… 3,412 / 12,482
             </div>
           </div>
@@ -305,10 +311,10 @@ export default function StylePage() {
               <Menu>
                 <MenuTrigger asChild>
                   <IconButton label="Sort">
-                    <ArrowDownUp size={16} />
+                    <ArrowDownUp size={18} />
                   </IconButton>
                 </MenuTrigger>
-                <MenuContent>
+                <MenuContent align="end">
                   <MenuLabel>Sort by</MenuLabel>
                   <MenuItem>Date captured</MenuItem>
                   <MenuItem>Name</MenuItem>
@@ -320,17 +326,20 @@ export default function StylePage() {
                 </MenuContent>
               </Menu>
               <IconButton label="Selection mode">
-                <CheckSquare size={16} />
+                <CheckSquare size={18} />
               </IconButton>
             </>
           }
         />
 
-        <ScrollArea className="relative flex-1 px-6 py-8">
+        <ScrollArea className="relative flex-1 px-10 py-12">
           <div className="mx-auto max-w-3xl">
-            <h1 className="mb-1 text-xl font-semibold text-tprimary">LUMEN Design System</h1>
-            <p className="mb-12 text-sm text-tsecondary">
-              Living style sheet — every token and base component, per docs/DESIGN.md.
+            <h1 className="text-4xl font-bold tracking-tight text-tprimary">
+              LUMEN Design System
+            </h1>
+            <p className="mb-16 mt-3 text-[15px] text-tsecondary">
+              Living style sheet — every token and base component, per
+              docs/DESIGN.md v2.
             </p>
             <SectionsDemo view={view} setView={setView} />
             <ExtraSections />
@@ -339,28 +348,28 @@ export default function StylePage() {
         </ScrollArea>
 
         {/* floating glass action bar demo */}
-        <div className="pointer-events-none absolute bottom-6 left-1/2 z-40 -translate-x-1/2">
-          <div className="glass pointer-events-auto flex items-center gap-1 rounded-pill border border-hairline px-2 py-1.5 shadow-popover">
+        <div className="pointer-events-none absolute bottom-8 left-1/2 z-40 -translate-x-1/2">
+          <div className="glass pointer-events-auto flex items-center gap-2 rounded-pill px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,.06),0_8px_24px_rgba(0,0,0,.35)]">
             <IconButton label="Favorite">
-              <Heart size={16} />
+              <Heart size={18} />
             </IconButton>
             <IconButton label="Add to album">
-              <Images size={16} />
+              <Images size={18} />
             </IconButton>
             <IconButton label="Collage">
-              <Star size={16} />
+              <Star size={18} />
             </IconButton>
             <IconButton label="Open containing folder">
-              <Folder size={16} />
+              <Folder size={18} />
             </IconButton>
             <IconButton label="Trash" className="text-danger">
-              <Trash2 size={16} />
+              <Trash2 size={18} />
             </IconButton>
           </div>
         </div>
 
-        {/* bottom-left status line */}
-        <div className="pointer-events-none absolute bottom-5 left-6 font-mono text-[11px] text-ttertiary">
+        {/* bottom-left status line — mono metadata only */}
+        <div className="pointer-events-none absolute bottom-7 left-10 font-mono text-[11px] text-ttertiary">
           12,482 items - 348 GB - scanned 2s ago
         </div>
       </div>
