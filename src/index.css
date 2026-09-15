@@ -115,9 +115,8 @@ body::after {
   color: var(--text-tertiary);
 }
 
-/* matte frosted glass v2.1:
-   gradient white 9→3% + blur(28) saturate(1.4) brightness(1.08)
-   + 1px border white/8 + inner top highlight + soft shadow */
+/* glass pill recipe v2.2 — the ONLY place blur lives
+   (player control bar, floating selection bar, scrub bubble, tooltips) */
 @utility glass {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.03));
   backdrop-filter: blur(28px) saturate(1.4) brightness(1.08);

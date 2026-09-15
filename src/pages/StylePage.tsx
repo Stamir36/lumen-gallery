@@ -194,8 +194,8 @@ function SectionsDemo({
         </FAB>
       </Section>
 
-      {/* 07 вЂ” Glass over content: blur is only visible over colorful media */}
-      <Section index="07" title="Glass over content">
+      {/* 07 — Glass whitelist: only floating pills over colorful media */}
+      <Section index="07" title="Glass pills over content">
         <div className="relative w-full overflow-hidden rounded-card">
           {/* colorful media stand-in */}
           <div
@@ -209,14 +209,7 @@ function SectionsDemo({
                 "#141518",
             }}
           />
-          {/* glass panels floating on top */}
-          <div className="absolute inset-x-8 top-8">
-            <div className="glass rounded-pill px-5 py-2.5">
-              <span className="text-sm font-medium text-tprimary">
-                Top bar glass
-              </span>
-            </div>
-          </div>
+          {/* whitelisted floating glass pills only */}
           <div className="absolute inset-x-8 bottom-8 flex items-center gap-3">
             <div className="glass flex items-center gap-2 rounded-pill px-3 py-2">
               <IconButton label="Favorite">
@@ -229,10 +222,41 @@ function SectionsDemo({
                 <Star size={18} />
               </IconButton>
             </div>
-            <div className="glass flex-1 rounded-control px-4 py-2.5">
+            <div className="glass flex-1 rounded-pill px-5 py-2.5">
               <span className="font-mono text-[12px] text-tsecondary">
-                00:04:32 / 00:12:08 В· 3840Г—2160
+                00:04:32 / 00:12:08 · 3840×2160
               </span>
+            </div>
+          </div>
+        </div>
+
+        {/* chrome surfaces comparison row: all SOLID, no blur */}
+        <div className="mt-8 w-full">
+          <div className="mb-3 text-sm text-tsecondary">Chrome surfaces — solid tonal</div>
+          <div className="flex flex-wrap gap-3">
+            {/* topbar sample */}
+            <div className="flex h-14 flex-1 items-center gap-3 border-b border-hairline bg-surface-1 px-5 shadow-elev1">
+              <span className="text-sm font-medium text-tprimary">Topbar</span>
+              <span className="font-mono text-[11px] text-ttertiary">SURFACE-1 + HAIRLINE</span>
+            </div>
+            {/* sidebar sample */}
+            <div className="flex h-14 flex-1 items-center gap-3 border-r border-hairline bg-surface-1 px-5 shadow-elev1">
+              <span className="text-sm font-medium text-tprimary">Sidebar</span>
+              <span className="font-mono text-[11px] text-ttertiary">SURFACE-1</span>
+            </div>
+            {/* menu sample */}
+            <div className="flex h-14 flex-1 items-center gap-3 rounded-[16px] border border-white/[.06] bg-surface-2 p-2 shadow-[0_16px_48px_rgba(0,0,0,.5)]">
+              <span className="flex h-8 items-center rounded-[10px] bg-surface-3 px-3 text-[13px] text-tprimary">
+                Menu item
+              </span>
+              <span className="text-[13px] text-tsecondary">Menu · dialog</span>
+            </div>
+            {/* segmented sample */}
+            <div className="flex h-14 flex-1 items-center justify-center rounded-pill bg-surface-2 p-1 shadow-elev1">
+              <span className="flex h-9 items-center rounded-pill bg-accent px-4 text-[13px] font-medium text-[#0A0A0C] shadow-[inset_0_1px_0_rgba(255,255,255,.35)]">
+                Active
+              </span>
+              <span className="px-4 text-[13px] text-tsecondary">Track</span>
             </div>
           </div>
         </div>

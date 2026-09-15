@@ -19,9 +19,10 @@ export const DialogContent = forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
+        // solid surface-2 chrome, radius 20, border white/6, deep shadow (v2.2 §3.2)
         "fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2",
-        "glass rounded-card p-8",
-        "shadow-[inset_0_1px_0_rgba(255,255,255,.06),0_12px_32px_rgba(0,0,0,.55)] focus:outline-none",
+        "rounded-[20px] border border-white/[.06] bg-surface-2 p-8",
+        "shadow-[0_16px_48px_rgba(0,0,0,.5)] focus:outline-none",
         className,
       )}
       {...props}

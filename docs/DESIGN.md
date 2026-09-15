@@ -35,24 +35,35 @@ steps + soft ambient shadow. Hairlines remain only as editorial dividers
 | `elev-3` | surface-3 + shadow `0 12px 32px rgba(0,0,0,.55)` (dialogs, popovers) |
 | hover | lift −2px + shadow `0 12px 28px rgba(0,0,0,.4)` + faint accent glow `0 0 0 1px rgba(110,193,255,.18)` |
 
-## 3. Glass Recipe (matte frosted) — v2.1
+## 3. Glass Whitelist — v2.2
 
-For topbar, sidebar, segmented track, floating bars, menus, dialogs:
+**backdrop-filter is allowed ONLY on small floating overlay pills:**
+video player control bar, floating selection action bar, scrub preview
+bubble, tooltips. **FORBIDDEN on:** topbar, sidebar, menus, dialogs, cards,
+segmented track, settings panels. macOS-style muddy blur on structural chrome
+is a bug.
+
+### 3.1 Glass pill recipe (the single place blur lives)
 
 ```
 background: linear-gradient(180deg, rgba(255,255,255,.09), rgba(255,255,255,.03));
 backdrop-filter: blur(28px) saturate(1.4) brightness(1.08);
 border: 1px solid rgba(255,255,255,.08);
-box-shadow: inset 0 1px 0 rgba(255,255,255,.10),   /* inner top highlight */
-            0 8px 24px rgba(0,0,0,.35);
-border-radius: per component;
+box-shadow: inset 0 1px 0 rgba(255,255,255,.10), 0 8px 24px rgba(0,0,0,.35);
+border-radius: 999px;
 ```
 
-Glass must be tested over colorful content (see /style "glass over content"
-section) — over flat dark canvas it reads as a gray slab. Dark matte, not
-smoky; text contrast stays secondary+.
+### 3.2 Structural chrome = solid tonal
 
-## 3.1 Accent Anchor Rule (v2.1)
+- **Topbar:** `surface-1` solid + bottom editorial hairline.
+- **Sidebar:** `surface-1` solid + right hairline.
+- **Menus / dialogs:** `surface-2` solid, radius 16–20, border white/6,
+  shadow `0 16px 48px rgba(0,0,0,.5)`.
+- **Cards / settings panels:** `surface-1`/`surface-2` solid per v2.
+
+Glass must still be tested over colorful content (/style section 07).
+
+## 3.3 Accent Anchor Rule (kept from v2.1, unchanged)
 
 Colorfulness without breaking monochrome discipline: **exactly 3–5 accent
 anchors per screen**, nothing else:

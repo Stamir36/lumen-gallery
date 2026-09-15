@@ -2,8 +2,8 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * GlassTopBar v2 (DESIGN.md v2 §10): 64px, matte frosted glass,
- * no bottom hairline — glass edge is enough.
+ * GlassTopBar v2.2: 64px, SOLID surface-1 + bottom editorial hairline.
+ * (No backdrop-filter on structural chrome — glass whitelist §3.)
  */
 export function GlassTopBar({
   left,
@@ -19,7 +19,7 @@ export function GlassTopBar({
   return (
     <header
       className={cn(
-        "glass sticky top-0 z-40 flex h-16 shrink-0 items-center gap-5 px-10",
+        "sticky top-0 z-40 flex h-16 shrink-0 items-center gap-5 border-b border-hairline bg-surface-1 px-10",
         className,
       )}
     >

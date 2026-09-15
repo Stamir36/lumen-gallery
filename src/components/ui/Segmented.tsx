@@ -27,7 +27,8 @@ export function Segmented<T extends string>({
       role="tablist"
       aria-label={ariaLabel}
       className={cn(
-        "glass inline-flex h-11 items-center gap-1 rounded-pill p-1",
+        // solid surface-2 track — NO blur (glass whitelist v2.2)
+        "inline-flex h-11 items-center gap-1 rounded-pill bg-surface-2 p-1",
         className,
       )}
     >

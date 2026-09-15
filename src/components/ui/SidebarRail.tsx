@@ -36,7 +36,8 @@ export function SidebarRail({
     <TooltipProvider delayDuration={200}>
       <nav
         className={cn(
-          "glass flex h-full flex-col transition-[width] duration-[160ms] ease-out",
+          // solid surface-1 + right hairline (v2.2 chrome, no blur)
+          "flex h-full flex-col border-r border-hairline bg-surface-1 transition-[width] duration-[160ms] ease-out",
           wide ? "w-[260px]" : "w-[68px]",
           className,
         )}

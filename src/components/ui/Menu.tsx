@@ -22,8 +22,9 @@ export const MenuContent = forwardRef<
       ref={ref}
       sideOffset={sideOffset}
       className={cn(
-        "glass z-50 min-w-52 rounded-control p-2",
-        "shadow-[inset_0_1px_0_rgba(255,255,255,.06),0_12px_32px_rgba(0,0,0,.55)]",
+        // solid surface-2 chrome (v2.2 §3.2) — no blur
+        "z-50 min-w-52 rounded-[16px] border border-white/[.06] bg-surface-2 p-2",
+        "shadow-[0_16px_48px_rgba(0,0,0,.5)]",
         className,
       )}
       {...props}
