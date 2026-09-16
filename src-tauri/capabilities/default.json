@@ -1,19 +1,21 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "enables the default permissions",
-  "windows": [
-    "main"
-  ],
-    "permissions": [
+  "description": "LUMEN default capability",
+  "windows": ["main"],
+  "permissions": [
     "core:default",
-    "dialog:allow-open",
-    "dialog:allow-open-file",
-    "window:allow-maximize",
-    "window:allow-unminimize",
-    "window:allow-toggle-maximize",
-    "window:allow-set-size",
-    "window:allow-set-position",
-    "window:allow-brush-for-dialog"
+    "core:window:allow-minimize",
+    "core:window:allow-maximize",
+    "core:window:allow-unmaximize",
+    "core:window:allow-toggle-maximize",
+    "core:window:allow-is-maximized",
+    "core:window:allow-start-dragging",
+    "core:window:allow-close",
+    "core:window:allow-set-title",
+    "core:event:allow-listen",
+    "core:event:allow-emit",
+    "dialog:default",
+    "dialog:allow-open"
   ]
 }

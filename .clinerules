@@ -35,6 +35,8 @@
 - **Run typecheck (`tsc --noEmit`) + `cargo clippy` before every commit.**
 - **Checkpoint commit after EVERY completed checklist item** (`chore: checkpoint ...`)
   so a stream drop never loses more than one step.
+- **Never guess Tauri v2 permission names**; verify against plugin docs or the
+  expected-list printed in build errors.
 - Conventional Commits: `feat:`, `fix:`, `docs:`, `refactor:`, `chore:`, etc.
   One conventional commit per phase (checkpoints are `chore:` and allowed in addition).
 - After every UI phase: run dev server, screenshot, self-review token-by-token
