@@ -7,7 +7,7 @@ import App from "./App";
 import StylePage from "./pages/StylePage";
 import OnboardingPage from "./pages/OnboardingRoute";
 import SettingsPage from "./pages/SettingsPage";
-import { initI18n, readSavedLang } from "./i18n";
+import { initI18n, readSavedLang, applyCursorPreference } from "./i18n";
 import { initScanListener } from "./state/library";
 import "./index.css";
 
@@ -22,6 +22,7 @@ async function bootstrap() {
   // apply the persisted/system language BEFORE the first render
   const saved = await readSavedLang();
   await initI18n(saved);
+  await applyCursorPreference().catch(() => undefined);
 
   ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
     <React.StrictMode>

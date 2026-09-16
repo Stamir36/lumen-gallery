@@ -103,6 +103,13 @@ body::after {
 ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.12); border-radius: 999px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.2); }
 
+/* Cursor: default on controls (v2.2); .cursor-pointer on <html> opts in */
+button, [role="button"], a, [data-clickable] { cursor: default; }
+html.cursor-pointer button,
+html.cursor-pointer [role="button"],
+html.cursor-pointer a,
+html.cursor-pointer [data-clickable] { cursor: pointer; }
+
 /* ============ Utilities (v2) ============ */
 
 /* editorial micro-label — max 1-2 per screen */

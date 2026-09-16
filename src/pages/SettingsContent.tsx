@@ -18,6 +18,11 @@ import { IconButton } from "@/components/ui/IconButton";
 import { api, formatBytes, type RootRow } from "@/lib/api";
 import { getDb } from "@/lib/db";
 import { useRootsStore } from "@/state/library";
+import {
+  readSetting,
+  writeSetting,
+  CURSOR_KEY,
+} from "@/i18n";
 
 /** Editorial numbered section header per DESIGN.md v2.2 §6. */
 function Section({
@@ -69,6 +74,22 @@ export function SettingsContent() {
   const [message, setMessage] = useState("");
   const [failed, setFailed] = useState(false);
   const [active, setActive] = useState<string>("libraries");
+  const [cursorPointer, setCursorPointer] = useState(false);
+
+  useEffect(() => {
+    void readSetting(CURSOR_KEY).then((v) =>
+      setCursorPointer(v === "true"),
+    );
+  }, []);
+
+  const toggleCursor = async (on: boolean) => {
+    setCursorPointer(on);
+    try {
+      await writeSetting(CURSOR_KEY, String(on));
+    } catch {
+      /* class already applied optimistically */
+    }
+  };
 
   useEffect(() => {
     let alive = true;
@@ -226,6 +247,28 @@ export function SettingsContent() {
             <div className="mt-2 flex items-center justify-between border-t border-hairline py-4">
               <span className="text-sm text-tprimary">{t("settings.theme")}</span>
               <span className="text-sm text-tsecondary">{t("settings.dark")}</span>
+            </div>
+            <div className="flex items-center justify-between border-t border-hairline py-4">
+              <span className="text-sm text-tprimary">
+                {t("settings.cursor_pointer")}
+              </span>
+              <button
+                role="switch"
+                aria-checked={cursorPointer}
+                aria-label={t("settings.cursor_pointer")}
+                onClick={() => void toggleCursor(!cursorPointer)}
+                className={
+                  "relative h-6 w-11 rounded-pill transition-colors duration-[160ms] ease-out " +
+                  (cursorPointer ? "bg-accent" : "bg-surface-3")
+                }
+              >
+                <span
+                  className={
+                    "absolute top-0.5 h-5 w-5 rounded-pill bg-white transition-all duration-[160ms] ease-out " +
+                    (cursorPointer ? "left-[22px]" : "left-0.5")
+                  }
+                />
+              </button>
             </div>
             <SoonRow label={t("settings.accent_color")} soon={t("settings.soon")} />
             <SoonRow label={t("settings.grid_density")} soon={t("settings.soon")} />

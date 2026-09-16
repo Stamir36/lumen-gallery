@@ -73,4 +73,39 @@ export async function readSavedLang(): Promise<Lang | null> {
   }
 }
 
+/** Generic settings kv read/write helpers (frontend-owned keys). */
+export async function readSetting(key: string): Promise<string | null> {
+  try {
+    const { getDb } = await import("@/lib/db");
+    const db = await getDb();
+    const rows = await db.select<{ value: string }[]>(
+      "SELECT value FROM settings WHERE key = ?1",
+      [key],
+    );
+    return rows[0]?.value ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export async function writeSetting(key: string, value: string) {
+  const { getDb } = await import("@/lib/db");
+  const db = await getDb();
+  await db.execute(
+    "INSERT INTO settings(key, value) VALUES (?1, ?2) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+    [key, value],
+  );
+}
+
+/** Cursor pointer preference (default OFF). */
+export const CURSOR_KEY = "ui.cursor_pointer";
+export async function applyCursorPreference() {
+  const v = await readSetting(CURSOR_KEY);
+  document.documentElement.classList.toggle("cursor-pointer", v === "true");
+}
+export async function setCursorPointer(on: boolean) {
+  document.documentElement.classList.toggle("cursor-pointer", on);
+  await writeSetting(CURSOR_KEY, String(on));
+}
+
 export default i18n;
