@@ -2,14 +2,14 @@
 //! dedupe by (path, mtime, size), SQLite upsert, progress events, fs watcher.
 
 use std::collections::{HashMap, HashSet};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::Arc;
 use std::time::UNIX_EPOCH;
 
 use tokio::sync::Mutex as AsyncMutex;
 
 use serde::Serialize;
-use sqlx::{Row, SqlitePool};
+use sqlx::{Connection as _, SqlitePool};
 use tauri::{AppHandle, Emitter};
 use walkdir::WalkDir;
 
@@ -103,48 +103,49 @@ pub async fn whitelist(pool: &SqlitePool) -> HashSet<String> {
         .collect()
 }
 
-/// Cheap dedupe check: does (path, mtime, size) already exist unchanged?
-async fn is_unchanged(pool: &SqlitePool, path: &str, mtime: i64, size: i64) -> bool {
-    let row = sqlx::query("SELECT mtime, size FROM media WHERE path = ?1")
-        .bind(path)
-        .fetch_optional(pool)
+/// Batched upsert: chunks of 500 rows per transaction, conditional on a real
+/// change (missing row, or mtime/size differ) so rescans only count writes.
+const UPSERT_CHUNK: usize = 500;
+
+async fn upsert_chunk(
+    tx: &mut sqlx::SqliteConnection,
+    rows: &[Candidate],
+) -> Result<u64, String> {
+    let mut changed = 0u64;
+    for c in rows {
+        let res = sqlx::query(
+            r#"INSERT INTO media (root_id, path, kind, ext, size, mtime)
+               VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+               ON CONFLICT(path) DO UPDATE SET
+                 root_id = excluded.root_id,
+                 kind    = excluded.kind,
+                 ext     = excluded.ext,
+                 size    = excluded.size,
+                 mtime   = excluded.mtime
+               WHERE media.mtime IS NOT ?5 OR media.size IS NOT ?6"#,
+        )
+        .bind(c.root_id)
+        .bind(&c.path)
+        .bind(c.kind)
+        .bind(&c.ext)
+        .bind(c.size)
+        .bind(c.mtime)
+        .execute(&mut *tx)
         .await
-        .ok()
-        .flatten();
-    match row {
-        Some(r) => r.get::<i64, _>("mtime") == mtime && r.get::<i64, _>("size") == size,
-        None => false,
+        .map_err(|e| e.to_string())?;
+        changed += res.rows_affected();
     }
+    Ok(changed)
 }
 
-async fn upsert(
-    pool: &SqlitePool,
+/// A candidate file collected in pass 1 (metadata read once during the walk).
+struct Candidate {
     root_id: i64,
-    path: &str,
-    kind: &str,
-    ext: &str,
+    path: String,
+    kind: &'static str,
+    ext: String,
     size: i64,
     mtime: i64,
-) -> bool {
-    sqlx::query(
-        r#"INSERT INTO media (root_id, path, kind, ext, size, mtime)
-           VALUES (?1, ?2, ?3, ?4, ?5, ?6)
-           ON CONFLICT(path) DO UPDATE SET
-             root_id = excluded.root_id,
-             kind    = excluded.kind,
-             ext     = excluded.ext,
-             size    = excluded.size,
-             mtime   = excluded.mtime"#,
-    )
-    .bind(root_id)
-    .bind(path)
-    .bind(kind)
-    .bind(ext)
-    .bind(size)
-    .bind(mtime)
-    .execute(pool)
-    .await
-    .is_ok()
 }
 
 fn emit_progress(
@@ -196,8 +197,8 @@ pub async fn scan_root(
 
     let allowed = whitelist(pool).await;
 
-    // Pass 1: collect candidate files (fast, no DB round-trips).
-    let mut candidates: Vec<PathBuf> = Vec::new();
+    // Pass 1: collect candidates WITH metadata (one fs round-trip per file).
+    let mut candidates: Vec<Candidate> = Vec::new();
     let walker = WalkDir::new(root_path).follow_links(false).into_iter();
 
     for entry in walker.filter_map(|e| e.ok()) {
@@ -205,12 +206,14 @@ pub async fn scan_root(
             continue;
         }
         let is_dir = entry.file_type().is_dir();
-        if let Ok(meta) = entry.metadata() {
-            if is_hidden_or_system(&meta) {
-                continue; // skip hidden/system files AND dirs (no descent)
-            }
+        let meta = match entry.metadata() {
+            Ok(m) => m,
+            Err(_) => continue, // unreadable — skip
+        };
+        if is_hidden_or_system(&meta) {
+            continue; // skip hidden/system files AND dirs (no descent)
         }
-        if !is_dir && entry.file_type().is_file() {
+        if !is_dir && meta.is_file() {
             let ext = entry
                 .path()
                 .extension()
@@ -218,7 +221,14 @@ pub async fn scan_root(
                 .unwrap_or_default()
                 .to_lowercase();
             if !ext.is_empty() && allowed.contains(&ext) {
-                candidates.push(entry.path().to_path_buf());
+                candidates.push(Candidate {
+                    root_id,
+                    path: entry.path().to_string_lossy().to_string(),
+                    kind: kind_for_ext(&ext),
+                    ext,
+                    size: meta.len() as i64,
+                    mtime: mtime_secs(&meta),
+                });
             }
         }
     }
@@ -229,31 +239,31 @@ pub async fn scan_root(
 
     emit_progress(app, root_id, "walk", 0, total, String::new(), 0);
 
-    for path in &candidates {
-        done += 1;
-        let meta = match std::fs::metadata(path) {
-            Ok(m) => m,
-            Err(_) => continue, // vanished mid-scan
-        };
-        let mtime = mtime_secs(&meta);
-        let size = meta.len() as i64;
-        let path_str = path.to_string_lossy().to_string();
-        let ext = path
-            .extension()
-            .and_then(|e| e.to_str())
-            .unwrap_or_default()
-            .to_lowercase();
-
-        if !is_unchanged(pool, &path_str, mtime, size).await
-            && upsert(pool, root_id, &path_str, kind_for_ext(&ext), &ext, size, mtime).await
-        {
-            added += 1;
-        }
-
-        if done % 25 == 0 || done == total {
-            emit_progress(app, root_id, "walk", done, total, path_str, added);
+    // Pass 1b: batched upserts — 500 rows per transaction.
+    let started = std::time::Instant::now();
+    let mut conn = pool
+        .acquire()
+        .await
+        .map_err(|e| format!("db acquire failed: {e}"))?;
+    for chunk in candidates.chunks(UPSERT_CHUNK) {
+        let mut tx = conn
+            .begin()
+            .await
+            .map_err(|e| format!("tx begin failed: {e}"))?;
+        let n = upsert_chunk(&mut tx, chunk).await?;
+        tx.commit().await.map_err(|e| format!("tx commit failed: {e}"))?;
+        added += n;
+        done = (done + chunk.len() as u64).min(total);
+        if let Some(last) = chunk.last() {
+            emit_progress(app, root_id, "walk", done, total, last.path.clone(), added);
         }
     }
+    drop(conn);
+    log::info!(
+        "scan of {root_id} ({} files) took {:.2}s ({added} changed)",
+        total,
+        started.elapsed().as_secs_f32()
+    );
 
     // Pass 2: drop rows whose files no longer exist under this root.
     // NEVER delete when the root itself is gone/unreadable (ejected drive,
