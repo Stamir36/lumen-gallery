@@ -2,14 +2,15 @@
 
 Phase 0 (docs) — done: `docs/SPEC.md`, `docs/DESIGN.md`, `.clinerules`, `TODO.md`.
 
-## Phase 1 — Project skeleton
+## Phase 1 — Project skeleton (DONE)
 - [x] Scaffold Tauri v2 + React 18 + Vite + TS strict + Tailwind v4 + shadcn/ui (hand-rolled shadcn-style on Radix)
 - [x] Install zustand, @tanstack/react-query, framer-motion, lucide-react, react-virtuoso, exifreader (exifreader deferred to Phase 4 — metadata phase)
 - [x] Bundle Inter + JetBrains Mono locally (@fontsource-variable, no CDN)
 - [x] Define design tokens in Tailwind v4 `@theme` per docs/DESIGN.md (also as CSS vars)
-- [ ] tauri-plugin-sql wired, SQLite migrations v1 (items, roots, albums, album_items, favorites, trash flag, watch_progress, settings) — planned next in Phase 2 (DB is scanning-related)
+- [ ] tauri-plugin-sql wired (Phase 2 scope — sql plugin + migrations deferred)
 - [x] App shell: canvas + grain overlay + scrollbars; /style living style sheet — **v2.2 soft glass editorial** (glass whitelist: pills only; solid tonal chrome; accent anchors; "glass pills over content" + "chrome surfaces" demo sections; screenshot QA pending: no browser tool in env)
-- [x] Conventional commit `feat: design system` + `feat: design system v2` + `style: glass & accent calibration v2.1` + `style: chrome de-glass v2.2`
+- [x] Frameless window + custom title bar (drag-region spacer, window controls, maximize icon swap)
+- [x] Conventional commits: `feat: design system`, `feat: design system v2`, `feat: frameless window + custom title bar`, `style: glass & accent calibration v2.2`
 
 ## Phase 2 — Libraries & scanning
 - [ ] Rust: fs walk (whitelist, skip hidden/system), volumes info, fs watch (2s debounce)

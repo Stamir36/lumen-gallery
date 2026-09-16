@@ -24,4 +24,9 @@ log = "0.4"
 tauri = { version = "2.11.3", features = [] }
   tauri-plugin-log = "2"
 tauri-plugin-dialog = "2"
+tauri-plugin-sql = { version = "2", features = ["sqlite"] }
 sysinfo = "0.33"
+walkdir = "2"
+notify = "6"
+thiserror = "2"
+sqlx = { version = "0.8", default-features = false, features = ["sqlite", "runtime-tokio", "macros"] }

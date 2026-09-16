@@ -5,7 +5,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "sonner";
 import App from "./App";
 import StylePage from "./pages/StylePage";
+import { initScanListener } from "./state/library";
 import "./index.css";
+
+// subscribe to Rust scan-progress events for the whole session
+initScanListener();
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: false } },

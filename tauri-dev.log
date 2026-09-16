@@ -2,17 +2,29 @@ $ tauri "dev"
      Running BeforeDevCommand (`pnpm dev`)
 $ vite
 
-  [32m[1mVITE[22m v6.4.3[39m  [2mready in [0m[1m1606[22m[2m[0m ms[22m
+  [32m[1mVITE[22m v6.4.3[39m  [2mready in [0m[1m4760[22m[2m[0m ms[22m
 
   [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m1420[22m/[39m
+        Warn Waiting for your frontend dev server to start on http://localhost:1420/...
      Running DevCommand (`cargo  run --no-default-features --color always --`)
         Info Watching C:\Develop\Agents AI\Gallary\src-tauri for changes...
-[1m[92m   Compiling[0m tauri-runtime v2.11.3
-[1m[92m   Compiling[0m wry v0.55.1
+[1m[93mwarning[0m[1m[97m: unused import: `SystemTime`[0m
+ [1m[96m--> [0msrc\scan.rs:6:27
+  [1m[96m|[0m
+[1m[96m6[0m [1m[96m|[0m use std::time::{Duration, SystemTime, UNIX_EPOCH};
+  [1m[96m|[0m                           [1m[93m^^^^^^^^^^[0m
+  [1m[96m|[0m
+  [1m[96m= [0m[1m[97mnote[0m: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+[1m[93mwarning[0m: `lumen` (lib) generated 1 warning (run `cargo fix --lib -p lumen` to apply 1 suggestion)
+[1m[92m    Finished[0m `dev` profile [unoptimized + debuginfo] target(s) in 0.76s
+[1m[92m     Running[0m `target\debug\lumen.exe`
+        Info File src-tauri\src\scan.rs changed. Rebuilding application...
+     Running DevCommand (`cargo  run --no-default-features --color always --`)
+        Info File src-tauri\src\scan.rs changed. Rebuilding application...
+     Running DevCommand (`cargo  run --no-default-features --color always --`)
 [1m[92m   Compiling[0m lumen v0.1.0 (C:\Develop\Agents AI\Gallary\src-tauri)
-[1m[96m    Building[0m [=======================> ] 355/363: wry, lu…[1m[96m    Building[0m [=======================> ] 356/363: wry, ta…[1m[96m    Building[0m [=======================> ] 357/363: wry                                                                 [1m[92m   Compiling[0m tauri-runtime-wry v2.11.4
-[1m[96m    Building[0m [=======================> ] 357/363: wry, ta…[1m[96m    Building[0m [=======================> ] 358/363: tauri-r…                                                            [1m[92m   Compiling[0m tauri v2.11.5
-[1m[96m    Building[0m [=======================> ] 358/363: tauri, …[1m[96m    Building[0m [=======================> ] 359/363: tauri                                                               [1m[92m   Compiling[0m tauri-plugin-log v2.9.1
-[1m[96m    Building[0m [=======================> ] 359/363: tauri, …[1m[96m    Building[0m [=======================> ] 360/363: tauri   [1m[96m    Building[0m [=======================> ] 361/363: lumen   [1m[96m    Building[0m [=======================> ] 362/363: lumen(b…                                                            [1m[92m    Finished[0m `dev` profile [unoptimized + debuginfo] target(s) in 1m 18s
+[1m[96m    Building[0m [=======================> ] 471/473: lumen   [2m12:41:14[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2mpackage.json[22m
+[1m[96m    Building[0m [=======================> ] 472/473: lumen(b…                                                            [1m[92m    Finished[0m `dev` profile [unoptimized + debuginfo] target(s) in 19.46s
 [1m[92m     Running[0m `target\debug\lumen.exe`
 [ELIFECYCLE] Command failed with exit code -1.

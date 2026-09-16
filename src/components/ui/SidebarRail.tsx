@@ -14,6 +14,8 @@ export interface SidebarItem {
   capacity?: { ratio: number; caption: string };
   active?: boolean;
   onSelect?: () => void;
+  /** optional trailing action (e.g. rescan a root) */
+  action?: { label: string; icon: ReactNode; onClick: () => void };
 }
 
 /**
@@ -81,7 +83,7 @@ function SidebarRow({ item, wide }: { item: SidebarItem; wide: boolean }) {
     <button
       onClick={item.onSelect}
       className={cn(
-        "flex h-11 w-full items-center gap-3 rounded-control px-3 text-left transition-all duration-[160ms] ease-out",
+        "group flex h-11 w-full items-center gap-3 rounded-control px-3 text-left transition-all duration-[160ms] ease-out",
         item.active
           ? // accent anchor: 14% tinted glass + accent icon + accent counter
             "bg-accent/[.14] text-tprimary shadow-[inset_0_1px_0_rgba(110,193,255,.15)] [&_svg]:text-accent"
@@ -105,6 +107,27 @@ function SidebarRow({ item, wide }: { item: SidebarItem; wide: boolean }) {
               )}
             >
               {item.badge}
+            </span>
+          )}
+          {item.action && (
+            <span
+              role="button"
+              tabIndex={0}
+              aria-label={item.action.label}
+              title={item.action.label}
+              onClick={(e) => {
+                e.stopPropagation();
+                item.action?.onClick();
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.stopPropagation();
+                  item.action?.onClick();
+                }
+              }}
+              className="flex h-7 w-7 items-center justify-center rounded-[10px] text-ttertiary opacity-0 transition-all duration-[160ms] hover:bg-surface-3 hover:text-tprimary group-hover:opacity-100 focus-visible:opacity-100 [&_svg]:size-4"
+            >
+              {item.action.icon}
             </span>
           )}
         </>
