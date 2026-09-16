@@ -7,8 +7,11 @@ pub const DEFAULT_EXTENSIONS: &str =
 pub const IMAGE_EXTENSIONS: &[&str] =
     &["jpg", "jpeg", "png", "gif", "webp", "avif", "bmp"];
 
-/// SQLite database file name (relative to app config dir).
-pub const DB_URL: &str = "sqlite:lumen.db";
+/// SQLite database URL with pragmas baked into the connection string:
+/// foreign keys (cascades!), WAL journaling, NORMAL fsync.
+/// tauri-plugin-sql (sqlx SqliteConnectOptions) parses these options.
+pub const DB_URL: &str =
+  "sqlite:lumen.db?mode=rwc&foreign_keys=true&journal_mode=WAL&synchronous=NORMAL";
 
 pub const MIGRATION_V1: &str = r#"
 -- roots: user-added library roots (folders / drives)

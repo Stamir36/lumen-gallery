@@ -53,6 +53,29 @@ pub fn run() {
             .build(),
         )?;
       }
+
+      // Verify pragmas once the pool exists. The pool is created lazily by
+      // the plugin on first frontend use, so retry briefly, then log once.
+      let handle = app.handle().clone();
+      tauri::async_runtime::spawn(async move {
+        for _ in 0..30 {
+          tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+          if let Ok(pool) = commands::pool_for(&handle).await {
+            let fk: i64 =
+              sqlx::query_scalar("PRAGMA foreign_keys").fetch_one(&pool).await.unwrap_or(0);
+            let mode: String = sqlx::query_scalar("PRAGMA journal_mode")
+              .fetch_one(&pool)
+              .await
+              .unwrap_or_default();
+            log::info!("sqlite pragmas: foreign_keys={fk} journal_mode={mode}");
+            if fk != 1 {
+              log::warn!("foreign_keys pragma is OFF — ON DELETE CASCADE will not fire");
+            }
+            break;
+          }
+        }
+      });
+
       Ok(())
     })
     .run(tauri::generate_context!())
