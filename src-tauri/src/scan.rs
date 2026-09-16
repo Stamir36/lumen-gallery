@@ -148,6 +148,30 @@ struct Candidate {
     mtime: i64,
 }
 
+/// Cooperative cancel tokens keyed by root_id (user pressed Cancel/Back).
+static CANCELLED: std::sync::Mutex<Option<HashSet<i64>>> = std::sync::Mutex::new(None);
+
+pub fn request_cancel(root_id: i64) {
+    CANCELLED.lock().unwrap().get_or_insert_with(HashSet::new).insert(root_id);
+}
+
+fn is_cancelled(root_id: i64) -> bool {
+    CANCELLED
+        .lock()
+        .unwrap()
+        .as_ref()
+        .map(|s| s.contains(&root_id))
+        .unwrap_or(false)
+}
+
+fn clear_cancel(root_id: i64) {
+    if let Some(s) = CANCELLED.lock().unwrap().as_mut() {
+        s.remove(&root_id);
+    }
+}
+
+
+
 fn emit_progress(
     app: &AppHandle,
     root_id: i64,
@@ -194,6 +218,7 @@ pub async fn scan_root(
         return Err("already scanning".to_string());
     }
     let _guard = lock.lock().await;
+    clear_cancel(root_id);
 
     let allowed = whitelist(pool).await;
 
@@ -231,6 +256,10 @@ pub async fn scan_root(
                 });
             }
         }
+        if is_cancelled(root_id) {
+            log::info!("scan of root {root_id} cancelled by user");
+            return Ok((0, 0));
+        }
     }
 
     let total = candidates.len() as u64;
@@ -245,7 +274,16 @@ pub async fn scan_root(
         .acquire()
         .await
         .map_err(|e| format!("db acquire failed: {e}"))?;
+    let mut cancelled = false;
+    if is_cancelled(root_id) {
+        cancelled = true;
+    }
     for chunk in candidates.chunks(UPSERT_CHUNK) {
+        if is_cancelled(root_id) {
+            cancelled = true;
+            log::info!("scan of root {root_id} cancelled during upsert");
+            break;
+        }
         let mut tx = conn
             .begin()
             .await
@@ -260,10 +298,17 @@ pub async fn scan_root(
     }
     drop(conn);
     log::info!(
-        "scan of {root_id} ({} files) took {:.2}s ({added} changed)",
+        "scan of {root_id} ({} files) took {:.2}s ({} changed{})",
         total,
-        started.elapsed().as_secs_f32()
+        started.elapsed().as_secs_f32(),
+        added,
+        if cancelled { ", cancelled" } else { "" }
     );
+    if cancelled {
+        clear_cancel(root_id);
+        emit_progress(app, root_id, "finalize", done, total, String::new(), added);
+        return Ok((done, added));
+    }
 
     // Pass 2: drop rows whose files no longer exist under this root.
     // NEVER delete when the root itself is gone/unreadable (ejected drive,

@@ -12,6 +12,11 @@
     "go_to_library": "К библиотеке",
     "scanning_title": "Сканирование библиотеки",
     "scan_in_background": "Сканировать в фоне",
+    "cancel_scan": "Отменить сканирование",
+    "scan_done_title": "Сканирование завершено",
+    "scan_done_summary": "{{count}} медиафайлов добавлено",
+    "to_library": "К библиотеке ({{count}})",
+    "add_another": "Добавить ещё одну библиотеку",
     "waiting": "ожидание сканера…"
   },
   "scan_progress": {

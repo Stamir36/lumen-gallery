@@ -12,6 +12,11 @@
     "go_to_library": "Go to library",
     "scanning_title": "Scanning library",
     "scan_in_background": "Scan in background",
+    "cancel_scan": "Cancel scan",
+    "scan_done_title": "Scan complete",
+    "scan_done_summary": "{{count}} media files added",
+    "to_library": "To library ({{count}})",
+    "add_another": "Add another library",
     "waiting": "waiting for scanner…"
   },
   "scan_progress": {

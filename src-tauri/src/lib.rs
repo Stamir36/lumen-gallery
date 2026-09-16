@@ -41,6 +41,7 @@ pub fn run() {
       commands::rescan_all,
       commands::list_media,
       commands::library_stats,
+      commands::cancel_scan,
       cache::thumbnail_cache_size,
       cache::clear_thumbnail_cache,
     ])

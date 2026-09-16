@@ -7,6 +7,12 @@ use tauri_plugin_sql::{DbInstances, DbPool};
 
 use crate::db::DB_URL;
 use crate::scan::{self, MediaRow};
+
+/// Tauri command: cooperatively abort the running scan of `root_id`.
+#[tauri::command]
+pub fn cancel_scan(root_id: i64) {
+    scan::request_cancel(root_id);
+}
 use crate::volumes::{self, VolumeInfo};
 use crate::watch::{spawn_watcher, WatcherRegistry};
 

@@ -71,6 +71,7 @@ export const api = {
       filter: filter === "all" ? null : filter,
     }),
   libraryStats: () => invoke<[number, number]>("library_stats"),
+  cancelScan: (rootId: number) => invoke<void>("cancel_scan", { rootId }),
 };
 
 /** Human-readable byte size, mono-friendly (e.g. "212 GB"). */

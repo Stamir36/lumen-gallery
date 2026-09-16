@@ -20,6 +20,17 @@ import { IconButton } from "@/components/ui/IconButton";
 import { Onboarding } from "@/pages/Onboarding";
 import { api, formatBytes, formatCount } from "@/lib/api";
 import { useRootsStore, useScanStore } from "@/state/library";
+
+/** Every "Add library" entry point resets the onboarding state machine. */
+function useOpenOnboarding() {
+  const resetToPicker = useScanStore((s) => s.resetToPicker);
+  const [show, setShow] = useState(false);
+  const open = () => {
+    resetToPicker();
+    setShow(true);
+  };
+  return { show, open, close: () => setShow(false) };
+}
 import { getDb } from "@/lib/db";
 import { useNavigate } from "react-router-dom";
 
@@ -33,7 +44,7 @@ export default function App() {
   const { roots, loaded, load, rescan, remove } = useRootsStore();
   const { scanningRootId, done, added } = useScanStore();
   const [stats, setStats] = useState<[number, number]>([0, 0]);
-  const [showOnboarding, setShowOnboarding] = useState(false);
+  const onboarding = useOpenOnboarding();
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -95,7 +106,7 @@ export default function App() {
               <div className="flex flex-col gap-3">
                 <LanguageDropdown />
                 <button
-                  onClick={() => setShowOnboarding(true)}
+                  onClick={onboarding.open}
                   className="flex h-11 w-full items-center gap-3 rounded-control px-3 text-left text-sm text-tsecondary transition-all duration-[160ms] hover:bg-white/[.06] hover:text-tprimary"
                 >
                   <Plus size={18} />
@@ -127,7 +138,7 @@ export default function App() {
                 <NavTooltip label={t("sidebar.add_library")}>
                   <IconButton
                     label={t("sidebar.add_library")}
-                    onClick={() => setShowOnboarding(true)}
+                    onClick={onboarding.open}
                   >
                     <Plus size={18} />
                   </IconButton>
@@ -146,8 +157,8 @@ export default function App() {
         )}
 
         <main className="min-w-0 flex-1 overflow-hidden">
-          {noRoots || showOnboarding ? (
-            <Onboarding onDone={() => setShowOnboarding(false)} />
+          {noRoots || onboarding.show ? (
+            <Onboarding onDone={onboarding.close} />
           ) : (
             <div className="flex h-full flex-col items-center justify-center gap-6 px-10">
               <h1 className="text-4xl font-bold tracking-tight text-tprimary">

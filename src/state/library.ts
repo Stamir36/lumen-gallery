@@ -4,6 +4,9 @@ import { api, type ScanProgress, type RootRow } from "@/lib/api";
 
 const LOG_TAIL = 200;
 
+/** Onboarding view state machine (FIX 6). */
+export type OnboardingView = "picker" | "scanning" | "done";
+
 export interface LogLine {
   at: number;
   text: string;
@@ -18,6 +21,11 @@ interface ScanState {
   currentPath: string;
   log: LogLine[];
   lastScanAt: number | null;
+  /** Explicit onboarding view state; reset() always returns to picker. */
+  view: OnboardingView;
+  setView: (v: OnboardingView) => void;
+  /** Reset to the picker state (used by EVERY add-library entry point). */
+  resetToPicker: () => void;
   setScanning: (rootId: number | null) => void;
   applyProgress: (p: ScanProgress) => void;
   finish: () => void;
@@ -33,6 +41,20 @@ export const useScanStore = create<ScanState>((set) => ({
   currentPath: "",
   log: [],
   lastScanAt: null,
+  view: "picker",
+
+  setView: (view) => set({ view }),
+
+  resetToPicker: () =>
+    set({
+      view: "picker",
+      scanningRootId: null,
+      phase: "idle",
+      done: 0,
+      total: 0,
+      added: 0,
+      currentPath: "",
+    }),
 
   setScanning: (rootId) =>
     set({

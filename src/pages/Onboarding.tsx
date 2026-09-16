@@ -1,43 +1,78 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { open } from "@tauri-apps/plugin-dialog";
-import { HardDrive, FolderPlus, RefreshCw, CheckCircle2 } from "lucide-react";
+import {
+  HardDrive,
+  FolderPlus,
+  RefreshCw,
+  CheckCircle2,
+  X,
+} from "lucide-react";
 import { PillButton } from "@/components/ui/PillButton";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { api, formatBytes, formatCount, type VolumeInfo } from "@/lib/api";
 import { useRootsStore, useScanStore } from "@/state/library";
 
 /**
- * Onboarding root picker per DESIGN.md v2.2:
- * chunky drive cards (radius 22, padding 28, tonal surface), accent gradient
- * capacity bar, hover lift; folder picker; dashed hairline dropzone.
+ * Onboarding root picker per DESIGN.md v2.2 — explicit state machine:
+ * picker (drives + volumes) | scanning (live progress) | done (accent CTA).
+ * Every entry point resets to `picker` via resetToPicker().
  */
 export function Onboarding({ onDone }: { onDone: () => void }) {
   const { t } = useTranslation();
   const [volumes, setVolumes] = useState<VolumeInfo[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
-  const [addedLabel, setAddedLabel] = useState<string | null>(null);
   const { refresh } = useRootsStore();
-  const { scanningRootId, phase, done, total, added, log } = useScanStore();
+  const {
+    view,
+    setView,
+    resetToPicker,
+    scanningRootId,
+    total,
+    added,
+    setScanning,
+    finish,
+  } = useScanStore();
 
   useEffect(() => {
-    api
-      .getVolumes()
-      .then(setVolumes)
-      .catch(() => setVolumes([]));
-  }, []);
+    if (view === "picker") {
+      api
+        .getVolumes()
+        .then(setVolumes)
+        .catch(() => setVolumes([]));
+    }
+  }, [view]);
+
+  const scanning = scanningRootId !== null;
 
   const add = async (path: string, kind?: string, label?: string) => {
     setBusy(path);
     try {
-      await api.addRoot(path, kind, label);
+      const root = await api.addRoot(path, kind, label);
       await refresh();
-      setAddedLabel(label ?? path);
+      setScanning(root.id);
+      setView("scanning");
     } catch (e) {
       console.error(e);
     } finally {
       setBusy(null);
     }
+  };
+
+  /** Scan finished (finalize event) -> done view. */
+  useEffect(() => {
+    if (view === "scanning" && !scanning && total > 0) {
+      finish();
+      setView("done");
+    }
+  }, [view, scanning, total, finish, setView]);
+
+  const cancelScan = async () => {
+    if (scanningRootId !== null) {
+      await api.cancelScan(scanningRootId).catch(() => undefined);
+    }
+    finish();
+    resetToPicker();
   };
 
   const chooseFolder = async () => {
@@ -47,9 +82,6 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
     }
   };
 
-  const scanning = scanningRootId !== null;
-  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-
   /** Drag-drop a folder: HTML5 drop carries the absolute path. */
   const onDrop = async (e: React.DragEvent) => {
     e.preventDefault();
@@ -57,73 +89,36 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
     if (path) await add(path, "folder");
   };
 
-  if (scanning) {
+  if (view === "scanning" || (view !== "done" && scanning)) {
+    return <ScanningView onCancel={() => void cancelScan()} />;
+  }
+
+  if (view === "done") {
     return (
       <div className="h-full overflow-y-auto px-10 py-16">
         <div className="mx-auto w-full max-w-3xl">
-          <h1 className="text-4xl font-bold tracking-tight text-tprimary">
-            {t("onboarding.scanning_title")}
-          </h1>
-          <p className="mt-2 text-[15px] text-tsecondary">
-            {addedLabel ?? t("sidebar.library")} — {t("onboarding.subtitle")}
-          </p>
-
-          <GlassCard className="mt-10">
-            <div className="flex items-end justify-between gap-8">
-              <div className="flex flex-col gap-1">
-                <span className="text-sm text-tsecondary">
-                  {t("scan_progress.files_seen")}
-                </span>
-                <span className="font-mono text-5xl tracking-tight text-tprimary">
-                  {formatCount(done)}
-                </span>
-                <span className="font-mono text-[11px] text-ttertiary">
-                  {t("scan_progress.total", { count: formatCount(total) })}
-                </span>
-              </div>
-              <div className="flex flex-col gap-1 text-right">
-                <span className="text-sm text-tsecondary">
-                  {t("scan_progress.media_added")}
-                </span>
-                <span className="font-mono text-5xl tracking-tight text-accent">
-                  {formatCount(added)}
-                </span>
-                <span className="font-mono text-[11px] text-ttertiary">
-                  {t("scan_progress.phase", { phase: phase.toUpperCase() })}
-                </span>
-              </div>
+          <GlassCard className="flex flex-col items-center gap-6 px-8 py-14 text-center">
+            <CheckCircle2 size={44} className="text-accent" />
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight text-tprimary">
+                {t("onboarding.scan_done_title")}
+              </h1>
+              <p className="mt-2 font-mono text-sm text-tsecondary">
+                {t("onboarding.scan_done_summary", {
+                  count: formatCount(added),
+                })}
+              </p>
             </div>
-
-            <div className="mt-8 h-1 w-full overflow-hidden rounded-pill bg-surface-2">
-              <div
-                className="h-full rounded-pill bg-gradient-to-r from-accent/70 to-accent transition-[width] duration-200"
-                style={{ width: `${pct}%` }}
-              />
-            </div>
-
-            <div
-              className="mt-6 max-h-40 overflow-y-auto rounded-control bg-black/20 p-4"
-              ref={(el) => {
-                if (el) el.scrollTop = el.scrollHeight;
-              }}
-            >
-              <div className="font-mono text-[11px] leading-relaxed text-ttertiary">
-                {log.length === 0
-                  ? t("onboarding.waiting")
-                  : log.slice(-50).map((l) => (
-                      <div key={l.at} className="truncate">
-                        {l.text}
-                      </div>
-                    ))}
-              </div>
-            </div>
-          </GlassCard>
-
-          <div className="mt-8 flex justify-end gap-3">
-            <PillButton variant="ghost" onClick={onDone}>
-              {t("onboarding.scan_in_background")}
+            <PillButton onClick={onDone} className="min-w-[280px]">
+              {t("onboarding.to_library", { count: formatCount(added) })}
             </PillButton>
-          </div>
+            <button
+              className="text-sm text-tsecondary underline-offset-4 hover:underline"
+              onClick={resetToPicker}
+            >
+              {t("onboarding.add_another")}
+            </button>
+          </GlassCard>
         </div>
       </div>
     );
@@ -139,20 +134,8 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
           {t("onboarding.subtitle")}
         </p>
 
-        {addedLabel && (
-          <div className="mt-6 flex items-center gap-3 rounded-control bg-accent/[.14] px-4 py-3">
-            <CheckCircle2 size={18} className="text-accent" />
-            <span className="text-sm text-tprimary">
-              {t("onboarding.added", { label: addedLabel })}
-            </span>
-            <button
-              className="ml-auto text-sm text-tsecondary underline-offset-4 hover:underline"
-              onClick={onDone}
-            >
-              {t("onboarding.go_to_library")}
-            </button>
-          </div>
-        )}
+        {/* Existing roots first (returning from done view). */}
+        <ExistingRoots />
 
         <div className="mt-10">
           <div className="mb-4 text-lg font-semibold text-tprimary">
@@ -220,6 +203,107 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
           <span className="text-sm text-ttertiary">
             {t("onboarding.dropzone_hint")}
           </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Existing roots list shown on the picker so the user sees context. */
+function ExistingRoots() {
+  const roots = useRootsStore((s) => s.roots);
+  if (roots.length === 0) return null;
+  return (
+    <div className="mt-8 flex flex-wrap gap-3">
+      {roots.map((r) => (
+        <div
+          key={r.id}
+          className="flex items-center gap-2 rounded-control bg-surface-1 px-4 py-2 shadow-elev1"
+        >
+          <HardDrive size={15} className="text-tsecondary" />
+          <span className="text-sm text-tprimary">{r.label || r.path}</span>
+          <span className="font-mono text-[11px] text-ttertiary">
+            {formatCount(r.itemCount)}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ScanningView({ onCancel }: { onCancel: () => void }) {
+  const { t } = useTranslation();
+  const { scanningRootId, phase, done, total, added, log } = useScanStore();
+  const roots = useRootsStore((s) => s.roots);
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+  const root = roots.find((r) => r.id === scanningRootId);
+
+  return (
+    <div className="h-full overflow-y-auto px-10 py-16">
+      <div className="mx-auto w-full max-w-3xl">
+        <h1 className="text-4xl font-bold tracking-tight text-tprimary">
+          {t("onboarding.scanning_title")}
+        </h1>
+        <p className="mt-2 text-[15px] text-tsecondary">
+          {root?.label ?? t("sidebar.library")} — {t("onboarding.subtitle")}
+        </p>
+
+        <GlassCard className="mt-10">
+          <div className="flex items-end justify-between gap-8">
+            <div className="flex flex-col gap-1">
+              <span className="text-sm text-tsecondary">
+                {t("scan_progress.files_seen")}
+              </span>
+              <span className="font-mono text-5xl tracking-tight text-tprimary">
+                {formatCount(done)}
+              </span>
+              <span className="font-mono text-[11px] text-ttertiary">
+                {t("scan_progress.total", { count: formatCount(total) })}
+              </span>
+            </div>
+            <div className="flex flex-col gap-1 text-right">
+              <span className="text-sm text-tsecondary">
+                {t("scan_progress.media_added")}
+              </span>
+              <span className="font-mono text-5xl tracking-tight text-accent">
+                {formatCount(added)}
+              </span>
+              <span className="font-mono text-[11px] text-ttertiary">
+                {t("scan_progress.phase", { phase: phase.toUpperCase() })}
+              </span>
+            </div>
+          </div>
+
+          <div className="mt-8 h-1 w-full overflow-hidden rounded-pill bg-surface-2">
+            <div
+              className="h-full rounded-pill bg-gradient-to-r from-accent/70 to-accent transition-[width] duration-200"
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+
+          <div
+            className="mt-6 max-h-40 overflow-y-auto rounded-control bg-black/20 p-4"
+            ref={(el) => {
+              if (el) el.scrollTop = el.scrollHeight;
+            }}
+          >
+            <div className="font-mono text-[11px] leading-relaxed text-ttertiary">
+              {log.length === 0
+                ? t("onboarding.waiting")
+                : log.slice(-50).map((l) => (
+                    <div key={l.at} className="truncate">
+                      {l.text}
+                    </div>
+                  ))}
+            </div>
+          </div>
+        </GlassCard>
+
+        <div className="mt-8 flex justify-end gap-3">
+          {/* Cancel: cooperative abort in Rust + back to picker. */}
+          <PillButton variant="ghost" onClick={onCancel}>
+            <X size={16} /> {t("onboarding.cancel_scan")}
+          </PillButton>
         </div>
       </div>
     </div>
