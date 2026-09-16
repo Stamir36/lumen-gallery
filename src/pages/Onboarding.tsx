@@ -29,7 +29,6 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
     setView,
     resetToPicker,
     phase,
-    added,
     clearLog,
     finish,
   } = useScanStore();
@@ -102,34 +101,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
   }
 
   if (view === "done") {
-    return (
-      <div className="h-full overflow-y-auto px-10 py-16">
-        <div className="mx-auto w-full max-w-3xl">
-          <GlassCard className="flex flex-col items-center gap-6 px-8 py-14 text-center">
-            <CheckCircle2 size={44} className="text-accent" />
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight text-tprimary">
-                {t("onboarding.scan_done_title")}
-              </h1>
-              <p className="mt-2 font-mono text-sm text-tsecondary">
-                {t("onboarding.scan_done_summary", {
-                  count: formatCount(added),
-                })}
-              </p>
-            </div>
-            <PillButton onClick={onDone} className="min-w-[280px]">
-              {t("onboarding.to_library", { count: formatCount(added) })}
-            </PillButton>
-            <button
-              className="text-sm text-tsecondary underline-offset-4 hover:underline"
-              onClick={resetToPicker}
-            >
-              {t("onboarding.add_another")}
-            </button>
-          </GlassCard>
-        </div>
-      </div>
-    );
+    return <DoneView onDone={onDone} onAddAnother={resetToPicker} />;
   }
 
   return (
@@ -311,6 +283,99 @@ function ScanningView({ onCancel }: { onCancel: () => void }) {
           {/* Cancel: cooperative abort in Rust + back to picker. */}
           <PillButton variant="ghost" onClick={onCancel}>
             <X size={16} /> {t("onboarding.cancel_scan")}
+          </PillButton>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Done view: same counters/progress as the scan view, at 100%. */
+function DoneView({
+  onDone,
+  onAddAnother,
+}: {
+  onDone: () => void;
+  onAddAnother: () => void;
+}) {
+  const { t } = useTranslation();
+  const { done, total, added, log } = useScanStore();
+  const elapsed =
+    log.length >= 2 ? (log[log.length - 1].at - log[0].at) / 1000 : null;
+  const pct = total > 0 ? Math.round((done / total) * 100) : 100;
+
+  return (
+    <div className="h-full overflow-y-auto px-10 py-16">
+      <div className="mx-auto w-full max-w-3xl">
+        <div className="flex items-center gap-3">
+          <CheckCircle2 size={28} className="text-accent" />
+          <h1 className="text-3xl font-bold tracking-tight text-tprimary">
+            {t("onboarding.scan_done_title")}
+          </h1>
+        </div>
+
+        <GlassCard className="mt-10">
+          <div className="flex items-end justify-between gap-8">
+            <div className="flex flex-col gap-1">
+              <span className="text-sm text-tsecondary">
+                {t("scan_progress.files_seen")}
+              </span>
+              <span className="font-mono text-5xl tracking-tight text-tprimary">
+                {formatCount(done)}
+              </span>
+              <span className="font-mono text-[11px] text-ttertiary">
+                {t("scan_progress.total", { count: formatCount(total) })}
+              </span>
+            </div>
+            <div className="flex flex-col gap-1 text-right">
+              <span className="text-sm text-tsecondary">
+                {t("scan_progress.media_added")}
+              </span>
+              <span className="font-mono text-5xl tracking-tight text-accent">
+                {formatCount(added)}
+              </span>
+              {elapsed !== null && (
+                <span className="font-mono text-[11px] text-ttertiary">
+                  {t("onboarding.scan_elapsed", {
+                    seconds: elapsed.toFixed(elapsed < 10 ? 2 : 1),
+                  })}
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-8 h-1 w-full overflow-hidden rounded-pill bg-surface-2">
+            <div
+              className="h-full rounded-pill bg-gradient-to-r from-accent/70 to-accent transition-[width] duration-200"
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+
+          <div
+            className="mt-6 max-h-40 overflow-y-auto rounded-control bg-black/20 p-4"
+            ref={(el) => {
+              if (el) el.scrollTop = el.scrollHeight;
+            }}
+          >
+            <div className="font-mono text-[11px] leading-relaxed text-ttertiary">
+              {log.slice(-50).map((l) => (
+                <div key={l.at} className="truncate">
+                  {l.text}
+                </div>
+              ))}
+            </div>
+          </div>
+        </GlassCard>
+
+        <div className="mt-8 flex flex-wrap items-center justify-end gap-3">
+          <button
+            className="text-sm text-tsecondary underline-offset-4 hover:underline"
+            onClick={onAddAnother}
+          >
+            {t("onboarding.add_another")}
+          </button>
+          <PillButton onClick={onDone} className="min-w-[280px]">
+            {t("onboarding.to_library", { count: formatCount(added) })}
           </PillButton>
         </div>
       </div>

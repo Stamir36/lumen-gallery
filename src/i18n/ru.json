@@ -15,6 +15,7 @@
     "cancel_scan": "Отменить сканирование",
     "scan_done_title": "Сканирование завершено",
     "scan_done_summary": "{{count}} медиафайлов добавлено",
+    "scan_elapsed": "{{seconds}} с",
     "to_library": "К библиотеке ({{count}})",
     "add_another": "Добавить ещё одну библиотеку",
     "waiting": "ожидание сканера…"
