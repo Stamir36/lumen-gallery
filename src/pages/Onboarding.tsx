@@ -28,10 +28,9 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
     view,
     setView,
     resetToPicker,
-    scanningRootId,
-    total,
+    phase,
     added,
-    setScanning,
+    clearLog,
     finish,
   } = useScanStore();
 
@@ -48,34 +47,37 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
     }
   }, [view]);
 
-  const scanning = scanningRootId !== null;
-
   const add = async (path: string, kind?: string, label?: string) => {
     setBusy(path);
+    // UI reacts instantly; scan counters are driven SOLELY by Rust events.
+    // Never call setScanning() here: a fast scan may finish before addRoot
+    // resolves, and resetting after its events would zero live counters.
+    clearLog();
+    setView("scanning");
     try {
-      const root = await api.addRoot(path, kind, label);
+      await api.addRoot(path, kind, label);
       await refresh();
-      setScanning(root.id);
-      setView("scanning");
     } catch (e) {
       console.error("add_root failed:", e);
       toast.error(`add_root failed: ${String(e).slice(0, 120)}`);
+      resetToPicker();
     } finally {
       setBusy(null);
     }
   };
 
-  /** Scan finished (finalize event) -> done view. */
+  /** Scan finished: finalize event -> done view (counters persist until reset). */
   useEffect(() => {
-    if (view === "scanning" && !scanning && total > 0) {
+    if (view === "scanning" && phase === "finalize") {
       finish();
       setView("done");
     }
-  }, [view, scanning, total, finish, setView]);
+  }, [view, phase, finish, setView]);
 
   const cancelScan = async () => {
-    if (scanningRootId !== null) {
-      await api.cancelScan(scanningRootId).catch(() => undefined);
+    const id = useScanStore.getState().scanningRootId;
+    if (id !== null) {
+      await api.cancelScan(id).catch(() => undefined);
     }
     finish();
     resetToPicker();
@@ -95,7 +97,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
     if (path) await add(path, "folder");
   };
 
-  if (view === "scanning" || (view !== "done" && scanning)) {
+  if (view === "scanning") {
     return <ScanningView onCancel={() => void cancelScan()} />;
   }
 
