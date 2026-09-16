@@ -39,6 +39,7 @@
   expected-list printed in build errors.
 - Conventional Commits: `feat:`, `fix:`, `docs:`, `refactor:`, `chore:`, etc.
 - CLEAN SHUTDOWN: track PIDs of every background process started; at end of session kill each with taskkill /T /PID; verify ports 1420/1421 free (Get-NetTCPConnection) and no project node.exe/lumen.exe/cargo processes remain (Get-CimInstance Win32_Process filtered by CommandLine); never leave dev servers running — verification is typecheck + clippy + cargo check, user runs the app manually for screenshots.
+- After rewriting any page component, re-verify its primary user journey (onClick -> api -> command -> state transition) before commit; all invoke errors must be surfaced (console + toast); user click-through required before phase acceptance.
   One conventional commit per phase (checkpoints are `chore:` and allowed in addition).
 - After every UI phase: run dev server, screenshot, self-review token-by-token
   against docs/DESIGN.md, fix discrepancies BEFORE committing.
