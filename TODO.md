@@ -1,9 +1,9 @@
-# LUMEN — Roadmap (Phases 1–6)
-
-## Deferred hardening (from fix batch, 2026-09-17)
+# LUMEN — Roadmap (Phases 1–6)## Deferred hardening (from fix batch, 2026-09-17)
 - [ ] Consolidate library stats on @tanstack/react-query (App.tsx currently hand-rolls useEffect + useState for libraryStats)
 - [ ] Restrictive CSP in tauri.conf.json — needs dev/prod split (`devUrl` requires relaxed CSP), do in packaging phase
-- [ ] Offline media UI: gray tiles per contract in scan.rs (offline flag, migration v2); `root-offline` event available
+- [ ] Offline media UI: gray tiles per contract in scan.rs (offline flag, migration v2); `root-offline` event available
+- [ ] THUMBNAILS ARE LAZY (user rule): generate ONLY when the user opens a directory/grid — never during scan, never eagerly for a whole root. Cache cleanup: measure scan perf (target 10k < 5s) when needed without a release bench run.
+
 
 Phase 0 (docs) — done: `docs/SPEC.md`, `docs/DESIGN.md`, `.clinerules`, `TODO.md`.
 
