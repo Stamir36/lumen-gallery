@@ -59,8 +59,8 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
 
   if (scanning) {
     return (
-      <div className="flex h-full items-center justify-center px-10 py-16">
-        <div className="w-full max-w-3xl">
+      <div className="h-full overflow-y-auto px-10 py-16">
+        <div className="mx-auto w-full max-w-3xl">
           <h1 className="text-4xl font-bold tracking-tight text-tprimary">
             {t("onboarding.scanning_title")}
           </h1>
@@ -101,11 +101,16 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
               />
             </div>
 
-            <div className="mt-6 rounded-control bg-black/20 p-4">
+            <div
+              className="mt-6 max-h-40 overflow-y-auto rounded-control bg-black/20 p-4"
+              ref={(el) => {
+                if (el) el.scrollTop = el.scrollHeight;
+              }}
+            >
               <div className="font-mono text-[11px] leading-relaxed text-ttertiary">
                 {log.length === 0
                   ? t("onboarding.waiting")
-                  : log.map((l) => (
+                  : log.slice(-50).map((l) => (
                       <div key={l.at} className="truncate">
                         {l.text}
                       </div>

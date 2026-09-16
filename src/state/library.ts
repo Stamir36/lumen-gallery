@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { listen } from "@tauri-apps/api/event";
 import { api, type ScanProgress, type RootRow } from "@/lib/api";
 
-const LOG_TAIL = 5;
+const LOG_TAIL = 200;
 
 export interface LogLine {
   at: number;
@@ -46,11 +46,16 @@ export const useScanStore = create<ScanState>((set) => ({
 
   applyProgress: (p) =>
     set((s) => {
+      // dedupe: same path+phase repeated (multiple listeners / event replays)
+      const key = `${p.phase}:${p.currentPath}`;
+      const last = s.log[s.log.length - 1]?.text;
       const text =
         p.phase === "finalize"
           ? `finalize · ${p.total} files seen · ${p.added} added`
-          : `${p.currentPath || "…"}`;
-      const log = [...s.log, { at: Date.now(), text }].slice(-LOG_TAIL);
+          : p.currentPath || "…";
+      const log = last === (p.phase === "finalize" ? text : key) || last === text
+        ? s.log
+        : [...s.log, { at: Date.now(), text }].slice(-LOG_TAIL);
       return {
         scanningRootId: p.rootId,
         phase: p.phase,
@@ -69,15 +74,19 @@ export const useScanStore = create<ScanState>((set) => ({
   clearLog: () => set({ log: [] }),
 }));
 
-/** Subscribes to Rust `scan-progress` events once per app session. */
+/** Subscribes to Rust `scan-progress` events exactly once per session. */
+let listenerPromise: Promise<() => void> | null = null;
 export function initScanListener() {
-  return listen<ScanProgress>("scan-progress", (e) => {
-    const p = e.payload;
-    useScanStore.getState().applyProgress(p);
-    if (p.phase === "finalize") {
-      useRootsStore.getState().refresh();
-    }
-  });
+  if (!listenerPromise) {
+    listenerPromise = listen<ScanProgress>("scan-progress", (e) => {
+      const p = e.payload;
+      useScanStore.getState().applyProgress(p);
+      if (p.phase === "finalize") {
+        useRootsStore.getState().refresh();
+      }
+    });
+  }
+  return listenerPromise;
 }
 
 interface RootsState {

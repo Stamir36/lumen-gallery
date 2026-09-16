@@ -1,36 +1,8 @@
 $ vite
+[2m00:56:14[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m Re-optimizing dependencies because lockfile has changed
 
-  [32m[1mVITE[22m v6.4.3[39m  [2mready in [0m[1m812[22m[2m[0m ms[22m
+  [32m[1mVITE[22m v6.4.3[39m  [2mready in [0m[1m3396[22m[2m[0m ms[22m
 
   [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m1420[22m/[39m
 [2m[32m  ➜[39m[22m[2m  press [22m[1mh + enter[22m[2m to show help[22m
-[2m02:08:10[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2mTODO.md[22m
-[2m02:15:03[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2mdocs/DESIGN.md[22m
-[2m02:15:04[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css[22m
-[2m02:18:26[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/ui/Segmented.tsx, /src/index.css[22m
-[2m02:18:27[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/ui/SidebarRail.tsx, /src/index.css[22m
-[2m02:18:50[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css[22m
-[2m02:18:52[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/StylePage.tsx, /src/index.css[22m
-[2m02:19:07[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/StylePage.tsx, /src/index.css[22m
-[2m02:19:24[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/StylePage.tsx, /src/index.css[22m
-[2m02:19:51[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2mTODO.md[22m
-[2m02:26:37[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2mdocs/DESIGN.md[22m
-[2m02:26:38[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css[22m
-[2m02:26:56[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/ui/GlassTopBar.tsx, /src/index.css[22m
-[2m02:26:56[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/ui/SidebarRail.tsx, /src/index.css[22m
-[2m02:26:56[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/ui/Segmented.tsx, /src/index.css[22m
-[2m02:27:14[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/ui/Segmented.tsx, /src/index.css[22m
-[2m02:27:14[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/ui/Dialog.tsx, /src/index.css[22m
-[2m02:27:14[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/ui/Menu.tsx, /src/index.css[22m
-[2m02:28:27[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/StylePage.tsx, /src/index.css[22m
-[2m02:29:19[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2mTODO.md[22m
-[2m02:38:30[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/index.css[22m
-[2m02:38:42[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32m✨ new dependencies optimized: [33m@tauri-apps/api/core, @tauri-apps/api/window, @tauri-apps/api/event[32m[39m
-[2m02:38:42[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32m✨ optimized dependencies changed. reloading[39m
-[2m02:41:57[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/@fs/C:\Develop\Agents AI\Gallary\src\components\WindowTitleBar.tsx, /src/index.css[22m
-[2m02:42:46[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/@fs/C:\Develop\Agents AI\Gallary\src\components\WindowTitleBar.tsx, /src/index.css[22m
-[2m02:43:29[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/@fs/C:\Develop\Agents AI\Gallary\src\components\WindowTitleBar.tsx, /src/index.css[22m
-[2m02:43:47[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/@fs/C:\Develop\Agents AI\Gallary\src\components\WindowTitleBar.tsx, /src/index.css[22m
-[2m02:45:00[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/@fs/C:\Develop\Agents AI\Gallary\src\components\WindowTitleBar.tsx, /src/index.css[22m
-[2m02:46:30[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2mTODO.md[22m
-[2m02:46:30[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2mTODO.md[22m
+[ELIFECYCLE] Command failed with exit code -1.
