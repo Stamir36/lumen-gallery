@@ -1,0 +1,86 @@
+{
+  "onboarding": {
+    "title": "Добавить библиотеку",
+    "subtitle": "Выберите диск или папку. LUMEN индексирует их на месте — ничего не копируется и не покидает этот компьютер.",
+    "drives": "Диски",
+    "no_drives": "Диски не найдены",
+    "free_of": "{{free}} свободно / {{total}}",
+    "choose_folder": "Выбрать папку…",
+    "rescan_all": "Пересканировать всё",
+    "dropzone_hint": "Перетащите папку сюда, чтобы добавить её как библиотеку",
+    "added": "{{label}} добавлено — сканирование в фоне",
+    "go_to_library": "К библиотеке",
+    "scanning_title": "Сканирование библиотеки",
+    "scan_in_background": "Сканировать в фоне",
+    "waiting": "ожидание сканера…"
+  },
+  "scan_progress": {
+    "files_seen": "Файлов просмотрено",
+    "media_added": "Медиа добавлено",
+    "total": "{{count}} ВСЕГО",
+    "phase": "ФАЗА {{phase}}",
+    "scanning": "СКАНИРОВАНИЕ…",
+    "seen_added": "{{done}} просмотрено · {{added}} добавлено",
+    "done": "Сканирование завершено"
+  },
+  "sidebar": {
+    "library": "Библиотека",
+    "favorites": "Избранное",
+    "albums": "Альбомы",
+    "videos": "Видео",
+    "images": "Фото",
+    "recents": "Недавние",
+    "trash": "Корзина",
+    "settings": "Настройки",
+    "add_library": "Добавить библиотеку",
+    "rescan": "Пересканировать {{label}}",
+    "collapse": "Свернуть панель",
+    "expand": "Развернуть панель",
+    "items_summary": "{{count}} элементов · {{size}}"
+  },
+  "topbar": {
+    "search_placeholder": "Поиск…",
+    "sort_by": "Сортировка",
+    "view_mode": "Вид",
+    "selection_mode": "Режим выбора",
+    "sort_date": "По дате",
+    "sort_name": "По имени",
+    "sort_size": "По размеру",
+    "sort_duration": "По длительности",
+    "ascending": "По возрастанию",
+    "descending": "По убыванию",
+    "view_justified": "Коллаж",
+    "view_masonry": "Мозаика",
+    "view_square": "Квадраты",
+    "view_list": "Список"
+  },
+  "empty_states": {
+    "no_media": "Пока нет медиа",
+    "no_favorites": "В избранном пусто",
+    "no_albums": "Пока нет альбомов",
+    "library_summary": "{{roots}} · {{count}} медиафайлов. Сетка-коллаж появится на этапе 3."
+  },
+  "titlebar": {
+    "minimize": "Свернуть",
+    "maximize": "Развернуть",
+    "restore": "Восстановить",
+    "close": "Закрыть (Alt+F4)"
+  },
+  "settings": {
+    "title": "Настройки",
+    "language": "Язык",
+    "theme": "Тема",
+    "external_player": "Внешний плеер",
+    "libraries": "Библиотеки",
+    "cache": "Кэш превью"
+  },
+  "actions": {
+    "favorite": "В избранное",
+    "add_to_album": "В альбом",
+    "collage": "Коллаж",
+    "open_folder": "Открыть содержащую папку",
+    "remove_root": "Удалить корень",
+    "rescan_root": "Пересканировать корень",
+    "back": "Назад"
+  }
+}

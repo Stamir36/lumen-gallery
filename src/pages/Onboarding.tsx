@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { open } from "@tauri-apps/plugin-dialog";
 import { HardDrive, FolderPlus, RefreshCw, CheckCircle2 } from "lucide-react";
 import { PillButton } from "@/components/ui/PillButton";
@@ -12,6 +13,7 @@ import { useRootsStore, useScanStore } from "@/state/library";
  * capacity bar, hover lift; folder picker; dashed hairline dropzone.
  */
 export function Onboarding({ onDone }: { onDone: () => void }) {
+  const { t } = useTranslation();
   const [volumes, setVolumes] = useState<VolumeInfo[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [addedLabel, setAddedLabel] = useState<string | null>(null);
@@ -60,30 +62,34 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
       <div className="flex h-full items-center justify-center px-10 py-16">
         <div className="w-full max-w-3xl">
           <h1 className="text-4xl font-bold tracking-tight text-tprimary">
-            Scanning library
+            {t("onboarding.scanning_title")}
           </h1>
           <p className="mt-2 text-[15px] text-tsecondary">
-            {addedLabel ?? "your library"} — files stay exactly where they are.
+            {addedLabel ?? t("sidebar.library")} — {t("onboarding.subtitle")}
           </p>
 
           <GlassCard className="mt-10">
             <div className="flex items-end justify-between gap-8">
               <div className="flex flex-col gap-1">
-                <span className="text-sm text-tsecondary">Files seen</span>
+                <span className="text-sm text-tsecondary">
+                  {t("scan_progress.files_seen")}
+                </span>
                 <span className="font-mono text-5xl tracking-tight text-tprimary">
                   {formatCount(done)}
                 </span>
                 <span className="font-mono text-[11px] text-ttertiary">
-                  {formatCount(total)} TOTAL
+                  {t("scan_progress.total", { count: formatCount(total) })}
                 </span>
               </div>
               <div className="flex flex-col gap-1 text-right">
-                <span className="text-sm text-tsecondary">Media added</span>
+                <span className="text-sm text-tsecondary">
+                  {t("scan_progress.media_added")}
+                </span>
                 <span className="font-mono text-5xl tracking-tight text-accent">
                   {formatCount(added)}
                 </span>
                 <span className="font-mono text-[11px] text-ttertiary">
-                  PHASE {phase.toUpperCase()}
+                  {t("scan_progress.phase", { phase: phase.toUpperCase() })}
                 </span>
               </div>
             </div>
@@ -98,7 +104,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
             <div className="mt-6 rounded-control bg-black/20 p-4">
               <div className="font-mono text-[11px] leading-relaxed text-ttertiary">
                 {log.length === 0
-                  ? "waiting for scanner…"
+                  ? t("onboarding.waiting")
                   : log.map((l) => (
                       <div key={l.at} className="truncate">
                         {l.text}
@@ -110,7 +116,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
 
           <div className="mt-8 flex justify-end gap-3">
             <PillButton variant="ghost" onClick={onDone}>
-              Scan in background
+              {t("onboarding.scan_in_background")}
             </PillButton>
           </div>
         </div>
@@ -122,34 +128,37 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
     <div className="h-full overflow-y-auto px-10 py-12">
       <div className="mx-auto max-w-4xl">
         <h1 className="text-4xl font-bold tracking-tight text-tprimary">
-          Add a library
+          {t("onboarding.title")}
         </h1>
         <p className="mt-2 max-w-xl text-[15px] text-tsecondary">
-          Pick a drive or folder. LUMEN indexes it in place — nothing is copied,
-          nothing leaves this machine.
+          {t("onboarding.subtitle")}
         </p>
 
         {addedLabel && (
           <div className="mt-6 flex items-center gap-3 rounded-control bg-accent/[.14] px-4 py-3">
             <CheckCircle2 size={18} className="text-accent" />
             <span className="text-sm text-tprimary">
-              Added {addedLabel} — scanning in the background
+              {t("onboarding.added", { label: addedLabel })}
             </span>
             <button
               className="ml-auto text-sm text-tsecondary underline-offset-4 hover:underline"
               onClick={onDone}
             >
-              Go to library
+              {t("onboarding.go_to_library")}
             </button>
           </div>
         )}
 
         <div className="mt-10">
-          <div className="mb-4 text-lg font-semibold text-tprimary">Drives</div>
+          <div className="mb-4 text-lg font-semibold text-tprimary">
+            {t("onboarding.drives")}
+          </div>
           <div className="flex flex-wrap gap-4">
             {volumes.length === 0 && (
               <div className="w-full rounded-card border border-dashed border-hairline px-8 py-12 text-center">
-                <span className="text-sm text-ttertiary">No drives reported</span>
+                <span className="text-sm text-ttertiary">
+                  {t("onboarding.no_drives")}
+                </span>
               </div>
             )}
             {volumes.map((v) => {
@@ -178,8 +187,10 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
                     />
                   </div>
                   <div className="mt-2 font-mono text-[12px] text-tsecondary">
-                    {formatBytes(v.availableBytes)} free /{" "}
-                    {formatBytes(v.totalBytes)}
+                    {t("onboarding.free_of", {
+                      free: formatBytes(v.availableBytes),
+                      total: formatBytes(v.totalBytes),
+                    })}
                   </div>
                 </button>
               );
@@ -189,10 +200,10 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
 
         <div className="mt-12 flex flex-wrap items-center gap-4">
           <PillButton onClick={chooseFolder}>
-            <FolderPlus size={16} /> Choose folder…
+            <FolderPlus size={16} /> {t("onboarding.choose_folder")}
           </PillButton>
           <PillButton variant="ghost" onClick={() => api.rescanAll()}>
-            <RefreshCw size={16} /> Rescan all
+            <RefreshCw size={16} /> {t("onboarding.rescan_all")}
           </PillButton>
         </div>
 
@@ -202,7 +213,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
           className="mt-8 flex flex-col items-center justify-center rounded-card border border-dashed border-hairline-hover px-8 py-16"
         >
           <span className="text-sm text-ttertiary">
-            Drop a folder here to add it as a library
+            {t("onboarding.dropzone_hint")}
           </span>
         </div>
       </div>

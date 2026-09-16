@@ -1,0 +1,86 @@
+{
+  "onboarding": {
+    "title": "Add a library",
+    "subtitle": "Pick a drive or folder. LUMEN indexes it in place — nothing is copied, nothing leaves this machine.",
+    "drives": "Drives",
+    "no_drives": "No drives reported",
+    "free_of": "{{free}} free / {{total}}",
+    "choose_folder": "Choose folder…",
+    "rescan_all": "Rescan all",
+    "dropzone_hint": "Drop a folder here to add it as a library",
+    "added": "Added {{label}} — scanning in the background",
+    "go_to_library": "Go to library",
+    "scanning_title": "Scanning library",
+    "scan_in_background": "Scan in background",
+    "waiting": "waiting for scanner…"
+  },
+  "scan_progress": {
+    "files_seen": "Files seen",
+    "media_added": "Media added",
+    "total": "{{count}} TOTAL",
+    "phase": "PHASE {{phase}}",
+    "scanning": "SCANNING…",
+    "seen_added": "{{done}} seen · {{added}} added",
+    "done": "Scan complete"
+  },
+  "sidebar": {
+    "library": "Library",
+    "favorites": "Favorites",
+    "albums": "Albums",
+    "videos": "Videos",
+    "images": "Photos",
+    "recents": "Recents",
+    "trash": "Trash",
+    "settings": "Settings",
+    "add_library": "Add library",
+    "rescan": "Rescan {{label}}",
+    "collapse": "Collapse sidebar",
+    "expand": "Expand sidebar",
+    "items_summary": "{{count}} items · {{size}}"
+  },
+  "topbar": {
+    "search_placeholder": "Search…",
+    "sort_by": "Sort by",
+    "view_mode": "View mode",
+    "selection_mode": "Selection mode",
+    "sort_date": "Date captured",
+    "sort_name": "Name",
+    "sort_size": "Size",
+    "sort_duration": "Duration",
+    "ascending": "Ascending",
+    "descending": "Descending",
+    "view_justified": "Justified",
+    "view_masonry": "Masonry",
+    "view_square": "Square",
+    "view_list": "List"
+  },
+  "empty_states": {
+    "no_media": "No media yet",
+    "no_favorites": "No favorites yet",
+    "no_albums": "No albums yet",
+    "library_summary": "{{roots}} indexed · {{count}} media items. The justified grid arrives in Phase 3."
+  },
+  "titlebar": {
+    "minimize": "Minimize",
+    "maximize": "Maximize",
+    "restore": "Restore",
+    "close": "Close (Alt+F4)"
+  },
+  "settings": {
+    "title": "Settings",
+    "language": "Language",
+    "theme": "Theme",
+    "external_player": "External player",
+    "libraries": "Libraries",
+    "cache": "Thumbnail cache"
+  },
+  "actions": {
+    "favorite": "Favorite",
+    "add_to_album": "Add to album",
+    "collage": "Collage",
+    "open_folder": "Open containing folder",
+    "remove_root": "Remove root",
+    "rescan_root": "Rescan root",
+    "back": "Back"
+  }
+}

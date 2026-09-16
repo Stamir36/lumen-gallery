@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { IconButton } from "./IconButton";
@@ -33,6 +34,7 @@ export function SidebarRail({
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const wide = !collapsed;
+  const { t } = useTranslation();
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -47,9 +49,9 @@ export function SidebarRail({
         <div className="flex h-16 shrink-0 items-center px-4">
           {wide ? (
             <>
-              <span className="micro-label flex-1 pl-2">Library</span>
+              <span className="micro-label flex-1 pl-2">{t("sidebar.library")}</span>
               <IconButton
-                label="Collapse sidebar"
+                label={t("sidebar.collapse")}
                 onClick={() => setCollapsed(true)}
               >
                 <PanelLeftClose size={16} />
@@ -57,7 +59,7 @@ export function SidebarRail({
             </>
           ) : (
             <IconButton
-              label="Expand sidebar"
+              label={t("sidebar.expand")}
               className="mx-auto"
               onClick={() => setCollapsed(false)}
             >

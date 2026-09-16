@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   FolderOpen,
   Heart,
@@ -12,6 +13,7 @@ import {
 } from "lucide-react";
 import { WindowTitleBar } from "@/components/WindowTitleBar";
 import { SidebarRail, type SidebarItem } from "@/components/ui/SidebarRail";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { IconButton } from "@/components/ui/IconButton";
 import { Onboarding } from "@/pages/Onboarding";
 import { api, formatBytes, formatCount } from "@/lib/api";
@@ -23,6 +25,7 @@ import { getDb } from "@/lib/db";
  * The grid lands in Phase 3; this proves the scan pipeline end to end.
  */
 export default function App() {
+  const { t } = useTranslation();
   const { roots, loaded, load, rescan, remove } = useRootsStore();
   const { scanningRootId, done, added } = useScanStore();
   const [stats, setStats] = useState<[number, number]>([0, 0]);
@@ -62,17 +65,17 @@ export default function App() {
             }
           : undefined,
       action: {
-        label: `Rescan ${r.label || r.path}`,
+        label: t("sidebar.rescan", { label: r.label || r.path }),
         icon: <RefreshCw />,
         onClick: () => void rescan(r.id),
       },
     })),
-    { id: "photos", label: "Photos", icon: <FolderOpen />, badge: formatCount(stats[0]) },
-    { id: "favorites", label: "Favorites", icon: <Heart /> },
-    { id: "albums", label: "Albums", icon: <Images /> },
-    { id: "videos", label: "Videos", icon: <Film /> },
-    { id: "recents", label: "Recents", icon: <Clock /> },
-    { id: "trash", label: "Trash", icon: <Trash2 /> },
+    { id: "photos", label: t("sidebar.images"), icon: <FolderOpen />, badge: formatCount(stats[0]) },
+    { id: "favorites", label: t("sidebar.favorites"), icon: <Heart /> },
+    { id: "albums", label: t("sidebar.albums"), icon: <Images /> },
+    { id: "videos", label: t("sidebar.videos"), icon: <Film /> },
+    { id: "recents", label: t("sidebar.recents"), icon: <Clock /> },
+    { id: "trash", label: t("sidebar.trash"), icon: <Trash2 /> },
   ];
 
   return (
@@ -86,17 +89,24 @@ export default function App() {
             items={items}
             bottom={
               <div className="flex flex-col gap-3">
+                <LanguageSwitcher />
                 <button
                   onClick={() => setShowOnboarding(true)}
                   className="flex h-11 w-full items-center gap-3 rounded-control px-3 text-left text-sm text-tsecondary transition-all duration-[160ms] hover:bg-white/[.06] hover:text-tprimary"
                 >
                   <Plus size={18} />
-                  Add library
+                  {t("sidebar.add_library")}
                 </button>
                 <div className="px-3 font-mono text-[10px] leading-relaxed text-ttertiary">
                   {scanningRootId !== null
-                    ? `SCANNING… ${formatCount(done)} seen · ${formatCount(added)} added`
-                    : `${formatCount(stats[0])} items · ${formatBytes(stats[1])}`}
+                    ? `${t("scan_progress.scanning")} ${t("scan_progress.seen_added", {
+                        done: formatCount(done),
+                        added: formatCount(added),
+                      })}`
+                    : t("sidebar.items_summary", {
+                        count: formatCount(stats[0]),
+                        size: formatBytes(stats[1]),
+                      })}
                 </div>
               </div>
             }
@@ -109,12 +119,13 @@ export default function App() {
           ) : (
             <div className="flex h-full flex-col items-center justify-center gap-6 px-10">
               <h1 className="text-4xl font-bold tracking-tight text-tprimary">
-                Library
+                {t("sidebar.library")}
               </h1>
               <p className="max-w-md text-center text-[15px] text-tsecondary">
-                {roots.length} root{roots.length === 1 ? "" : "s"} indexed ·{" "}
-                <span className="font-mono">{formatCount(stats[0])}</span> media
-                items. The justified grid arrives in Phase 3.
+                {t("empty_states.library_summary", {
+                  roots: `${roots.length}`,
+                  count: formatCount(stats[0]),
+                })}
               </p>
               <div className="flex flex-wrap justify-center gap-4">
                 {roots.map((r) => (
@@ -128,18 +139,18 @@ export default function App() {
                         {r.label || r.path}
                       </div>
                       <div className="font-mono text-[11px] text-ttertiary">
-                        {formatCount(r.itemCount)} items
+                        {formatCount(r.itemCount)}
                       </div>
                     </div>
                     <IconButton
-                      label="Rescan root"
+                      label={t("actions.rescan_root")}
                       onClick={() => rescan(r.id)}
                       disabled={scanningRootId !== null}
                     >
                       <RefreshCw size={16} />
                     </IconButton>
                     <IconButton
-                      label="Remove root"
+                      label={t("actions.remove_root")}
                       className="text-danger"
                       onClick={() => remove(r.id)}
                     >

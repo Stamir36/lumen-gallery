@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { Minus, Square, Maximize2, X, Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getCurrentWindow } from "@tauri-apps/api/window";
@@ -16,6 +17,7 @@ export function WindowTitleBar({
   title?: string;
   leftAction?: ReactNode;
 }) {
+  const { t } = useTranslation();
   const [maximized, setMaximized] = useState(false);
 
   const update = () =>
@@ -66,8 +68,8 @@ export function WindowTitleBar({
       {/* right cluster: window controls */}
       <div className="flex h-full items-center gap-0.5 pr-2">
         <button
-          aria-label="Minimize"
-          title="Minimize"
+          aria-label={t("titlebar.minimize")}
+          title={t("titlebar.minimize")}
           className={cn(btnBase, "rounded-control hover:bg-surface-2")}
           onMouseDown={stop}
           onClick={minimize}
@@ -75,8 +77,8 @@ export function WindowTitleBar({
           <Minus size={18} />
         </button>
         <button
-          aria-label={maximized ? "Restore" : "Maximize"}
-          title={maximized ? "Restore" : "Maximize"}
+          aria-label={maximized ? t("titlebar.restore") : t("titlebar.maximize")}
+          title={maximized ? t("titlebar.restore") : t("titlebar.maximize")}
           className={cn(btnBase, "rounded-control hover:bg-surface-2")}
           onMouseDown={stop}
           onClick={toggleMaximize}
@@ -84,8 +86,8 @@ export function WindowTitleBar({
           {maximized ? <Square size={16} /> : <Maximize2 size={16} />}
         </button>
         <button
-          aria-label="Close"
-          title="Close (Alt+F4)"
+          aria-label={t("titlebar.close")}
+          title={t("titlebar.close")}
           className={cn(
             btnBase,
             "rounded-control text-danger hover:bg-danger/[.14] hover:text-danger",
