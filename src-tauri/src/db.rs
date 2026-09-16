@@ -70,3 +70,10 @@ CREATE TABLE IF NOT EXISTS settings (
 INSERT OR IGNORE INTO settings(key, value) VALUES ('extensions', 'jpg,jpeg,png,gif,webp,avif,bmp,mp4,mkv,webm,mov,m4v');
 INSERT OR IGNORE INTO settings(key, value) VALUES ('external_player', '');
 "#;
+
+/// v2: offline flag on media (ejected/unreadable root — rows are kept, UI
+/// contract: offline media render as gray tiles later).
+pub const MIGRATION_V2: &str = r#"
+ALTER TABLE media ADD COLUMN offline BOOLEAN NOT NULL DEFAULT 0;
+CREATE INDEX IF NOT EXISTS idx_media_offline ON media(offline);
+"#;

@@ -49,6 +49,15 @@ fn mtime_secs(meta: &std::fs::Metadata) -> i64 {
         .unwrap_or(0)
 }
 
+/// A root counts as readable only if it exists, is a dir, and listdir succeeds
+/// (catches ejected drives where the mount point may still be a stub).
+fn root_is_readable(path: &Path) -> bool {
+    if !path.is_dir() {
+        return false;
+    }
+    std::fs::read_dir(path).is_ok()
+}
+
 /// Windows: skip FILE_ATTRIBUTE_HIDDEN | FILE_ATTRIBUTE_SYSTEM.
 fn is_hidden_or_system(meta: &std::fs::Metadata) -> bool {
     #[cfg(windows)]
@@ -227,6 +236,25 @@ pub async fn scan_root(
     }
 
     // Pass 2: drop rows whose files no longer exist under this root.
+    // NEVER delete when the root itself is gone/unreadable (ejected drive,
+    // temporarily unmounted volume): flag media offline instead so a flaky
+    // mount can never wipe the library (SPEC §3).
+    if !root_is_readable(root_path) {
+        log::warn!(
+            "root {:?} is offline (ejected/unreadable) — skipping row cleanup, flagging media offline",
+            root_path
+        );
+        let _ = sqlx::query("UPDATE media SET offline = 1 WHERE root_id = ?1 AND offline = 0")
+            .bind(root_id)
+            .execute(pool)
+            .await;
+        let _ = app.emit(
+            "root-offline",
+            serde_json::json!({ "rootId": root_id, "path": root_path.to_string_lossy() }),
+        );
+        return Ok((done, added));
+    }
+
     let existing: Vec<String> = sqlx::query_scalar("SELECT path FROM media WHERE root_id = ?1")
         .bind(root_id)
         .fetch_all(pool)
@@ -240,6 +268,12 @@ pub async fn scan_root(
                 .await;
         }
     }
+
+    // Successful scan with a readable root: clear stale offline flags.
+    let _ = sqlx::query("UPDATE media SET offline = 0 WHERE root_id = ?1 AND offline = 1")
+        .bind(root_id)
+        .execute(pool)
+        .await;
 
     emit_progress(app, root_id, "finalize", done, total, String::new(), added);
     Ok((done, added))
