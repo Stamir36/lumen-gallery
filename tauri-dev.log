@@ -48,3 +48,4 @@ $ vite
   10 |  import { initScanListener } from "./state/library";
   11 |  import "./index.css";[39m
 [2m12:55:15[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2msrc/pages/OnboardingRoute.tsx[22m
+[ELIFECYCLE] Command failed with exit code -1.

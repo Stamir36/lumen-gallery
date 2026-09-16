@@ -36,20 +36,30 @@ export function WindowTitleBar({
   const toggleMaximize = () => getCurrentWindow().toggleMaximize();
   const close = () => getCurrentWindow().close();
 
+  /** Start a native window drag on mousedown (reliable in Tauri v2). */
+  const startDrag = (e: React.MouseEvent) => {
+    if (e.buttons !== 1) return; // left button only
+    void getCurrentWindow().startDragging();
+  };
+
+  /** Swallow mousedown so controls never begin a window drag. */
+  const stop = (e: React.MouseEvent) => e.stopPropagation();
+
   return (
     <header className="flex h-14 shrink-0 items-center border-b border-hairline bg-surface-1">
-      {/* left cluster: icon + wordmark */}
-      <div className="flex h-full items-center gap-3 px-4">
+      {/* left cluster: icon + wordmark (mousedown swallowed → never drags) */}
+      <div className="flex h-full items-center gap-3 px-4" onMouseDown={stop}>
         {leftAction ?? <Menu size={18} className="text-tsecondary" />}
         <span className="font-sans text-sm font-semibold tracking-tight text-tprimary">
           {title}
         </span>
       </div>
 
-      {/* drag spacer — double-click toggles maximize */}
+      {/* drag spacer — empty area only; drags the window via startDragging() */}
       <div
         data-tauri-drag-region="true"
-        className="flex-1 cursor-default"
+        className="h-full flex-1 cursor-default"
+        onMouseDown={startDrag}
         onDoubleClick={toggleMaximize}
       />
 
@@ -59,6 +69,7 @@ export function WindowTitleBar({
           aria-label="Minimize"
           title="Minimize"
           className={cn(btnBase, "rounded-control hover:bg-surface-2")}
+          onMouseDown={stop}
           onClick={minimize}
         >
           <Minus size={18} />
@@ -67,6 +78,7 @@ export function WindowTitleBar({
           aria-label={maximized ? "Restore" : "Maximize"}
           title={maximized ? "Restore" : "Maximize"}
           className={cn(btnBase, "rounded-control hover:bg-surface-2")}
+          onMouseDown={stop}
           onClick={toggleMaximize}
         >
           {maximized ? <Square size={16} /> : <Maximize2 size={16} />}
@@ -78,6 +90,7 @@ export function WindowTitleBar({
             btnBase,
             "rounded-control text-danger hover:bg-danger/[.14] hover:text-danger",
           )}
+          onMouseDown={stop}
           onClick={close}
         >
           <X size={18} />
