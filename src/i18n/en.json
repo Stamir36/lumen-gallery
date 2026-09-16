@@ -70,9 +70,19 @@
     "title": "Settings",
     "language": "Language",
     "theme": "Theme",
-    "external_player": "External player",
+    "dark": "Dark",
+    "external_player": "External player path",
+    "player_placeholder": "C:\\Program Files\\VLC\\vlc.exe",
     "libraries": "Libraries",
-    "cache": "Thumbnail cache"
+    "no_libraries": "No libraries yet — add a folder or drive",
+    "remove_hint": "Removing a library only forgets the files; nothing is deleted from disk.",
+    "cache": "Thumbnail cache",
+    "clear_cache": "Clear cache",
+    "save": "Save",
+    "loading": "Loading…",
+    "saved": "Saved",
+    "load_error": "Couldn't load settings",
+    "operation_error": "Operation failed"
   },
   "actions": {
     "favorite": "Favorite",

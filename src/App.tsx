@@ -10,6 +10,7 @@ import {
   HardDrive,
   RefreshCw,
   Plus,
+  Settings,
 } from "lucide-react";
 import { WindowTitleBar } from "@/components/WindowTitleBar";
 import { SidebarRail, type SidebarItem } from "@/components/ui/SidebarRail";
@@ -19,6 +20,7 @@ import { Onboarding } from "@/pages/Onboarding";
 import { api, formatBytes, formatCount } from "@/lib/api";
 import { useRootsStore, useScanStore } from "@/state/library";
 import { getDb } from "@/lib/db";
+import { useNavigate } from "react-router-dom";
 
 /**
  * App shell after Phase 2: frameless TitleBar + roots sidebar + onboarding.
@@ -26,6 +28,7 @@ import { getDb } from "@/lib/db";
  */
 export default function App() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { roots, loaded, load, rescan, remove } = useRootsStore();
   const { scanningRootId, done, added } = useScanStore();
   const [stats, setStats] = useState<[number, number]>([0, 0]);
@@ -96,6 +99,13 @@ export default function App() {
                 >
                   <Plus size={18} />
                   {t("sidebar.add_library")}
+                </button>
+                <button
+                  onClick={() => navigate("/settings")}
+                  className="flex h-11 w-full items-center gap-3 rounded-control px-3 text-left text-sm text-tsecondary transition-all duration-[160ms] hover:bg-white/[.06] hover:text-tprimary"
+                >
+                  <Settings size={18} />
+                  {t("sidebar.settings")}
                 </button>
                 <div className="px-3 font-mono text-[10px] leading-relaxed text-ttertiary">
                   {scanningRootId !== null

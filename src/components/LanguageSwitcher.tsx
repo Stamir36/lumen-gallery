@@ -4,7 +4,7 @@ import { persistLang, type Lang } from "@/i18n";
 
 /** RU / EN pill switcher; choice is persisted to SQLite settings. */
 export function LanguageSwitcher() {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const current: Lang = i18n.language.startsWith("ru") ? "ru" : "en";
 
   const change = async (lng: Lang) => {
@@ -19,7 +19,7 @@ export function LanguageSwitcher() {
 
   return (
     <Segmented<Lang>
-      aria-label="Language"
+      aria-label={t("settings.language")}
       options={[
         { value: "ru", label: "RU" },
         { value: "en", label: "EN" },

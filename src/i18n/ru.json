@@ -70,9 +70,19 @@
     "title": "Настройки",
     "language": "Язык",
     "theme": "Тема",
-    "external_player": "Внешний плеер",
+    "dark": "Тёмная",
+    "external_player": "Путь к внешнему плееру",
+    "player_placeholder": "C:\\Program Files\\VLC\\vlc.exe",
     "libraries": "Библиотеки",
-    "cache": "Кэш превью"
+    "no_libraries": "Библиотек пока нет — добавьте папку или диск",
+    "remove_hint": "Удаление библиотеки лишь забывает файлы — с диска ничего не стирается.",
+    "cache": "Кэш миниатюр",
+    "clear_cache": "Очистить кэш",
+    "save": "Сохранить",
+    "loading": "Загрузка…",
+    "saved": "Сохранено",
+    "load_error": "Не удалось загрузить настройки",
+    "operation_error": "Операция не удалась"
   },
   "actions": {
     "favorite": "В избранное",

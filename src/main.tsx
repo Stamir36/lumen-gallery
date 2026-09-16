@@ -6,6 +6,7 @@ import { Toaster } from "sonner";
 import App from "./App";
 import StylePage from "./pages/StylePage";
 import OnboardingPage from "./pages/OnboardingRoute";
+import SettingsPage from "./pages/SettingsPage";
 import { initI18n, readSavedLang } from "./i18n";
 import { initScanListener } from "./state/library";
 import "./index.css";
@@ -32,6 +33,7 @@ async function bootstrap() {
             <Route path="/style" element={<StylePage />} />
             {/* onboarding is also reachable directly for QA/screenshots */}
             <Route path="/onboarding" element={<OnboardingPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
           </Routes>
         </HashRouter>
         <Toaster

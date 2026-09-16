@@ -1,3 +1,5 @@
+mod cache;
+
 mod commands;
 mod db;
 mod scan;
@@ -30,6 +32,8 @@ pub fn run() {
       commands::rescan_all,
       commands::list_media,
       commands::library_stats,
+      cache::thumbnail_cache_size,
+      cache::clear_thumbnail_cache,
     ])
     .setup(|app| {
       if cfg!(debug_assertions) {
