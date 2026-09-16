@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "sonner";
 import App from "./App";
 import StylePage from "./pages/StylePage";
+import OnboardingPage from "./pages/OnboardingRoute";
 import { initScanListener } from "./state/library";
 import "./index.css";
 
@@ -23,6 +24,8 @@ ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
           <Route path="/" element={<App />} />
           {/* hidden living style sheet */}
           <Route path="/style" element={<StylePage />} />
+          {/* onboarding is also reachable directly for QA/screenshots */}
+          <Route path="/onboarding" element={<OnboardingPage />} />
         </Routes>
       </HashRouter>
       <Toaster
