@@ -40,7 +40,9 @@ pub async fn pool_for(app: &AppHandle) -> Result<SqlitePool, String> {
 }
 
 /// Best-effort capacity numbers for a root path (uses its owning drive).
-fn capacity_for(path: &str) -> (i64, i64) {
+/// Returns None when no volume matches — callers show a mono dash instead of
+/// inventing another drive's numbers.
+fn capacity_for(path: &str) -> Option<(i64, i64)> {
     let vols = volumes::list_volumes();
     let norm = path.replace('/', "\\").to_lowercase();
     let mut best: Option<&VolumeInfo> = None;
@@ -50,15 +52,12 @@ fn capacity_for(path: &str) -> (i64, i64) {
             best = Some(v);
         }
     }
-    match best.or_else(|| vols.first()) {
-        Some(v) => (v.total_bytes as i64, v.available_bytes as i64),
-        None => (0, 0),
-    }
+    best.map(|v| (v.total_bytes as i64, v.available_bytes as i64))
 }
 
 fn root_from_row(r: &sqlx::sqlite::SqliteRow) -> RootRow {
     let path: String = r.get("path");
-    let (total, avail) = capacity_for(&path);
+    let (total, avail) = capacity_for(&path).unwrap_or((0, 0));
     RootRow {
         id: r.get("id"),
         path,
