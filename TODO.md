@@ -12,13 +12,15 @@ Phase 0 (docs) — done: `docs/SPEC.md`, `docs/DESIGN.md`, `.clinerules`, `TODO.
 - [x] Frameless window + custom title bar (drag-region spacer, window controls, maximize icon swap)
 - [x] Conventional commits: `feat: design system`, `feat: design system v2`, `feat: frameless window + custom title bar`, `style: glass & accent calibration v2.2`
 
-## Phase 2 — Libraries & scanning
-- [ ] Rust: fs walk (whitelist, skip hidden/system), volumes info, fs watch (2s debounce)
-- [ ] Onboarding: volume list (capacity bars, mono digits), drag-drop folder
-- [ ] Scan pipeline: dedupe path+mtime+size, incremental rescan, live counters + mono log feed
-- [ ] Ejected-drive safe behavior
-- [ ] Settings: manage libraries, per-root rescan
-- [ ] QA + screenshot pass; `feat: libraries and scanning`
+## Phase 2 — Libraries & scanning (DONE)
+- [x] Rust: fs walk (whitelist, skip hidden/system), volumes info via sysinfo, fs watch (notify, 2s debounce)
+- [x] Onboarding: volume list (accent gradient capacity bars, mono digits), folder picker + drag-drop dropzone, scan view with mono counters + log tail
+- [x] Scan pipeline: dedupe path+mtime+size, incremental rescan, live counters + mono log feed (scan-progress events)
+- [x] Roots persisted in SQLite (tauri-plugin-sql migrations v1); sidebar roots show capacity bar + rescan action
+- [ ] Ejected-drive safe behavior (Phase 6 hardening — root stays, rescan skips missing paths)
+- [ ] Settings: manage libraries, per-root rescan (Phase 6; rescan already available per root + rescan all)
+- [x] cargo clippy clean (0 warnings, `-D warnings`) + pnpm typecheck clean
+- [x] Commits: `fix: tauri v2 capabilities permissions`, `feat: onboarding root picker`, `feat: scan core + sqlite`
 
 ## Phase 3 — Library grid UI
 - [ ] Sidebar 240/64 rail: roots + capacity bars, Favorites, Albums, Videos, Images, Recents, Trash, settings/scan status
