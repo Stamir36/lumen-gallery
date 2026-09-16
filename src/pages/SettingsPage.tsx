@@ -19,8 +19,9 @@ export default function SettingsPage() {
           </IconButton>
         }
       />
-      <main className="min-h-0 flex-1 overflow-y-auto px-8 py-12 lg:px-10">
-        <div className="mx-auto max-w-3xl space-y-12">
+      {/* Fluid layout per v2.2: no max-width, 40px gutters. */}
+      <main className="min-h-0 flex-1 overflow-y-auto px-10 py-12">
+        <div className="space-y-12">
           <h1 className="text-4xl font-bold leading-tight tracking-tight text-tprimary">
             {t("settings.title")}
           </h1>

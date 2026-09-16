@@ -153,26 +153,27 @@ export function SettingsContent() {
   };
 
   return (
-    <div className="flex gap-10">
-      {/* section nav */}
-      <nav className="hidden w-56 shrink-0 flex-col gap-1 md:flex">
+    <div className="flex items-start gap-10">
+      {/* sticky section nav — never scrolls out of view */}
+      <nav className="sticky top-0 hidden w-[240px] shrink-0 flex-col gap-1 self-start md:flex">
         {navItems.map((n) => (
           <button
             key={n.id}
             onClick={() => jump(n.id)}
             className={
-              "flex h-11 items-center gap-3 rounded-control px-3 text-left text-sm transition-all duration-[160ms] ease-out " +
+              "flex min-h-11 items-center gap-3 break-words rounded-control px-3 py-2 text-left text-sm leading-snug transition-all duration-[160ms] ease-out " +
               (active === n.id
                 ? "bg-accent/[.14] text-tprimary [&_svg]:text-accent"
                 : "text-tsecondary hover:bg-white/[.06] hover:text-tprimary")
             }
           >
-            {n.icon}
-            {n.label}
+            <span className="shrink-0">{n.icon}</span>
+            <span>{n.label}</span>
           </button>
         ))}
       </nav>
 
+      {/* content cards fill the full column width */}
       <div className="min-w-0 flex-1 space-y-12">
         {/* 01 Libraries */}
         <Section index="01" id="libraries" title={t("settings.nav_libraries")}>
