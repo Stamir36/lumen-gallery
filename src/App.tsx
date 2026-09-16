@@ -14,7 +14,8 @@ import {
 } from "lucide-react";
 import { WindowTitleBar } from "@/components/WindowTitleBar";
 import { SidebarRail, type SidebarItem } from "@/components/ui/SidebarRail";
-import { LanguageDropdown } from "@/components/LanguageSwitcher";
+import { LanguageDropdown, LanguageDropdownIcon } from "@/components/LanguageSwitcher";
+import { NavTooltip } from "@/components/ui/NavTooltip";
 import { IconButton } from "@/components/ui/IconButton";
 import { Onboarding } from "@/pages/Onboarding";
 import { api, formatBytes, formatCount } from "@/lib/api";
@@ -119,6 +120,27 @@ export default function App() {
                       })}
                 </div>
               </div>
+            }
+            railBottom={
+              <>
+                <LanguageDropdownIcon />
+                <NavTooltip label={t("sidebar.add_library")}>
+                  <IconButton
+                    label={t("sidebar.add_library")}
+                    onClick={() => setShowOnboarding(true)}
+                  >
+                    <Plus size={18} />
+                  </IconButton>
+                </NavTooltip>
+                <NavTooltip label={t("sidebar.settings")}>
+                  <IconButton
+                    label={t("sidebar.settings")}
+                    onClick={() => navigate("/settings")}
+                  >
+                    <Settings size={18} />
+                  </IconButton>
+                </NavTooltip>
+              </>
             }
           />
         )}

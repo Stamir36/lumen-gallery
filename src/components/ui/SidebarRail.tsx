@@ -26,10 +26,13 @@ export interface SidebarItem {
 export function SidebarRail({
   items,
   bottom,
+  railBottom,
   className,
 }: {
   items: SidebarItem[];
   bottom?: ReactNode;
+  /** icons-only footer for the collapsed rail */
+  railBottom?: ReactNode;
   className?: string;
 }) {
   const [collapsed, setCollapsed] = useState(false);
@@ -41,8 +44,8 @@ export function SidebarRail({
       <nav
         className={cn(
           // solid surface-1 + right hairline (v2.2 chrome, no blur)
-          "flex h-full flex-col border-r border-hairline bg-surface-1 transition-[width] duration-[160ms] ease-out",
-          wide ? "w-[260px]" : "w-[68px]",
+          "flex h-full flex-col overflow-hidden border-r border-hairline bg-surface-1 transition-[width] duration-[160ms] ease-out",
+          wide ? "w-[260px]" : "w-16",
           className,
         )}
       >
@@ -68,13 +71,26 @@ export function SidebarRail({
           )}
         </div>
 
-        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-4">
+        <div
+          className={cn(
+            "flex min-h-0 flex-1 flex-col gap-3 p-4",
+            wide ? "overflow-y-auto" : "overflow-y-hidden",
+          )}
+        >
           {items.map((item) => (
             <SidebarRow key={item.id} item={item} wide={wide} />
           ))}
         </div>
 
-        {bottom && <div className="shrink-0 p-4">{bottom}</div>}
+        {wide ? (
+          bottom && <div className="shrink-0 overflow-hidden p-4">{bottom}</div>
+        ) : (
+          railBottom && (
+            <div className="flex shrink-0 flex-col items-center gap-1 p-2">
+              {railBottom}
+            </div>
+          )
+        )}
       </nav>
     </TooltipProvider>
   );
