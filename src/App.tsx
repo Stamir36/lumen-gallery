@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   FolderOpen,
@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { WindowTitleBar } from "@/components/WindowTitleBar";
 import { SidebarRail, type SidebarItem } from "@/components/ui/SidebarRail";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { LanguageDropdown } from "@/components/LanguageSwitcher";
 import { IconButton } from "@/components/ui/IconButton";
 import { Onboarding } from "@/pages/Onboarding";
 import { api, formatBytes, formatCount } from "@/lib/api";
@@ -92,7 +92,7 @@ export default function App() {
             items={items}
             bottom={
               <div className="flex flex-col gap-3">
-                <LanguageSwitcher />
+                <LanguageDropdown />
                 <button
                   onClick={() => setShowOnboarding(true)}
                   className="flex h-11 w-full items-center gap-3 rounded-control px-3 text-left text-sm text-tsecondary transition-all duration-[160ms] hover:bg-white/[.06] hover:text-tprimary"
@@ -176,4 +176,5 @@ export default function App() {
     </div>
   );
 }
+
 

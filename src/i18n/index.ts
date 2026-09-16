@@ -6,6 +6,12 @@ import ru from "./ru.json";
 export const LANG_KEY = "lang";
 export type Lang = "en" | "ru";
 
+/** Future languages = one array entry here. */
+export const LOCALES: { code: Lang; nativeName: string }[] = [
+  { code: "en", nativeName: "English" },
+  { code: "ru", nativeName: "Русский" },
+];
+
 /** System detection: ru-RU / ru → 'ru', everything else → 'en'. */
 function detectLang(): Lang {
   const nav = typeof navigator !== "undefined" ? navigator.language : "en";

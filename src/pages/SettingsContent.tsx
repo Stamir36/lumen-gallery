@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { invoke } from "@tauri-apps/api/core";
 import { useNavigate } from "react-router-dom";
 import { RefreshCw, Trash2 } from "lucide-react";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { LanguageDropdown } from "@/components/LanguageSwitcher";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { PillButton } from "@/components/ui/PillButton";
 import { IconButton } from "@/components/ui/IconButton";
@@ -58,7 +58,7 @@ export function SettingsContent() {
     <GlassCard>
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h2 className="text-xl font-semibold">{t("settings.language")}</h2>
-        <div className="w-44"><LanguageSwitcher /></div>
+        <div className="w-44"><LanguageDropdown /></div>
       </div>
       <div className="mt-6 flex justify-between border-t border-hairline pt-6">
         <span>{t("settings.theme")}</span><span className="text-tsecondary">{t("settings.dark")}</span>
@@ -101,3 +101,4 @@ export function SettingsContent() {
     {message && <p role={failed ? "alert" : "status"} className={failed ? "text-danger" : "text-tsecondary"}>{t(message)}</p>}
   </div>;
 }
+
