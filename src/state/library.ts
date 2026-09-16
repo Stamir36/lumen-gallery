@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { listen } from "@tauri-apps/api/event";
+import { toast } from "sonner";
 import { api, type ScanProgress, type RootRow } from "@/lib/api";
 
 const LOG_TAIL = 200;
@@ -133,7 +134,9 @@ export const useRootsStore = create<RootsState>((set, get) => ({
     try {
       const roots = await api.listRoots();
       set({ roots });
-    } catch {
+    } catch (e) {
+      console.error("list_roots failed:", e);
+      toast.error("list_roots failed — see console (F12)");
       set({ roots: [] });
     }
   },

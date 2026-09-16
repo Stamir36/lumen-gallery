@@ -7,11 +7,12 @@ pub const DEFAULT_EXTENSIONS: &str =
 pub const IMAGE_EXTENSIONS: &[&str] =
     &["jpg", "jpeg", "png", "gif", "webp", "avif", "bmp"];
 
-/// SQLite database URL with pragmas baked into the connection string:
-/// foreign keys (cascades!), WAL journaling, NORMAL fsync.
-/// tauri-plugin-sql (sqlx SqliteConnectOptions) parses these options.
-pub const DB_URL: &str =
-  "sqlite:lumen.db?mode=rwc&foreign_keys=true&journal_mode=WAL&synchronous=NORMAL";
+/// SQLite database URL. MUST stay in sync with src/lib/db.ts — tauri-plugin-sql
+/// keys its DbInstances map by this exact string.
+/// NOTE: plugin's path_mapper strips everything after ':' and treats the rest as
+/// a plain file path, so URL query params (pragmas) are NOT supported here.
+/// Pragmas are enforced at runtime instead (see lib.rs setup hook).
+pub const DB_URL: &str = "sqlite:lumen.db";
 
 pub const MIGRATION_V1: &str = r#"
 -- roots: user-added library roots (folders / drives)

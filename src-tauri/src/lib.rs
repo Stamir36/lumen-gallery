@@ -55,13 +55,17 @@ pub fn run() {
         )?;
       }
 
-      // Verify pragmas once the pool exists. The pool is created lazily by
-      // the plugin on first frontend use, so retry briefly, then log once.
+      // Enforce + verify pragmas once the pool exists. The pool is created
+      // lazily by the plugin on first frontend use (Database.load), so retry
+      // briefly. Spawned: NEVER blocks or fails a command path.
       let handle = app.handle().clone();
       tauri::async_runtime::spawn(async move {
         for _ in 0..30 {
           tokio::time::sleep(std::time::Duration::from_millis(500)).await;
           if let Ok(pool) = commands::pool_for(&handle).await {
+            let _ = sqlx::query("PRAGMA foreign_keys = ON").execute(&pool).await;
+            let _ = sqlx::query("PRAGMA journal_mode = WAL").execute(&pool).await;
+            let _ = sqlx::query("PRAGMA synchronous = NORMAL").execute(&pool).await;
             let fk: i64 =
               sqlx::query_scalar("PRAGMA foreign_keys").fetch_one(&pool).await.unwrap_or(0);
             let mode: String = sqlx::query_scalar("PRAGMA journal_mode")

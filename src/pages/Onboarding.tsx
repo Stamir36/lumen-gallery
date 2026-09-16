@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { open } from "@tauri-apps/plugin-dialog";
 import {
   HardDrive,
@@ -39,7 +40,11 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
       api
         .getVolumes()
         .then(setVolumes)
-        .catch(() => setVolumes([]));
+        .catch((e) => {
+          console.error("get_volumes failed:", e);
+          toast.error("get_volumes failed — see console (F12)");
+          setVolumes([]);
+        });
     }
   }, [view]);
 
@@ -53,7 +58,8 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
       setScanning(root.id);
       setView("scanning");
     } catch (e) {
-      console.error(e);
+      console.error("add_root failed:", e);
+      toast.error(`add_root failed: ${String(e).slice(0, 120)}`);
     } finally {
       setBusy(null);
     }
