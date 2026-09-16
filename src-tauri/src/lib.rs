@@ -4,6 +4,7 @@ mod commands;
 mod db;
 mod scan;
 mod volumes;
+mod watch;
 
 use tauri_plugin_sql::{Migration, MigrationKind};
 
@@ -43,6 +44,7 @@ pub fn run() {
       cache::thumbnail_cache_size,
       cache::clear_thumbnail_cache,
     ])
+    .manage(watch::WatcherRegistry::default())
     .setup(|app| {
       if cfg!(debug_assertions) {
         app.handle().plugin(

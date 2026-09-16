@@ -2,12 +2,13 @@
 
 use serde::Serialize;
 use sqlx::{Row, SqlitePool};
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Manager, State};
 use tauri_plugin_sql::{DbInstances, DbPool};
 
 use crate::db::DB_URL;
 use crate::scan::{self, MediaRow};
 use crate::volumes::{self, VolumeInfo};
+use crate::watch::{spawn_watcher, WatcherRegistry};
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -126,9 +127,11 @@ pub async fn add_root(
             log::warn!("initial scan failed for {path_buf:?}: {e}");
         }
     });
-    scan::spawn_watcher(
+    let registry = app.state::<WatcherRegistry>();
+    spawn_watcher(
         app.clone(),
         pool.clone(),
+        &registry,
         root.id,
         std::path::PathBuf::from(&path),
     );
@@ -137,8 +140,14 @@ pub async fn add_root(
 }
 
 #[tauri::command]
-pub async fn remove_root(app: AppHandle, id: i64) -> Result<(), String> {
+pub async fn remove_root(
+    app: AppHandle,
+    registry: State<'_, WatcherRegistry>,
+    id: i64,
+) -> Result<(), String> {
     let pool = pool_for(&app).await?;
+    // Stop the watcher FIRST so it cannot rescan a deleted root_id.
+    registry.remove(id);
     sqlx::query("DELETE FROM roots WHERE id = ?1")
         .bind(id)
         .execute(&pool)

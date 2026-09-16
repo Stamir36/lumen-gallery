@@ -1,9 +1,12 @@
 //! Scan core: recursive walk, whitelist filtering, hidden/system skipping,
 //! dedupe by (path, mtime, size), SQLite upsert, progress events, fs watcher.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
-use std::time::{Duration, UNIX_EPOCH};
+use std::sync::Arc;
+use std::time::UNIX_EPOCH;
+
+use tokio::sync::Mutex as AsyncMutex;
 
 use serde::Serialize;
 use sqlx::{Row, SqlitePool};
@@ -166,14 +169,31 @@ fn emit_progress(
     );
 }
 
+/// Per-root scan locks so watcher-triggered and manual rescans coalesce.
+static SCAN_LOCKS: std::sync::Mutex<Option<HashMap<i64, Arc<AsyncMutex<()>>>>> =
+    std::sync::Mutex::new(None);
+
+fn scan_lock(root_id: i64) -> Arc<AsyncMutex<()>> {
+    let mut guard = SCAN_LOCKS.lock().unwrap();
+    let map = guard.get_or_insert_with(HashMap::new);
+    map.entry(root_id).or_default().clone()
+}
+
 /// Walks `root` recursively, upserts media rows, emits `scan-progress`.
 /// Returns (files_seen, media_added_or_updated).
+/// Concurrent scans of the same root fail fast with "already scanning".
 pub async fn scan_root(
     app: &AppHandle,
     pool: &SqlitePool,
     root_id: i64,
     root_path: &Path,
 ) -> Result<(u64, u64), String> {
+    let lock = scan_lock(root_id);
+    if lock.try_lock().is_err() {
+        return Err("already scanning".to_string());
+    }
+    let _guard = lock.lock().await;
+
     let allowed = whitelist(pool).await;
 
     // Pass 1: collect candidate files (fast, no DB round-trips).
@@ -279,46 +299,3 @@ pub async fn scan_root(
     Ok((done, added))
 }
 
-/// Background watcher: debounce 2s, then incremental rescan of the root.
-pub fn spawn_watcher(app: AppHandle, pool: SqlitePool, root_id: i64, root_path: PathBuf) {
-    use notify::{RecursiveMode, Watcher};
-
-    std::thread::spawn(move || {
-        let (tx, rx) = std::sync::mpsc::channel::<()>();
-
-        let mut watcher = match notify::recommended_watcher(move |res: Result<notify::Event, notify::Error>| {
-            if res.is_ok() {
-                let _ = tx.send(());
-            }
-        }) {
-            Ok(w) => w,
-            Err(e) => {
-                log::warn!("watcher init failed for {:?}: {e}", root_path);
-                return;
-            }
-        };
-
-        if let Err(e) = watcher.watch(&root_path, RecursiveMode::Recursive) {
-            log::warn!("watch failed for {:?}: {e}", root_path);
-            return;
-        }
-
-        let debounce = Duration::from_secs(2);
-        loop {
-            if rx.recv().is_err() {
-                return; // app shutting down
-            }
-            // coalesce further filesystem events for 2s
-            while rx.recv_timeout(debounce).is_ok() {}
-
-            let app2 = app.clone();
-            let pool2 = pool.clone();
-            let path2 = root_path.clone();
-            tauri::async_runtime::spawn(async move {
-                if let Err(e) = scan_root(&app2, &pool2, root_id, &path2).await {
-                    log::warn!("incremental rescan failed: {e}");
-                }
-            });
-        }
-    });
-}
