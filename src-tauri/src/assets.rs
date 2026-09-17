@@ -12,6 +12,14 @@ pub fn allow_dir(app: &AppHandle, dir: &std::path::Path) {
     if let Err(e) = scope.allow_directory(dir, true) {
         log::warn!("asset scope allow_directory failed for {dir:?}: {e}");
     }
+    // The fs plugin read is the WebView-decoder fallback path (FIX 2): when the
+    // Rust image crate cannot decode a file, the frontend fetches its bytes and
+    // hands them to createImageBitmap — the fs scope needs the same roots.
+    use tauri_plugin_fs::FsExt;
+    let fs_scope = app.fs_scope();
+    if let Err(e) = fs_scope.allow_directory(dir, true) {
+        log::warn!("fs scope allow_directory failed for {dir:?}: {e}");
+    }
 }
 
 /// Extends the asset scope for every stored root (called once after boot).

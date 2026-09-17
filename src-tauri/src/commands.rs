@@ -422,11 +422,15 @@ pub async fn list_folders(
             .ok_or_else(|| "root not found".to_string())?,
     };
 
-    let rows = sqlx::query("SELECT id, path, thumb_path, dominant_color FROM media WHERE root_id = ?1 AND trashed = 0 ORDER BY mtime DESC")
-        .bind(root_id)
-        .fetch_all(&pool)
-        .await
-        .map_err(|e| e.to_string())?;
+    let rows = sqlx::query(
+        // thumb_error IS NULL filters undecodable files out of the cover pick:
+        // a corrupt first file must not make the whole folder card coverless
+        "SELECT id, path, thumb_path, dominant_color, thumb_error FROM media WHERE root_id = ?1 AND trashed = 0 ORDER BY mtime DESC",
+    )
+    .bind(root_id)
+    .fetch_all(&pool)
+    .await
+    .map_err(|e| e.to_string())?;
 
     struct Acc {
         name: String,
@@ -434,6 +438,11 @@ pub async fn list_folders(
         cover_id: i64,
         cover_thumb: Option<String>,
         cover_color: Option<String>,
+        /// first child with a (pending) thumb: the webview-side cover fallback
+        /// enqueues it when the card shows before the thumb exists
+        fallback_id: i64,
+        fallback_thumb: Option<String>,
+        fallback_color: Option<String>,
     }
     let mut map: HashMap<String, Acc> = HashMap::new();
 
@@ -450,6 +459,7 @@ pub async fn list_folders(
             .to_string();
         let thumb: Option<String> = r.try_get("thumb_path").unwrap_or(None);
         let color: Option<String> = r.try_get("dominant_color").unwrap_or(None);
+        let broken: bool = r.try_get::<i64, _>("thumb_error").unwrap_or(0) == 1;
         let id: i64 = r.get("id");
         let acc = map.entry(folder.clone()).or_insert(Acc {
             name,
@@ -457,26 +467,51 @@ pub async fn list_folders(
             cover_id: id,
             cover_thumb: None,
             cover_color: None,
+            fallback_id: id,
+            fallback_thumb: None,
+            fallback_color: None,
         });
         acc.count += 1;
+        if broken {
+            continue; // never a cover from a file known to be undecodable
+        }
+        // primary chain: cached thumb -> dominant color
         if acc.cover_thumb.is_none() && thumb.is_some() {
-            acc.cover_thumb = thumb;
+            acc.cover_thumb = thumb.clone();
             acc.cover_id = id;
             acc.cover_color = color.clone();
         } else if acc.cover_color.is_none() && color.is_some() {
-            acc.cover_color = color;
+            acc.cover_color = color.clone();
+        }
+        // fallback candidate: the newest not-yet-decoded child (any kind)
+        if acc.fallback_thumb.is_none() && acc.fallback_color.is_none() {
+            acc.fallback_id = id;
+            acc.fallback_thumb = thumb;
+            acc.fallback_color = color;
         }
     }
 
     let mut folders: Vec<FolderRow> = map
         .into_iter()
-        .map(|(path, a)| FolderRow {
-            path,
-            name: a.name,
-            count: a.count,
-            cover_id: Some(a.cover_id),
-            cover_thumb: a.cover_thumb,
-            cover_color: a.cover_color,
+        .map(|(path, a)| {
+            // cover chain (FIX 2): ok thumb -> dominant color -> decodable-child
+            // fallback -> neutral surface. Rows with thumb_error are skipped as
+            // candidates; the fallback keeps a decodable child so the webview
+            // can still enqueue a thumb while the card is on screen.
+            let has_primary = a.cover_thumb.is_some() || a.cover_color.is_some();
+            let (cover_id, cover_thumb, cover_color) = if has_primary {
+                (Some(a.cover_id), a.cover_thumb, a.cover_color)
+            } else {
+                (Some(a.fallback_id), a.fallback_thumb, a.fallback_color)
+            };
+            FolderRow {
+                path,
+                name: a.name,
+                count: a.count,
+                cover_id,
+                cover_thumb,
+                cover_color,
+            }
         })
         .collect();
     folders.sort_by_key(|f| f.name.to_lowercase());
