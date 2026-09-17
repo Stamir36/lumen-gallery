@@ -1,5 +1,30 @@
 # LUMEN — Roadmap (Phases 1–6)
 
+## Phase 3.8 — stabilization batch S1 (2026-09-17)
+Findings + evidence: `docs/AUDIT-2026-09-17.md`.
+- [ ] S1.1 seed warm thumbs from DB (instant render, enqueue only `thumb_path = null` + new version)
+- [ ] S1.2 app-wide thumb queue: ONE semaphore (settings workers, default 4), dedupe by `(id, mtime, size)`, 24-item sub-batches with incremental delivery
+- [ ] S1.3 subscribe the frontend to the writer's `thumbs-ready` event (patch the row cache, drop stuck placeholders)
+- [ ] S1.4 versioned thumb cache `(id, mtime, size)`, migration v5 `thumb_size`, stale file deleted + regenerated (incl. previous `thumb_error` rows)
+- [ ] S1.5 persistent browser fallback: decoded bitmap written to `appCacheDir/thumbs` through the writer; negative marker keyed by file version
+- [ ] S1.6 tile state contract: shimmer → thumb → neutral tile + mono ext chip; never a broken glyph
+- [ ] S1.7 bulk favorite/trash: placeholder list starts at `?1`, chunks ≤512, `rows_affected > 0` asserted with an i18n toast on mismatch
+- [ ] S1.8 scan upsert compares `excluded.mtime`/`excluded.size` + in-memory regression test on the real SQL
+- [ ] S1.9 explorer `tree | grid` sub-toggle (persisted), folders never in both panes, v2.2 gutters in folder mode
+- [ ] S1.10 `backend-ready` gate before the first library query (kills the first-open flicker)
+- [ ] S1.11 restore fs watchers for stored roots at boot
+- [ ] S1.12 route the remaining direct writes (video thumb, settings, cache clear) through the writer / `db_exec`
+
+## Backlog (audit 2026-09-17) — deferred, not dropped
+- [ ] Folder exclusions (`excluded_folders`, scan skip, Settings list + restore, show-excluded toggle) — Phase 3.5 FIX 6, still open
+- [ ] Masonry capped at 2 000 (MASONRY_MAX); lift only with ≥55 fps measured on 9.4k
+- [ ] Grid reflow animation on window resize (rows repack instantly — `layout` on 9k tiles is unaffordable)
+- [ ] Library stats on @tanstack/react-query (App.tsx hand-rolls useEffect + useState)
+- [ ] Restrictive CSP with a dev/prod split (needs `devUrl` relaxation) → packaging phase
+- [ ] Filmstrip reuses the same `thumbSrc` path + versioned cache as the grid (Phase 4 viewers)
+- [ ] `Enter` opens the viewer (Phase 4); explorer keyboard navigation in masonry
+- [ ] Numbers still awaiting a GUI run: warm tile paint, cold first tile < 1 s, rescan changes on an unchanged folder, 60 fps scroll, bulk favorite `rows_affected`
+
 ## Phase 3.7 — perf + declutter (2026-09-17)
 - [x] FIX 1 single-writer SQLite: ALL media writes through one tokio task (mpsc); thumb updates batched — flush at 200ms or 64 items, ONE transaction; favorite/trash/settings via whitelisted `db_exec` command with oneshot completion; busy_timeout=10000; WAL + NORMAL kept. Dev console logs `[perf] db_exec Nms` per UI write (favorite <50ms contract).
 - [x] FIX 2 honest tiles: WebView-decoder fallback (fs-read + createImageBitmap) tried once per file when Rust decode fails; folder covers skip thumb_error rows, chain = thumb → color → newest decodable child → tonal surface + folder glyph; broken-glyph eliminated everywhere.
