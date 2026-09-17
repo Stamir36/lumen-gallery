@@ -1,4 +1,4 @@
-//! Cache operations are restricted to generated WebP thumbnails, never library files.
+//! Cache operations are restricted to generated thumbnails, never library files.
 use std::fs;
 use tauri::{AppHandle, Manager};
 
@@ -23,7 +23,13 @@ fn thumbnails(app: &AppHandle, clear: bool) -> Result<u64, String> {
     for entry in fs::read_dir(dir).map_err(|e| e.to_string())? {
         let entry = entry.map_err(|e| e.to_string())?;
         if !entry.file_type().map_err(|e| e.to_string())?.is_file()
-            || !entry.path().extension().is_some_and(|ext| ext.eq_ignore_ascii_case("webp")) {
+            || !entry
+                .path()
+                .extension()
+                .is_some_and(|ext| {
+                    ext.eq_ignore_ascii_case("webp") || ext.eq_ignore_ascii_case("jpg")
+                })
+        {
             continue;
         }
         let metadata = fs::symlink_metadata(entry.path()).map_err(|e| e.to_string())?;

@@ -1,15 +1,16 @@
-✓ Lockfile passes supply-chain policies (verified 44m ago)
-Progress: resolved 0, reused 48, downloaded 1, added 0
-[WARN] Tarball download average speed 45 KiB/s (size 54 KiB) is below 50 KiB/s: https://registry.npmjs.org/@babel/runtime/-/runtime-7.29.7.tgz (GET)
-Progress: resolved 0, reused 48, downloaded 2, added 0
-Progress: resolved 0, reused 50, downloaded 4, added 0
-Packages: +6 -1
-++++++-
-Progress: resolved 6, reused 54, downloaded 5, added 6, done
+✓ Lockfile passes supply-chain policies (verified 1d ago)
+Progress: resolved 0, reused 3, downloaded 0, added 0
+Progress: resolved 0, reused 10, downloaded 1, added 0
+Progress: resolved 0, reused 18, downloaded 1, added 0
+Progress: resolved 0, reused 31, downloaded 1, added 0
+Progress: resolved 0, reused 38, downloaded 1, added 0
+Progress: resolved 0, reused 45, downloaded 1, added 0
+Packages: +1
++
+Progress: resolved 1, reused 54, downloaded 1, added 1, done
 
 dependencies:
-+ i18next 26.4.2
-+ react-i18next 17.0.14
++ @tauri-apps/plugin-fs 2.5.2
 
 Error: ERR_PNPM_IGNORED_BUILDS
 

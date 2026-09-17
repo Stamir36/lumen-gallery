@@ -86,55 +86,6 @@ pub fn kind_for_ext(ext: &str) -> &'static str {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn kind_for_ext_classifies_whitelist() {
-        assert_eq!(kind_for_ext("jpg"), "image");
-        assert_eq!(kind_for_ext("png"), "image");
-        assert_eq!(kind_for_ext("mp4"), "video");
-        assert_eq!(kind_for_ext("mkv"), "video");
-        assert_eq!(kind_for_ext(""), "video");
-        assert_eq!(kind_for_ext("exe"), "video");
-    }
-
-    /// The conditional upsert dedupes by (path, mtime, size): rows are only
-    /// written when mtime or size actually differ. This mirrors the WHERE
-    /// clause of upsert_chunk's INSERT ... ON CONFLICT statement.
-    fn should_write(existing_mtime: Option<i64>, existing_size: Option<i64>, mtime: i64, size: i64) -> bool {
-        match (existing_mtime, existing_size) {
-            (Some(m), Some(s)) => m != mtime || s != size,
-            _ => true, // missing row -> insert
-        }
-    }
-
-    #[test]
-    fn dedupe_skips_unchanged_rows() {
-        // same mtime+size -> skip (the dedupe contract)
-        assert!(!should_write(Some(1000), Some(42), 1000, 42));
-        // mtime changed -> write
-        assert!(should_write(Some(1001), Some(42), 1000, 42));
-        // size changed -> write
-        assert!(should_write(Some(1000), Some(43), 1000, 42));
-        // brand new path -> write
-        assert!(should_write(None, None, 1000, 42));
-    }
-
-    #[test]
-    fn chunking_covers_all_candidates() {
-        // Verify chunk boundaries cover every item exactly once.
-        let n: usize = 1234;
-        let chunks: Vec<usize> = (0..n).collect::<Vec<_>>().chunks(UPSERT_CHUNK).map(|c| c.len()).collect();
-        assert_eq!(chunks, vec![UPSERT_CHUNK, UPSERT_CHUNK, 234]);
-        assert_eq!(chunks.iter().sum::<usize>(), n);
-        // smaller than one chunk -> single chunk
-        let small: Vec<usize> = (0..499).collect();
-        assert_eq!(small.chunks(UPSERT_CHUNK).count(), 1);
-    }
-}
-
 /// Reads the extension whitelist from settings (fallback: DEFAULT_EXTENSIONS).
 pub async fn whitelist(pool: &SqlitePool) -> HashSet<String> {
     let value: Option<String> =
@@ -403,3 +354,40 @@ pub async fn scan_root(
     Ok((done, added))
 }
 
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn kind_for_ext_classifies_whitelist() {
+        assert_eq!(kind_for_ext("jpg"), "image");
+        assert_eq!(kind_for_ext("png"), "image");
+        assert_eq!(kind_for_ext("mp4"), "video");
+        assert_eq!(kind_for_ext("mkv"), "video");
+        assert_eq!(kind_for_ext(""), "video");
+    }
+
+    fn should_write(existing_mtime: Option<i64>, existing_size: Option<i64>, mtime: i64, size: i64) -> bool {
+        match (existing_mtime, existing_size) {
+            (Some(m), Some(s)) => m != mtime || s != size,
+            _ => true,
+        }
+    }
+
+    #[test]
+    fn dedupe_skips_unchanged_rows() {
+        assert!(!should_write(Some(1000), Some(42), 1000, 42));
+        assert!(should_write(Some(1001), Some(42), 1000, 42));
+        assert!(should_write(Some(1000), Some(43), 1000, 42));
+        assert!(should_write(None, None, 1000, 42));
+    }
+
+    #[test]
+    fn chunking_covers_all_candidates() {
+        let n: usize = 1234;
+        let chunks: Vec<usize> = (0..n).collect::<Vec<_>>().chunks(UPSERT_CHUNK).map(|c| c.len()).collect();
+        assert_eq!(chunks, vec![UPSERT_CHUNK, UPSERT_CHUNK, 234]);
+        assert_eq!(chunks.iter().sum::<usize>(), n);
+    }
+}

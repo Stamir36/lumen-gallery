@@ -141,6 +141,9 @@ pub async fn add_root(
         std::path::PathBuf::from(&path),
     );
 
+    // asset protocol: allow convertFileSrc() to serve files from this root
+    crate::assets::allow_dir(&app, std::path::Path::new(&path));
+
     Ok(root)
 }
 

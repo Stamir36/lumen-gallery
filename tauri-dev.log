@@ -2,50 +2,316 @@ $ tauri "dev"
      Running BeforeDevCommand (`pnpm dev`)
 $ vite
 
-  [32m[1mVITE[22m v6.4.3[39m  [2mready in [0m[1m713[22m[2m[0m ms[22m
+  [32m[1mVITE[22m v6.4.3[39m  [2mready in [0m[1m3707[22m[2m[0m ms[22m
 
   [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m1420[22m/[39m
      Running DevCommand (`cargo  run --no-default-features --color always --`)
         Info Watching C:\Develop\Agents AI\Gallary\src-tauri for changes...
-[1m[92m    Finished[0m `dev` profile [unoptimized + debuginfo] target(s) in 0.76s
+[1m[92m    Finished[0m `dev` profile [unoptimized + debuginfo] target(s) in 22.64s
 [1m[92m     Running[0m `target\debug\lumen.exe`
-[2m12:55:06[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2msrc/main.tsx[22m
-[2m12:55:07[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2msrc/main.tsx[22m
-[2m12:55:08[22m [31m[1m[vite][22m[39m [31mInternal server error: Failed to resolve import "./pages/OnboardingRoute" from "src/main.tsx". Does the file exist?[39m
-  Plugin: [35mvite:import-analysis[39m
-  File: [36mC:/Develop/Agents AI/Gallary/src/main.tsx[39m:8:27
-[33m  7  |  import App from "./App";
-  8  |  import StylePage from "./pages/StylePage";
-  9  |  import OnboardingPage from "./pages/OnboardingRoute";
-     |                              ^
-  10 |  import { initScanListener } from "./state/library";
-  11 |  import "./index.css";[39m
-      at TransformPluginContext._formatLog (file:///C:/Develop/Agents%20AI/Gallary/node_modules/.pnpm/vite@6.4.3_jiti@2.7.0_lightningcss@1.32.0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:42658:41)
-      at TransformPluginContext.error (file:///C:/Develop/Agents%20AI/Gallary/node_modules/.pnpm/vite@6.4.3_jiti@2.7.0_lightningcss@1.32.0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:42655:16)
-      at normalizeUrl (file:///C:/Develop/Agents%20AI/Gallary/node_modules/.pnpm/vite@6.4.3_jiti@2.7.0_lightningcss@1.32.0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:40634:23)
-      at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
-      at async file:///C:/Develop/Agents%20AI/Gallary/node_modules/.pnpm/vite@6.4.3_jiti@2.7.0_lightningcss@1.32.0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:40753:37
-      at async Promise.all (index 8)
-      at async TransformPluginContext.transform (file:///C:/Develop/Agents%20AI/Gallary/node_modules/.pnpm/vite@6.4.3_jiti@2.7.0_lightningcss@1.32.0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:40680:7)
-      at async EnvironmentPluginContainer.transform (file:///C:/Develop/Agents%20AI/Gallary/node_modules/.pnpm/vite@6.4.3_jiti@2.7.0_lightningcss@1.32.0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:42453:18)
-      at async loadAndTransform (file:///C:/Develop/Agents%20AI/Gallary/node_modules/.pnpm/vite@6.4.3_jiti@2.7.0_lightningcss@1.32.0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:35845:27)
-[2m12:55:08[22m [31m[1m[vite][22m[39m Pre-transform error: Failed to resolve import "./pages/OnboardingRoute" from "src/main.tsx". Does the file exist?
-  Plugin: [35mvite:import-analysis[39m
-  File: [36mC:/Develop/Agents AI/Gallary/src/main.tsx[39m:8:27
-[33m  7  |  import App from "./App";
-  8  |  import StylePage from "./pages/StylePage";
-  9  |  import OnboardingPage from "./pages/OnboardingRoute";
-     |                              ^
-  10 |  import { initScanListener } from "./state/library";
-  11 |  import "./index.css";[39m
-[2m12:55:08[22m [31m[1m[vite][22m[39m Pre-transform error: Failed to resolve import "./pages/OnboardingRoute" from "src/main.tsx". Does the file exist?
-  Plugin: [35mvite:import-analysis[39m
-  File: [36mC:/Develop/Agents AI/Gallary/src/main.tsx[39m:8:27
-[33m  7  |  import App from "./App";
-  8  |  import StylePage from "./pages/StylePage";
-  9  |  import OnboardingPage from "./pages/OnboardingRoute";
-     |                              ^
-  10 |  import { initScanListener } from "./state/library";
-  11 |  import "./index.css";[39m
-[2m12:55:15[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2msrc/pages/OnboardingRoute.tsx[22m
+[2026-09-17][12:10:45][lumen_lib][INFO] sqlite pragmas: foreign_keys=1 journal_mode=wal
+        Info File src-tauri\Cargo.toml changed. Rebuilding application...
+     Running DevCommand (`cargo  run --no-default-features --color always --`)
+[1m[92m    Updating[0m crates.io index
+[1m[92m     Locking[0m 1 package to latest compatible version
+[1m[92m      Adding[0m http-range v0.1.5
+[1m[96m Downloading[0m 0 crates                                                                                                 [1m[92m  Downloaded[0m http-range v0.1.5
+[1m[96m Downloading[0m 0 crates                                                                                                 [1m[92m  Downloaded[0m 1 crate (4.8KiB) in 0.41s
+[1m[92m   Compiling[0m tauri v2.11.5
+[1m[92m   Compiling[0m http-range v0.1.5
+[1m[96m    Building[0m [=======================> ] 459/474: tauri(b…[1m[96m    Building[0m [=======================> ] 460/474: tauri(b…[1m[96m    Building[0m [=======================> ] 461/474: tauri(b…                                                            [1m[92m   Compiling[0m tauri-plugin-fs v2.5.2
+[1m[92m   Compiling[0m tauri-plugin-sql v2.4.1
+[1m[92m   Compiling[0m tauri-plugin-log v2.9.1
+[1m[96m    Building[0m [=======================> ] 462/474: tauri-p…[1m[96m    Building[0m [=======================> ] 463/474: tauri, …                                                            [1m[92m   Compiling[0m tauri-plugin-dialog v2.7.3
+[1m[96m    Building[0m [=======================> ] 465/474: tauri, …                                                            [1m[92m   Compiling[0m lumen v0.1.0 (C:\Develop\Agents AI\Gallary\src-tauri)
+[1m[96m    Building[0m [=======================> ] 466/474: tauri, …[1m[96m    Building[0m [=======================> ] 467/474: tauri   [1m[96m    Building[0m [=======================> ] 467/474: tauri-p…[1m[96m    Building[0m [=======================> ] 468/474: tauri-p…[1m[96m    Building[0m [=======================> ] 469/474: tauri-p…[1m[96m    Building[0m [=======================> ] 470/474: tauri-p…[1m[96m    Building[0m [=======================> ] 471/474: tauri-p…[1m[96m    Building[0m [=======================> ] 472/474: lumen           Info File src-tauri\src\lib.rs changed. Rebuilding application...
+     Running DevCommand (`cargo  run --no-default-features --color always --`)
+        Info File src-tauri\src\lib.rs changed. Rebuilding application...
+     Running DevCommand (`cargo  run --no-default-features --color always --`)
+[1m[92m   Compiling[0m lumen v0.1.0 (C:\Develop\Agents AI\Gallary\src-tauri)
+[1m[96m    Building[0m [=======================> ] 472/474: lumen           Info File src-tauri\src\commands.rs changed. Rebuilding application...
+     Running DevCommand (`cargo  run --no-default-features --color always --`)
+[1m[92m   Compiling[0m lumen v0.1.0 (C:\Develop\Agents AI\Gallary\src-tauri)
+[1m[96m    Building[0m [=======================> ] 472/474: lumen   [1m[96m    Building[0m [=======================> ] 473/474: lumen(b…[2m15:12:54[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2msrc/main.tsx[22m
+[2m15:12:54[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2msrc/main.tsx[22m
+                                                            [1m[92m    Finished[0m `dev` profile [unoptimized + debuginfo] target(s) in 25.49s
+[1m[92m     Running[0m `target\debug\lumen.exe`
+[2026-09-17][12:13:05][lumen_lib][INFO] sqlite pragmas: foreign_keys=1 journal_mode=wal
+        Info File src-tauri\src\db.rs changed. Rebuilding application...
+     Running DevCommand (`cargo  run --no-default-features --color always --`)
+        Info File src-tauri\src\lib.rs changed. Rebuilding application...
+     Running DevCommand (`cargo  run --no-default-features --color always --`)
+[1m[92m   Compiling[0m lumen v0.1.0 (C:\Develop\Agents AI\Gallary\src-tauri)
+[1m[96m    Building[0m [=======================> ] 472/474: lumen   [1m[96m    Building[0m [=======================> ] 473/474: lumen(b…                                                            [1m[92m    Finished[0m `dev` profile [unoptimized + debuginfo] target(s) in 27.87s
+[1m[92m     Running[0m `target\debug\lumen.exe`
+[2026-09-17][12:16:28][lumen_lib][INFO] sqlite pragmas: foreign_keys=1 journal_mode=wal
+        Info File src-tauri\src\thumbs.rs changed. Rebuilding application...
+     Running DevCommand (`cargo  run --no-default-features --color always --`)
+[1m[92m    Finished[0m `dev` profile [unoptimized + debuginfo] target(s) in 1.37s
+[1m[92m     Running[0m `target\debug\lumen.exe`
+[2026-09-17][12:17:25][lumen_lib][INFO] sqlite pragmas: foreign_keys=1 journal_mode=wal
+        Info File src-tauri\src\thumbs.rs changed. Rebuilding application...
+     Running DevCommand (`cargo  run --no-default-features --color always --`)
+[1m[92m    Finished[0m `dev` profile [unoptimized + debuginfo] target(s) in 1.00s
+[1m[92m     Running[0m `target\debug\lumen.exe`
+[2026-09-17][12:18:19][lumen_lib][INFO] sqlite pragmas: foreign_keys=1 journal_mode=wal
+        Info File src-tauri\src\lib.rs changed. Rebuilding application...
+     Running DevCommand (`cargo  run --no-default-features --color always --`)
+[1m[92m    Updating[0m crates.io index
+        Info File src-tauri\src\lib.rs changed. Rebuilding application...
+     Running DevCommand (`cargo  run --no-default-features --color always --`)
+[1m[92m    Updating[0m crates.io index
+        Info File src-tauri\Cargo.toml changed. Rebuilding application...
+     Running DevCommand (`cargo  run --no-default-features --color always --`)
+[1m[92m    Updating[0m crates.io index
+        Info File src-tauri\src\lib.rs changed. Rebuilding application...
+     Running DevCommand (`cargo  run --no-default-features --color always --`)
+[1m[92m    Updating[0m crates.io index
+[1m[96m       Fetch[0m 1 complete; 16 pending                       [1m[96m       Fetch[0m 31 complete; 76 pending                      [1m[96m       Fetch[0m 95 complete; 12 pending                      [1m[96m       Fetch[0m 106 complete; 1 pending                      [1m[96m       Fetch[0m 124 complete; 139 pending                    [1m[96m       Fetch[0m 144 complete; 119 pending                    [1m[96m       Fetch[0m 215 complete; 48 pending                     [1m[96m       Fetch[0m 263 complete; 155 pending                    [1m[96m       Fetch[0m 394 complete; 24 pending                     [1m[96m       Fetch[0m 416 complete; 2 pending                      [1m[96m       Fetch[0m 418 complete; 61 pending                     [1m[96m       Fetch[0m 478 complete; 1 pending                      [1m[96m       Fetch[0m 490 complete; 19 pending                     [1m[96m       Fetch[0m 510 complete; 12 pending                     [1m[96m       Fetch[0m 524 complete; 1 pending                                                                                  [1m[92m     Locking[0m 46 packages to latest compatible versions
+[1m[92m      Adding[0m aligned v0.4.3
+[1m[92m      Adding[0m aligned-vec v0.6.4
+[1m[92m      Adding[0m arbitrary v1.4.2
+[1m[92m      Adding[0m arg_enum_proc_macro v0.3.4
+[1m[92m      Adding[0m as-slice v0.2.1
+[1m[92m      Adding[0m av-scenechange v0.14.1
+[1m[92m      Adding[0m av1-grain v0.2.5
+[1m[92m      Adding[0m avif-serialize v0.8.9
+[1m[92m      Adding[0m bitstream-io v4.10.0
+[1m[92m      Adding[0m built v0.8.1
+[1m[92m      Adding[0m byteorder-lite v0.1.0
+[1m[92m      Adding[0m color_quant v1.1.0
+[1m[92m      Adding[0m equator v0.4.2
+[1m[92m      Adding[0m equator-macro v0.4.2
+[1m[92m      Adding[0m gif v0.14.2
+[1m[92m      Adding[0m image v0.25.10
+[1m[92m      Adding[0m image-webp v0.2.4
+[1m[92m      Adding[0m imgref v1.12.3
+[1m[92m      Adding[0m interpolate_name v0.2.4
+[1m[92m      Adding[0m itertools v0.14.0
+[1m[92m      Adding[0m jobserver v0.1.35
+[1m[92m      Adding[0m libfuzzer-sys v0.4.13
+[1m[92m      Adding[0m loop9 v0.1.5
+[1m[92m      Adding[0m maybe-rayon v0.1.1
+[1m[92m      Adding[0m moxcms v0.8.1
+[1m[92m      Adding[0m no_std_io2 v0.9.4
+[1m[92m      Adding[0m nom v8.0.0
+[1m[92m      Adding[0m noop_proc_macro v0.3.0
+[1m[92m      Adding[0m num-bigint v0.4.8
+[1m[92m      Adding[0m num-derive v0.4.2
+[1m[92m      Adding[0m num-rational v0.4.2
+[1m[92m      Adding[0m paste v1.0.15
+[1m[92m      Adding[0m pastey v0.1.1
+[1m[92m      Adding[0m profiling v1.0.18
+[1m[92m      Adding[0m profiling-procmacros v1.0.18
+[1m[92m      Adding[0m pxfm v0.1.30
+[1m[92m      Adding[0m quick-error v2.0.1
+[1m[92m      Adding[0m rav1e v0.8.1
+[1m[92m      Adding[0m ravif v0.13.0
+[1m[92m      Adding[0m rgb v0.8.53
+[1m[92m      Adding[0m simd_helpers v0.1.0
+[1m[92m      Adding[0m v_frame v0.3.9
+[1m[92m      Adding[0m weezl v0.1.12
+[1m[92m      Adding[0m y4m v0.8.0
+[1m[92m      Adding[0m zune-core v0.5.3
+[1m[92m      Adding[0m zune-jpeg v0.5.15
+[1m[96m Downloading[0m 0 crates                                     [1m[96m Downloading[0m 1 crate                                      [1m[96m Downloading[0m 2 crates                                     [1m[96m Downloading[0m 3 crates                                     [1m[96m Downloading[0m 4 crates                                     [1m[96m Downloading[0m 5 crates                                     [1m[96m Downloading[0m 6 crates                                     [1m[96m Downloading[0m 7 crates                                     [1m[96m Downloading[0m 8 crates                                     [1m[96m Downloading[0m 9 crates                                     [1m[96m Downloading[0m 10 crates                                    [1m[96m Downloading[0m 11 crates                                    [1m[96m Downloading[0m 12 crates                                    [1m[96m Downloading[0m 13 crates                                    [1m[96m Downloading[0m 14 crates                                    [1m[96m Downloading[0m 15 crates                                    [1m[96m Downloading[0m 16 crates                                    [1m[96m Downloading[0m 17 crates                                    [1m[96m Downloading[0m 18 crates                                    [1m[96m Downloading[0m 19 crates                                    [1m[96m Downloading[0m 20 crates                                    [1m[96m Downloading[0m 21 crates                                    [1m[96m Downloading[0m 22 crates                                    [1m[96m Downloading[0m 23 crates                                    [1m[96m Downloading[0m 24 crates                                    [1m[96m Downloading[0m 25 crates                                    [1m[96m Downloading[0m 26 crates                                    [1m[96m Downloading[0m 27 crates                                    [1m[96m Downloading[0m 28 crates                                    [1m[96m Downloading[0m 29 crates                                    [1m[96m Downloading[0m 30 crates                                    [1m[96m Downloading[0m 31 crates                                    [1m[96m Downloading[0m 32 crates                                    [1m[96m Downloading[0m 33 crates                                    [1m[96m Downloading[0m 34 crates                                    [1m[96m Downloading[0m 35 crates                                    [1m[96m Downloading[0m 36 crates                                    [1m[96m Downloading[0m 37 crates                                    [1m[96m Downloading[0m 38 crates                                    [1m[96m Downloading[0m 39 crates                                    [1m[96m Downloading[0m 40 crates                                    [1m[96m Downloading[0m 41 crates                                    [1m[96m Downloading[0m 42 crates                                    [1m[96m Downloading[0m 43 crates                                    [1m[96m Downloading[0m 44 crates                                    [1m[96m Downloading[0m 45 crates                                    [1m[96m Downloading[0m 46 crates                                    [1m[96m Downloading[0m 47 crates                                    [1m[96m Downloading[0m 48 crates                                    [1m[96m Downloading[0m 49 crates                                    [1m[96m Downloading[0m 50 crates                                                                                                [1m[92m  Downloaded[0m aligned v0.4.3
+[1m[96m Downloading[0m 50 crates, remaining bytes: 50.4KiB                                                                      [1m[92m  Downloaded[0m byteorder-lite v0.1.0
+[1m[96m Downloading[0m 49 crates, remaining bytes: 30.3KiB                                                                      [1m[92m  Downloaded[0m aligned-vec v0.6.4
+[1m[96m Downloading[0m 48 crates, remaining bytes: 490.4KiB                                                                     [1m[92m  Downloaded[0m av1-grain v0.2.5
+[1m[96m Downloading[0m 47 crates, remaining bytes: 563.3KiB                                                                     [1m[92m  Downloaded[0m no_std_io2 v0.9.4
+[1m[96m Downloading[0m 46 crates, remaining bytes: 382.5KiB                                                                     [1m[92m  Downloaded[0m png v0.18.1
+[1m[96m Downloading[0m 45 crates, remaining bytes: 191.3KiB                                                                     [1m[92m  Downloaded[0m v_frame v0.3.9
+[1m[96m Downloading[0m 44 crates, remaining bytes: 2.8MiB                                                                       [1m[92m  Downloaded[0m arg_enum_proc_macro v0.3.4
+[1m[96m Downloading[0m 43 crates, remaining bytes: 3.0MiB                                                                       [1m[92m  Downloaded[0m as-slice v0.2.1
+[1m[96m Downloading[0m 42 crates, remaining bytes: 2.9MiB                                                                       [1m[92m  Downloaded[0m imgref v1.12.3
+[1m[96m Downloading[0m 41 crates, remaining bytes: 2.9MiB                                                                       [1m[92m  Downloaded[0m rgb v0.8.53
+[1m[96m Downloading[0m 40 crates, remaining bytes: 2.9MiB                                                                       [1m[92m  Downloaded[0m weezl v0.1.12
+[1m[96m Downloading[0m 39 crates, remaining bytes: 2.2MiB                                                                       [1m[92m  Downloaded[0m loop9 v0.1.5
+[1m[96m Downloading[0m 38 crates, remaining bytes: 2.1MiB                                                                       [1m[92m  Downloaded[0m num-derive v0.4.2
+[1m[96m Downloading[0m 37 crates, remaining bytes: 2.1MiB                                                                       [1m[92m  Downloaded[0m equator v0.4.2
+[1m[96m Downloading[0m 36 crates, remaining bytes: 1013.8KiB                                                                    [1m[92m  Downloaded[0m maybe-rayon v0.1.1
+[1m[96m Downloading[0m 35 crates, remaining bytes: 797.8KiB                                                                     [1m[92m  Downloaded[0m avif-serialize v0.8.9
+[1m[96m Downloading[0m 34 crates, remaining bytes: 714.9KiB                                                                     [1m[92m  Downloaded[0m quick-error v2.0.1
+[1m[96m Downloading[0m 33 crates, remaining bytes: 566.9KiB                                                                     [1m[92m  Downloaded[0m simd_helpers v0.1.0
+[1m[96m Downloading[0m 32 crates, remaining bytes: 482.9KiB                                                                     [1m[92m  Downloaded[0m profiling v1.0.18
+[1m[96m Downloading[0m 31 crates, remaining bytes: 482.9KiB                                                                     [1m[92m  Downloaded[0m rustversion v1.0.23
+[1m[96m Downloading[0m 30 crates, remaining bytes: 482.9KiB                                                                     [1m[92m  Downloaded[0m bytemuck v1.25.2
+[1m[96m Downloading[0m 29 crates                                                                                                [1m[92m  Downloaded[0m built v0.8.1
+[1m[96m Downloading[0m 28 crates                                                                                                [1m[92m  Downloaded[0m noop_proc_macro v0.3.0
+[1m[96m Downloading[0m 27 crates                                                                                                [1m[92m  Downloaded[0m paste v1.0.15
+[1m[96m Downloading[0m 26 crates                                                                                                [1m[92m  Downloaded[0m equator-macro v0.4.2
+[1m[96m Downloading[0m 25 crates                                                                                                [1m[92m  Downloaded[0m wasm-bindgen-shared v0.2.128
+[1m[96m Downloading[0m 24 crates                                                                                                [1m[92m  Downloaded[0m pastey v0.1.1
+[1m[96m Downloading[0m 23 crates                                                                                                [1m[92m  Downloaded[0m num-rational v0.4.2
+[1m[96m Downloading[0m 22 crates                                                                                                [1m[92m  Downloaded[0m av-scenechange v0.14.1
+[1m[96m Downloading[0m 21 crates, extracting av-scenechange ...                                                                 [1m[92m  Downloaded[0m color_quant v1.1.0
+[1m[96m Downloading[0m 20 crates                                                                                                [1m[92m  Downloaded[0m wasm-bindgen v0.2.128
+[1m[96m Downloading[0m 19 crates                                                                                                [1m[92m  Downloaded[0m y4m v0.8.0
+[1m[96m Downloading[0m 18 crates                                                                                                [1m[92m  Downloaded[0m wasm-bindgen-macro v0.2.128
+[1m[96m Downloading[0m 17 crates                                                                                                [1m[92m  Downloaded[0m profiling-procmacros v1.0.18
+[1m[96m Downloading[0m 16 crates                                                                                                [1m[92m  Downloaded[0m gif v0.14.2
+[1m[96m Downloading[0m 15 crates                                                                                                [1m[92m  Downloaded[0m jobserver v0.1.35
+[1m[96m Downloading[0m 14 crates                                                                                                [1m[92m  Downloaded[0m ravif v0.13.0
+[1m[96m Downloading[0m 13 crates                                                                                                [1m[92m  Downloaded[0m bumpalo v3.20.3
+[1m[96m Downloading[0m 12 crates                                                                                                [1m[92m  Downloaded[0m zune-core v0.5.3
+[1m[96m Downloading[0m 11 crates                                                                                                [1m[92m  Downloaded[0m bitstream-io v4.10.0
+[1m[96m Downloading[0m 10 crates                                                                                                [1m[92m  Downloaded[0m itertools v0.14.0
+[1m[96m Downloading[0m 9 crates                                                                                                 [1m[92m  Downloaded[0m num-bigint v0.4.8
+[1m[96m Downloading[0m 8 crates                                                                                                 [1m[92m  Downloaded[0m nom v8.0.0
+[1m[96m Downloading[0m 7 crates                                                                                                 [1m[92m  Downloaded[0m wasm-bindgen-macro-support v0.2.128
+[1m[96m Downloading[0m 6 crates                                                                                                 [1m[92m  Downloaded[0m image-webp v0.2.4
+[1m[96m Downloading[0m 5 crates                                                                                                 [1m[92m  Downloaded[0m zune-jpeg v0.5.15
+[1m[96m Downloading[0m 4 crates                                                                                                 [1m[92m  Downloaded[0m moxcms v0.8.1
+[1m[96m Downloading[0m 3 crates                                                                                                 [1m[92m  Downloaded[0m image v0.25.10
+[1m[96m Downloading[0m 2 crates                                                                                                 [1m[92m  Downloaded[0m pxfm v0.1.30
+[1m[96m Downloading[0m 1 crate, extracting pxfm ...                                                                             [1m[92m  Downloaded[0m rav1e v0.8.1
+[1m[96m Downloading[0m 0 crates, extracting rav1e ...                                                                           [1m[92m  Downloaded[0m 51 crates (4.8MiB) in 7.57s (largest was `rav1e` at 1.4MiB)
+[1m[92m   Compiling[0m new_debug_unreachable v1.0.6
+[1m[92m   Compiling[0m num-traits v0.2.19
+[1m[92m   Compiling[0m simd-adler32 v0.3.10
+[1m[92m   Compiling[0m adler2 v2.0.1
+[1m[92m   Compiling[0m crc32fast v1.5.2
+[1m[92m   Compiling[0m either v1.18.0
+[1m[92m   Compiling[0m arrayvec v0.7.8
+[1m[96m    Building[0m [============>            ] 290/530: num-tra…                                                            [1m[92m   Compiling[0m string_cache v0.9.0
+[1m[96m    Building[0m [============>            ] 291/530: num-tra…                                                            [1m[92m   Compiling[0m tendril v0.5.1
+[1m[96m    Building[0m [============>            ] 292/530: num-tra…                                                            [1m[92m   Compiling[0m selectors v0.36.1
+[1m[96m    Building[0m [============>            ] 293/530: num-tra…[1m[96m    Building[0m [============>            ] 294/530: selecto…                                                            [1m[92m   Compiling[0m web_atoms v0.2.6
+[1m[96m    Building[0m [============>            ] 295/530: selecto…[1m[96m    Building[0m [============>            ] 296/530: selecto…                                                            [1m[92m   Compiling[0m miniz_oxide v0.9.1
+[1m[92m   Compiling[0m miniz_oxide v0.8.9
+[1m[96m    Building[0m [=============>           ] 298/530: miniz_o…                                                            [1m[92m   Compiling[0m fdeflate v0.3.7
+[1m[96m    Building[0m [=============>           ] 299/530: miniz_o…[1m[96m    Building[0m [==============>          ] 333/530: miniz_o…                                                            [1m[92m   Compiling[0m equator-macro v0.4.2
+[1m[96m    Building[0m [===============>         ] 342/530: miniz_o…[1m[96m    Building[0m [===============>         ] 343/530: miniz_o…                                                            [1m[92m   Compiling[0m flate2 v1.1.10
+[1m[96m    Building[0m [===============>         ] 344/530: miniz_o…                                                            [1m[92m   Compiling[0m markup5ever v0.38.0
+[1m[96m    Building[0m [===============>         ] 345/530: miniz_o…                                                            [1m[92m   Compiling[0m num-integer v0.1.47
+[1m[96m    Building[0m [===============>         ] 357/530: miniz_o…                                                            [1m[92m   Compiling[0m rust_decimal v1.43.0
+[1m[96m    Building[0m [================>        ] 368/530: miniz_o…[1m[96m    Building[0m [=================>       ] 385/530: miniz_o…                                                            [1m[92m   Compiling[0m rayon v1.12.0
+[1m[96m    Building[0m [=================>       ] 397/530: selecto…                                                            [1m[92m   Compiling[0m equator v0.4.2
+[1m[96m    Building[0m [=================>       ] 398/530: selecto…                                                            [1m[92m   Compiling[0m html5ever v0.38.0
+[1m[96m    Building[0m [=================>       ] 399/530: selecto…                                                            [1m[92m   Compiling[0m png v0.17.16
+[1m[96m    Building[0m [=================>       ] 400/530: png, ru…                                                            [1m[92m   Compiling[0m num-bigint v0.4.8
+[1m[96m    Building[0m [=================>       ] 401/530: png, ru…                                                            [1m[92m   Compiling[0m atoi v2.0.0
+[1m[96m    Building[0m [==================>      ] 404/530: png, ru…                                                            [1m[92m   Compiling[0m aligned-vec v0.6.4
+[1m[96m    Building[0m [==================>      ] 405/530: png, ru…                                                            [1m[92m   Compiling[0m as-slice v0.2.1
+[1m[96m    Building[0m [==================>      ] 406/530: png, ru…                                                            [1m[92m   Compiling[0m av-scenechange v0.14.1
+[1m[96m    Building[0m [==================>      ] 408/530: png, ru…                                                            [1m[92m   Compiling[0m v_frame v0.3.9
+[1m[96m    Building[0m [==================>      ] 409/530: png, ru…                                                            [1m[92m   Compiling[0m sqlx-core v0.8.6
+[1m[96m    Building[0m [==================>      ] 410/530: png, sq…                                                            [1m[92m   Compiling[0m built v0.8.1
+[1m[96m    Building[0m [==================>      ] 411/530: png, sq…                                                            [1m[92m   Compiling[0m paste v1.0.15
+[1m[96m    Building[0m [==================>      ] 412/530: png, sq…[1m[96m    Building[0m [==================>      ] 417/530: png, sq…                                                            [1m[92m   Compiling[0m aligned v0.4.3
+[1m[96m    Building[0m [==================>      ] 418/530: png, sq…                                                            [1m[92m   Compiling[0m ico v0.5.0
+[1m[96m    Building[0m [==================>      ] 419/530: png, sq…                                                            [1m[92m   Compiling[0m dom_query v0.27.0
+[1m[96m    Building[0m [==================>      ] 420/530: png, sq…                                                            [1m[92m   Compiling[0m num-rational v0.4.2
+[1m[96m    Building[0m [==================>      ] 421/530: png, sq…                                                            [1m[92m   Compiling[0m rav1e v0.8.1
+[1m[96m    Building[0m [==================>      ] 422/530: png, sq…[1m[96m    Building[0m [==================>      ] 423/530: sqlx-co…[1m[96m    Building[0m [===================>     ] 425/530: sqlx-co…                                                            [1m[92m   Compiling[0m profiling-procmacros v1.0.18
+[1m[96m    Building[0m [===================>     ] 429/530: sqlx-co…                                                            [1m[92m   Compiling[0m arg_enum_proc_macro v0.3.4
+[1m[96m    Building[0m [===================>     ] 430/530: sqlx-co…                                                            [1m[92m   Compiling[0m no_std_io2 v0.9.4
+[1m[96m    Building[0m [===================>     ] 431/530: sqlx-co…                                                            [1m[92m   Compiling[0m tauri-utils v2.9.3
+[1m[96m    Building[0m [===================>     ] 432/530: sqlx-co…                                                            [1m[92m   Compiling[0m nom v8.0.0
+[1m[96m    Building[0m [===================>     ] 433/530: sqlx-co…                                                            [1m[92m   Compiling[0m y4m v0.8.0
+[1m[96m    Building[0m [===================>     ] 436/530: sqlx-co…                                                            [1m[92m   Compiling[0m pastey v0.1.1
+[1m[96m    Building[0m [===================>     ] 438/530: sqlx-co…[1m[96m    Building[0m [===================>     ] 441/530: sqlx-co…                                                            [1m[92m   Compiling[0m bitstream-io v4.10.0
+[1m[96m    Building[0m [===================>     ] 442/530: sqlx-co…                                                            [1m[92m   Compiling[0m profiling v1.0.18
+[1m[96m    Building[0m [===================>     ] 443/530: sqlx-co…[1m[96m    Building[0m [===================>     ] 445/530: sqlx-co…[1m[96m    Building[0m [====================>    ] 446/530: sqlx-co…[1m[96m    Building[0m [====================>    ] 449/530: sqlx-co…                                                            [1m[92m   Compiling[0m itertools v0.14.0
+[1m[96m    Building[0m [====================>    ] 450/530: sqlx-co…                                                            [1m[92m   Compiling[0m num-derive v0.4.2
+[1m[96m    Building[0m [====================>    ] 453/530: sqlx-co…                                                            [1m[92m   Compiling[0m simd_helpers v0.1.0
+[1m[96m    Building[0m [====================>    ] 455/530: sqlx-co…[1m[96m    Building[0m [====================>    ] 456/530: sqlx-co…                                                            [1m[92m   Compiling[0m maybe-rayon v0.1.1
+[1m[96m    Building[0m [====================>    ] 457/530: sqlx-co…                                                            [1m[92m   Compiling[0m quick-error v2.0.1
+[1m[96m    Building[0m [====================>    ] 459/530: quick-e…                                                            [1m[92m   Compiling[0m noop_proc_macro v0.3.0
+[1m[96m    Building[0m [====================>    ] 461/530: quick-e…                                                            [1m[92m   Compiling[0m imgref v1.12.3
+[1m[96m    Building[0m [====================>    ] 462/530: sqlx-co…                                                            [1m[92m   Compiling[0m loop9 v0.1.5
+[1m[96m    Building[0m [====================>    ] 463/530: sqlx-co…                                                            [1m[92m   Compiling[0m avif-serialize v0.8.9
+[1m[96m    Building[0m [=====================>   ] 470/530: sqlx-co…                                                            [1m[92m   Compiling[0m pxfm v0.1.30
+[1m[96m    Building[0m [=====================>   ] 471/530: sqlx-co…                                                            [1m[92m   Compiling[0m rgb v0.8.53
+[1m[96m    Building[0m [=====================>   ] 472/530: sqlx-co…                                                            [1m[92m   Compiling[0m byteorder-lite v0.1.0
+[1m[96m    Building[0m [=====================>   ] 473/530: sqlx-co…                                                            [1m[92m   Compiling[0m weezl v0.1.12
+[1m[96m    Building[0m [=====================>   ] 474/530: sqlx-co…                                                            [1m[92m   Compiling[0m color_quant v1.1.0
+[1m[96m    Building[0m [=====================>   ] 475/530: sqlx-co…                                                            [1m[92m   Compiling[0m av1-grain v0.2.5
+[1m[96m    Building[0m [=====================>   ] 476/530: av1-gra…                                                            [1m[92m   Compiling[0m zune-core v0.5.3
+[1m[96m    Building[0m [=====================>   ] 477/530: av1-gra…                                                            [1m[92m   Compiling[0m gif v0.14.2
+[1m[96m    Building[0m [=====================>   ] 478/530: av1-gra…                                                            [1m[92m   Compiling[0m zune-jpeg v0.5.15
+[1m[96m    Building[0m [=====================>   ] 479/530: av1-gra…                                                            [1m[92m   Compiling[0m image-webp v0.2.4
+[1m[96m    Building[0m [=====================>   ] 480/530: av1-gra…                                                            [1m[92m   Compiling[0m sqlx-sqlite v0.8.6
+[1m[96m    Building[0m [=====================>   ] 481/530: av1-gra…[1m[96m    Building[0m [=====================>   ] 482/530: sqlx-sq…[1m[96m    Building[0m [=====================>   ] 483/530: sqlx-sq…                                                            [1m[92m   Compiling[0m moxcms v0.8.1
+[1m[96m    Building[0m [=====================>   ] 484/530: sqlx-sq…                                                            [1m[92m   Compiling[0m png v0.18.1
+[1m[96m    Building[0m [======================>  ] 489/530: sqlx-sq…                                                            [1m[92m   Compiling[0m sqlx-macros-core v0.8.6
+[1m[96m    Building[0m [======================>  ] 490/530: sqlx-sq…        Info File src-tauri\capabilities\default.json changed. Rebuilding application...
+     Running DevCommand (`cargo  run --no-default-features --color always --`)
+        Info File src-tauri\src\cache.rs changed. Rebuilding application...
+     Running DevCommand (`cargo  run --no-default-features --color always --`)
+        Info File src-tauri\src\cache.rs changed. Rebuilding application...
+     Running DevCommand (`cargo  run --no-default-features --color always --`)
+[1m[92m   Compiling[0m tauri-utils v2.9.3
+[1m[92m   Compiling[0m sqlx-sqlite v0.8.6
+[1m[92m   Compiling[0m rav1e v0.8.1
+[1m[92m   Compiling[0m pxfm v0.1.30
+[1m[92m   Compiling[0m png v0.18.1
+[1m[92m   Compiling[0m bytemuck v1.25.2
+[1m[92m   Compiling[0m sysinfo v0.33.1
+[1m[96m    Building[0m [======================>  ] 493/530: sqlx-sq…[1m[96m    Building[0m [======================>  ] 494/530: sqlx-sq…[1m[96m    Building[0m [======================>  ] 495/530: sqlx-sq…                                                            [1m[92m   Compiling[0m sqlx-macros-core v0.8.6
+[1m[96m    Building[0m [======================>  ] 495/530: sqlx-sq…                                                            [1m[92m   Compiling[0m moxcms v0.8.1
+[1m[96m    Building[0m [======================>  ] 496/530: sqlx-sq…                                                            [1m[92m   Compiling[0m sqlx-macros v0.8.6
+[1m[96m    Building[0m [======================>  ] 497/530: sqlx-sq…                                                            [1m[92m   Compiling[0m ravif v0.13.0
+[1m[96m    Building[0m [======================>  ] 497/530: sqlx-sq…[1m[96m    Building[0m [======================>  ] 498/530: sqlx-sq…[1m[96m    Building[0m [======================>  ] 499/530: sqlx-sq…[1m[96m    Building[0m [======================>  ] 500/530: sqlx-sq…                                                            [1m[92m   Compiling[0m sqlx v0.8.6
+[1m[96m    Building[0m [======================>  ] 501/530: sqlx-sq…[1m[96m    Building[0m [======================>  ] 502/530: sqlx-sq…[1m[96m    Building[0m [======================>  ] 503/530: moxcms,…                                                            [1m[92m   Compiling[0m image v0.25.10
+[1m[96m    Building[0m [======================>  ] 503/530: image, …                                                            [1m[92m   Compiling[0m tauri-build v2.6.3
+[1m[96m    Building[0m [======================>  ] 503/530: image, …                                                            [1m[92m   Compiling[0m tauri-plugin v2.6.3
+[1m[96m    Building[0m [======================>  ] 503/530: tauri-p…                                                            [1m[92m   Compiling[0m tauri-codegen v2.6.3
+[1m[96m    Building[0m [======================>  ] 503/530: tauri-p…[1m[96m    Building[0m [======================>  ] 504/530: tauri-c…[1m[96m    Building[0m [======================>  ] 505/530: tauri-c…[1m[96m    Building[0m [======================>  ] 506/530: tauri-c…[1m[96m    Building[0m [======================>  ] 507/530: image, …[1m[96m    Building[0m [======================>  ] 508/530: image, …                                                            [1m[92m   Compiling[0m tauri v2.11.5
+[1m[92m   Compiling[0m tauri-plugin-fs v2.5.2
+[1m[92m   Compiling[0m tauri-macros v2.6.3
+[1m[96m    Building[0m [=======================> ] 509/530: tauri(b…                                                            [1m[92m   Compiling[0m tauri-plugin-dialog v2.7.3
+[1m[96m    Building[0m [=======================> ] 509/530: tauri-p…                                                            [1m[92m   Compiling[0m tauri-plugin-log v2.9.1
+[1m[96m    Building[0m [=======================> ] 509/530: tauri-p…                                                            [1m[92m   Compiling[0m tauri-plugin-sql v2.4.1
+[1m[96m    Building[0m [=======================> ] 509/530: tauri-p…                                                            [1m[92m   Compiling[0m lumen v0.1.0 (C:\Develop\Agents AI\Gallary\src-tauri)
+[1m[96m    Building[0m [=======================> ] 509/530: tauri-p…[1m[96m    Building[0m [=======================> ] 510/530: tauri-p…[1m[96m    Building[0m [=======================> ] 511/530: tauri-p…[1m[96m    Building[0m [=======================> ] 512/530: tauri-p…[1m[96m    Building[0m [=======================> ] 513/530: image, …[1m[96m    Building[0m [=======================> ] 514/530: image, …[1m[96m    Building[0m [=======================> ] 515/530: tauri(b…[1m[96m    Building[0m [=======================> ] 516/530: tauri(b…[1m[96m    Building[0m [=======================> ] 517/530: tauri-p…[1m[96m    Building[0m [=======================> ] 518/530: tauri-p…[1m[96m    Building[0m [=======================> ] 519/530: tauri-p…[1m[96m    Building[0m [=======================> ] 520/530: tauri-p…[1m[96m    Building[0m [=======================> ] 521/530: tauri, …[1m[96m    Building[0m [=======================> ] 522/530: lumen(b…[1m[96m    Building[0m [=======================> ] 523/530: tauri   [1m[96m    Building[0m [=======================> ] 523/530: tauri-p…[1m[96m    Building[0m [=======================> ] 524/530: tauri-p…[1m[96m    Building[0m [=======================> ] 525/530: tauri-p…[1m[96m    Building[0m [=======================> ] 526/530: tauri-p…[1m[96m    Building[0m [=======================> ] 527/530: tauri   [1m[96m    Building[0m [=======================> ] 528/530: lumen                                                               [1m[91merror[E0428][0m[1m[97m: the name `volumes` is defined multiple times[0m
+ [1m[96m--> [0msrc\lib.rs:9:1
+  [1m[96m|[0m
+[1m[96m8[0m [1m[96m|[0m mod volumes;
+  [1m[96m|[0m [1m[96m------------[0m [1m[96mprevious definition of the module `volumes` here[0m
+[1m[96m9[0m [1m[96m|[0m mod volumes;
+  [1m[96m|[0m [1m[91m^^^^^^^^^^^^[0m [1m[91m`volumes` redefined here[0m
+  [1m[96m|[0m
+  [1m[96m= [0m[1m[97mnote[0m: `volumes` must be defined only once in the type namespace of this module
+
+[1m[96m    Building[0m [=======================> ] 528/530: lumen                                                               [1m[97mFor more information about this error, try `rustc --explain E0428`.[0m
+[1m[96m    Building[0m [=======================> ] 528/530: lumen                                                               [1m[91merror[0m: could not compile `lumen` (lib) due to 1 previous error
+[2m15:20:37[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2mpnpm-workspace.yaml[22m
+[2m15:20:37[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2mpackage.json[22m
+        Info File src-tauri\src\scan.rs changed. Rebuilding application...
+     Running DevCommand (`cargo  run --no-default-features --color always --`)
+[1m[92m   Compiling[0m lumen v0.1.0 (C:\Develop\Agents AI\Gallary\src-tauri)
+[1m[96m    Building[0m [=======================> ] 528/530: lumen                                                               [1m[91merror[E0428][0m[1m[97m: the name `volumes` is defined multiple times[0m
+ [1m[96m--> [0msrc\lib.rs:9:1
+  [1m[96m|[0m
+[1m[96m8[0m [1m[96m|[0m mod volumes;
+  [1m[96m|[0m [1m[96m------------[0m [1m[96mprevious definition of the module `volumes` here[0m
+[1m[96m9[0m [1m[96m|[0m mod volumes;
+  [1m[96m|[0m [1m[91m^^^^^^^^^^^^[0m [1m[91m`volumes` redefined here[0m
+  [1m[96m|[0m
+  [1m[96m= [0m[1m[97mnote[0m: `volumes` must be defined only once in the type namespace of this module
+
+[1m[96m    Building[0m [=======================> ] 528/530: lumen                                                               [1m[97mFor more information about this error, try `rustc --explain E0428`.[0m
+[1m[96m    Building[0m [=======================> ] 528/530: lumen                                                               [1m[91merror[0m: could not compile `lumen` (lib) due to 1 previous error
+        Info File src-tauri\src\scan.rs changed. Rebuilding application...
+     Running DevCommand (`cargo  run --no-default-features --color always --`)
+[1m[92m   Compiling[0m lumen v0.1.0 (C:\Develop\Agents AI\Gallary\src-tauri)
+[1m[96m    Building[0m [=======================> ] 528/530: lumen                                                               [1m[91merror[E0428][0m[1m[97m: the name `volumes` is defined multiple times[0m
+ [1m[96m--> [0msrc\lib.rs:9:1
+  [1m[96m|[0m
+[1m[96m8[0m [1m[96m|[0m mod volumes;
+  [1m[96m|[0m [1m[96m------------[0m [1m[96mprevious definition of the module `volumes` here[0m
+[1m[96m9[0m [1m[96m|[0m mod volumes;
+  [1m[96m|[0m [1m[91m^^^^^^^^^^^^[0m [1m[91m`volumes` redefined here[0m
+  [1m[96m|[0m
+  [1m[96m= [0m[1m[97mnote[0m: `volumes` must be defined only once in the type namespace of this module
+
+[1m[96m    Building[0m [=======================> ] 528/530: lumen                                                               [1m[97mFor more information about this error, try `rustc --explain E0428`.[0m
+[1m[96m    Building[0m [=======================> ] 528/530: lumen                                                               [1m[91merror[0m: could not compile `lumen` (lib) due to 1 previous error
+        Info File src-tauri\src\lib.rs changed. Rebuilding application...
+     Running DevCommand (`cargo  run --no-default-features --color always --`)
+[1m[92m   Compiling[0m lumen v0.1.0 (C:\Develop\Agents AI\Gallary\src-tauri)
+[1m[96m    Building[0m [=======================> ] 528/530: lumen   [1m[96m    Building[0m [=======================> ] 529/530: lumen(b…                                                            [1m[92m    Finished[0m `dev` profile [unoptimized + debuginfo] target(s) in 48.03s
+[1m[92m     Running[0m `target\debug\lumen.exe`
+[2026-09-17][12:28:47][lumen_lib][INFO] sqlite pragmas: foreign_keys=1 journal_mode=wal
 [ELIFECYCLE] Command failed with exit code -1.

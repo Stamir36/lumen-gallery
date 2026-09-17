@@ -81,3 +81,11 @@ pub const MIGRATION_V2: &str = r#"
 ALTER TABLE media ADD COLUMN offline BOOLEAN NOT NULL DEFAULT 0;
 CREATE INDEX IF NOT EXISTS idx_media_offline ON media(offline);
 "#;
+
+/// v3: thumbnail cache columns (lazy generation, mtime-keyed freshness).
+pub const MIGRATION_V3: &str = r#"
+ALTER TABLE media ADD COLUMN thumb_path TEXT;
+ALTER TABLE media ADD COLUMN thumb_mtime INTEGER;
+ALTER TABLE media ADD COLUMN dominant_color TEXT;
+CREATE INDEX IF NOT EXISTS idx_media_thumb_path ON media(thumb_path);
+"#;

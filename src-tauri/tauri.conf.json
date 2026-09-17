@@ -23,8 +23,12 @@
         "backgroundColor": "#0A0A0C"
       }
     ],
-            "security": {
-      "csp": null
+                "security": {
+      "csp": null,
+      "assetProtocol": {
+        "enable": true,
+        "scope": ["$APPCACHE/thumbs/**"]
+      }
     }
   },
   "bundle": {

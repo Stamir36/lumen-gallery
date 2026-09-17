@@ -7,6 +7,7 @@ import App from "./App";
 import StylePage from "./pages/StylePage";
 import OnboardingPage from "./pages/OnboardingRoute";
 import SettingsPage from "./pages/SettingsPage";
+import AssetTest from "./pages/AssetTest";
 import { initI18n, readSavedLang, applyCursorPreference } from "./i18n";
 import { initScanListener } from "./state/library";
 import "./index.css";
@@ -35,6 +36,7 @@ async function bootstrap() {
             {/* onboarding is also reachable directly for QA/screenshots */}
             <Route path="/onboarding" element={<OnboardingPage />} />
             <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/asset-test" element={<AssetTest />} />
           </Routes>
         </HashRouter>
         <Toaster

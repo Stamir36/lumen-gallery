@@ -1,8 +1,10 @@
+mod assets;
 mod cache;
 
 mod commands;
 mod db;
 mod scan;
+mod thumbs;
 mod volumes;
 mod watch;
 
@@ -23,10 +25,17 @@ pub fn run() {
       sql: db::MIGRATION_V2,
       kind: MigrationKind::Up,
     },
+    Migration {
+      version: 3,
+      description: "lumen_v3_thumbnails",
+      sql: db::MIGRATION_V3,
+      kind: MigrationKind::Up,
+    },
   ];
 
   tauri::Builder::default()
     .plugin(tauri_plugin_dialog::init())
+    .plugin(tauri_plugin_fs::init())
     .plugin(
       tauri_plugin_sql::Builder::default()
         .add_migrations(db::DB_URL, migrations)
@@ -44,6 +53,7 @@ pub fn run() {
       commands::cancel_scan,
       cache::thumbnail_cache_size,
       cache::clear_thumbnail_cache,
+      thumbs::generate_thumbs,
     ])
     .manage(watch::WatcherRegistry::default())
     .setup(|app| {
@@ -76,6 +86,8 @@ pub fn run() {
             if fk != 1 {
               log::warn!("foreign_keys pragma is OFF — ON DELETE CASCADE will not fire");
             }
+            // asset protocol: allow serving files from every stored root
+            assets::allow_stored_roots(handle.clone()).await;
             break;
           }
         }
