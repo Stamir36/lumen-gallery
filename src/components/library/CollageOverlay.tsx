@@ -194,7 +194,7 @@ export function CollageOverlay({ rows, onClose }: { rows: MediaRow[]; onClose: (
         </button>
       </div>
 
-      <span className="pointer-events-none absolute bottom-5 left-1/2 -translate-x-1/2 whitespace-nowrap font-mono text-[11px] tracking-[0.06em] text-ttertiary">
+      <span className="pointer-events-none absolute bottom-5 left-1/2 max-w-[calc(100%-3rem)] -translate-x-1/2 truncate whitespace-nowrap font-mono text-[11px] tracking-[0.06em] text-ttertiary">
         {t("collage.hint")}
       </span>
     </motion.div>

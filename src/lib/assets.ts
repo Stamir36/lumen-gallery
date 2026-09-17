@@ -11,6 +11,10 @@ export function tauriAvailable(): boolean {
  * for the file's root directory (extended at runtime from Rust on add_root/boot).
  */
 export function fileSrc(path: string): string {
+  if (!path) return "";
+  // Already a web URL (data: thumbs in the QA route, blob: capture fallbacks):
+  // convertFileSrc would mangle it into an asset-host path.
+  if (/^(data|blob|https?):/i.test(path)) return path;
   // No IPC (browser preview): an empty src keeps <video> inert instead of
   // throwing "convertFileSrc of undefined" all over the console.
   if (!tauriAvailable()) return "";
