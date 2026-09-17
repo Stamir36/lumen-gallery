@@ -5,6 +5,8 @@ import { toast } from "sonner";
 import {
   ArrowLeft,
   Camera,
+  ChevronLeft,
+  ChevronRight,
   EyeOff,
   Gauge,
   Heart,
@@ -370,6 +372,8 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
   const bufferedRatio = duration > 0 ? Math.min(1, buffered / duration) : 0;
   const fav = favoriteOf(row);
   const nextRow = queue[index + 1];
+  const canPrev = index > 0;
+  const canNext = index < queue.length - 1;
   const chips = [
     row.width && row.height ? `${row.width}×${row.height}` : null,
     formatBytes(row.size),
@@ -446,10 +450,12 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
       <AnimatePresence>
         {showChrome && !error && (
           <motion.div
-            initial={reduced ? false : { opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={reduced ? { opacity: 0 } : { opacity: 0, y: -10 }}
-            transition={{ duration: reduced ? 0 : 0.16, ease: "easeOut" }}
+            /* glass + animated opacity = backdrop-filter is isolated while
+               opacity < 1, then pops in at 1 — animate TRANSFORM only */
+            initial={reduced ? false : { y: -12 }}
+            animate={{ y: 0 }}
+            exit={reduced ? { opacity: 0 } : { y: -12 }}
+            transition={{ type: "spring", stiffness: 260, damping: 26 }}
             className="absolute left-4 top-4 z-40 flex items-center gap-2"
           >
             <button
@@ -503,9 +509,10 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
         {resume && !error && (
           <motion.button
             type="button"
-            initial={reduced ? false : { opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={reduced ? { opacity: 0 } : { opacity: 0, y: 8 }}
+            initial={reduced ? false : { y: 8 }}
+            animate={{ y: 0 }}
+            exit={reduced ? { opacity: 0 } : { y: 8 }}
+            transition={{ type: "spring", stiffness: 260, damping: 26 }}
             onClick={() => {
               const el = video.current;
               if (el) {
@@ -555,13 +562,67 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
         </div>
       )}
 
+      {/* ---------- side navigation: prev / next in the queue ----------
+          same slide contract as the other chrome (transform only, no opacity —
+          the buttons carry backdrop-blur) */}
+      <AnimatePresence>
+        {showChrome && !error && (
+          <motion.div
+            key="nav-prev"
+            initial={reduced ? false : { y: "-50%", x: -12 }}
+            animate={{ y: "-50%", x: 0 }}
+            exit={reduced ? { opacity: 0 } : { y: "-50%", x: -12 }}
+            transition={{ type: "spring", stiffness: 260, damping: 26 }}
+            className="absolute left-4 top-1/2 z-40"
+          >
+            <button
+              type="button"
+              aria-label={t("viewer.prev")}
+              title={t("viewer.prev")}
+              disabled={!canPrev}
+              onClick={() => useViewer.getState().step(-1)}
+              className={cn(
+                "flex h-11 w-11 items-center justify-center rounded-pill bg-white/[.06] text-tprimary backdrop-blur-sm transition-all duration-[160ms] hover:bg-white/[.12]",
+                !canPrev && "pointer-events-none opacity-30",
+              )}
+            >
+              <ChevronLeft size={22} />
+            </button>
+          </motion.div>
+        )}
+        {showChrome && !error && (
+          <motion.div
+            key="nav-next"
+            initial={reduced ? false : { y: "-50%", x: 12 }}
+            animate={{ y: "-50%", x: 0 }}
+            exit={reduced ? { opacity: 0 } : { y: "-50%", x: 12 }}
+            transition={{ type: "spring", stiffness: 260, damping: 26 }}
+            className="absolute right-4 top-1/2 z-40"
+          >
+            <button
+              type="button"
+              aria-label={t("viewer.next")}
+              title={t("viewer.next")}
+              disabled={!canNext}
+              onClick={() => useViewer.getState().step(1)}
+              className={cn(
+                "flex h-11 w-11 items-center justify-center rounded-pill bg-white/[.06] text-tprimary backdrop-blur-sm transition-all duration-[160ms] hover:bg-white/[.12]",
+                !canNext && "pointer-events-none opacity-30",
+              )}
+            >
+              <ChevronRight size={22} />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* ---------- right rail: up next (collapsible) ---------- */}
       <AnimatePresence>
         {stripOpen && !manualHide && queue.length > 1 && (
           <motion.aside
-            initial={reduced ? false : { opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={reduced ? { opacity: 0 } : { opacity: 0, x: 20 }}
+            initial={reduced ? false : { x: 20 }}
+            animate={{ x: 0 }}
+            exit={reduced ? { opacity: 0 } : { x: 20 }}
             transition={{ duration: reduced ? 0 : 0.18, ease: "easeOut" }}
             className="glass absolute bottom-4 right-3 top-4 z-40 flex w-[136px] flex-col rounded-viewer p-2.5"
           >
@@ -586,9 +647,9 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
       <AnimatePresence>
         {showChrome && (
           <motion.div
-            initial={reduced ? false : { opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={reduced ? { opacity: 0 } : { opacity: 0, y: 16 }}
+            initial={reduced ? false : { y: 16 }}
+            animate={{ y: 0 }}
+            exit={reduced ? { opacity: 0 } : { y: 16 }}
             transition={{ type: "spring", stiffness: 260, damping: 26 }}
             className="absolute bottom-24 left-0 z-40 transition-[right] duration-[180ms] ease-out"
             style={{ right: stripOpen ? 152 : 0 }}
@@ -696,9 +757,9 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
       <AnimatePresence>
         {showChrome && (
           <motion.div
-            initial={reduced ? false : { opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={reduced ? { opacity: 0, y: 16 } : { opacity: 0, y: 16 }}
+            initial={reduced ? false : { y: 16 }}
+            animate={{ y: 0 }}
+            exit={reduced ? { opacity: 0 } : { y: 16 }}
             transition={{ type: "spring", stiffness: 260, damping: 26 }}
             className={cn(
               "absolute bottom-6 z-40",
@@ -748,9 +809,10 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
                 <AnimatePresence>
                   {volumeOpen && (
                     <motion.div
-                      initial={reduced ? false : { opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={reduced ? { opacity: 0 } : { opacity: 0, y: 8 }}
+                      initial={reduced ? false : { y: 8 }}
+                      animate={{ y: 0 }}
+                      exit={reduced ? { opacity: 0 } : { y: 8 }}
+                      transition={{ type: "spring", stiffness: 260, damping: 26 }}
                       className="glass absolute bottom-14 left-1/2 flex h-[168px] w-12 -translate-x-1/2 items-center justify-center rounded-pill"
                     >
                       <input
