@@ -115,23 +115,31 @@ pub async fn whitelist(pool: &SqlitePool) -> HashSet<String> {
 /// change (missing row, or mtime/size differ) so rescans only count writes.
 const UPSERT_CHUNK: usize = 500;
 
+/// The REAL upsert statement, as a const so the regression test runs exactly
+/// what production runs (a copy inside the test would prove nothing).
+///
+/// The guard used to read `media.mtime IS NOT ?5 OR media.size IS NOT ?6` while
+/// the binds are `?5 = size, ?6 = mtime` — it compared the stored mtime against
+/// the incoming SIZE and vice versa, which is true for every row, so a rescan of
+/// an unchanged folder rewrote all 9.4k rows every time. `excluded.*` cannot be
+/// mismatched with the bind order.
+const UPSERT_SQL: &str = r#"INSERT INTO media (root_id, path, kind, ext, size, mtime)
+   VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+   ON CONFLICT(path) DO UPDATE SET
+     root_id = excluded.root_id,
+     kind    = excluded.kind,
+     ext     = excluded.ext,
+     size    = excluded.size,
+     mtime   = excluded.mtime
+   WHERE media.mtime IS NOT excluded.mtime OR media.size IS NOT excluded.size"#;
+
 async fn upsert_chunk(
     tx: &mut sqlx::SqliteConnection,
     rows: &[Candidate],
 ) -> Result<u64, String> {
     let mut changed = 0u64;
     for c in rows {
-        let res = sqlx::query(
-            r#"INSERT INTO media (root_id, path, kind, ext, size, mtime)
-               VALUES (?1, ?2, ?3, ?4, ?5, ?6)
-               ON CONFLICT(path) DO UPDATE SET
-                 root_id = excluded.root_id,
-                 kind    = excluded.kind,
-                 ext     = excluded.ext,
-                 size    = excluded.size,
-                 mtime   = excluded.mtime
-               WHERE media.mtime IS NOT ?5 OR media.size IS NOT ?6"#,
-        )
+        let res = sqlx::query(UPSERT_SQL)
         .bind(c.root_id)
         .bind(&c.path)
         .bind(c.kind)
@@ -389,6 +397,73 @@ mod tests {
         assert!(should_write(Some(1001), Some(42), 1000, 42));
         assert!(should_write(Some(1000), Some(43), 1000, 42));
         assert!(should_write(None, None, 1000, 42));
+    }
+
+    /// Regression for the swapped mtime/size guard: rescanning an untouched
+    /// folder must report 0 changes, and a real change must report exactly 1.
+    #[test]
+    fn unchanged_rescan_counts_zero_changes() {
+        use sqlx::sqlite::SqlitePoolOptions;
+
+        tauri::async_runtime::block_on(async {
+            let pool = SqlitePoolOptions::new()
+                .max_connections(1)
+                .connect("sqlite::memory:")
+                .await
+                .expect("in-memory sqlite");
+            sqlx::query(
+                "CREATE TABLE media (
+                   id INTEGER PRIMARY KEY AUTOINCREMENT,
+                   root_id INTEGER NOT NULL,
+                   path TEXT NOT NULL UNIQUE,
+                   kind TEXT NOT NULL,
+                   ext TEXT NOT NULL,
+                   size INTEGER NOT NULL DEFAULT 0,
+                   mtime INTEGER NOT NULL DEFAULT 0)",
+            )
+            .execute(&pool)
+            .await
+            .unwrap();
+
+            let mut conn = pool.acquire().await.unwrap();
+            let row = |size: i64, mtime: i64| Candidate {
+                root_id: 1,
+                path: "D:/photos/a.jpg".into(),
+                kind: "image",
+                ext: "jpg".into(),
+                size,
+                mtime,
+            };
+
+            assert_eq!(
+                upsert_chunk(&mut conn, &[row(5_000, 1_700_000_000)])
+                    .await
+                    .unwrap(),
+                1,
+                "the first insert is a change"
+            );
+            assert_eq!(
+                upsert_chunk(&mut conn, &[row(5_000, 1_700_000_000)])
+                    .await
+                    .unwrap(),
+                0,
+                "an unchanged file must NOT count as a change"
+            );
+            assert_eq!(
+                upsert_chunk(&mut conn, &[row(5_000, 1_700_000_500)])
+                    .await
+                    .unwrap(),
+                1,
+                "a new mtime is a change"
+            );
+            assert_eq!(
+                upsert_chunk(&mut conn, &[row(6_000, 1_700_000_500)])
+                    .await
+                    .unwrap(),
+                1,
+                "a new size (same mtime) is a change"
+            );
+        });
     }
 
     #[test]
