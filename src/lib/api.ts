@@ -20,6 +20,15 @@ export interface RootRow {
   availableBytes: number;
 }
 
+/**
+ * Rust serializes timestamps straight out of SQLite (`unixepoch()` / 
+ * `SystemTime::as_secs`) — seconds. Every formatter in src/lib/format.ts takes
+ * MILLISECONDS, so this module converts once, at the IPC boundary.
+ */
+function secondsToMs(secs: number): number {
+  return secs > 0 ? secs * 1000 : secs;
+}
+
 export interface MediaRow {
   id: number;
   rootId: number;
@@ -104,8 +113,8 @@ export const api = {
   removeRoot: (id: number) => invoke<void>("remove_root", { id }),
   rescanRoot: (id: number) => invoke<number>("rescan_root", { id }),
   rescanAll: () => invoke<number>("rescan_all"),
-  listMedia: (params: ListMediaParams = {}) =>
-    invoke<MediaRow[]>("list_media", {
+  listMedia: async (params: ListMediaParams = {}): Promise<MediaRow[]> => {
+    const rows = await invoke<MediaRow[]>("list_media", {
       limit: params.limit ?? 200_000,
       offset: params.offset ?? 0,
       filter: params.filter && params.filter !== "all" ? params.filter : null,
@@ -114,7 +123,15 @@ export const api = {
       q: params.q && params.q.trim() ? params.q.trim() : null,
       sort: params.sort ?? "date",
       desc: params.desc ?? true,
-    }),
+    });
+    // THE unit boundary: seconds in Rust/SQLite -> ms everywhere in the UI.
+    // Missing this made every date group render as January 1970.
+    return rows.map((r) => ({
+      ...r,
+      mtime: secondsToMs(r.mtime),
+      addedAt: secondsToMs(r.addedAt),
+    }));
+  },
   listFolders: (rootId: number, dir: string | null) =>
     invoke<FolderRow[]>("list_folders", { rootId, dir }),
   librarySummary: () => invoke<LibrarySummary>("library_summary"),
