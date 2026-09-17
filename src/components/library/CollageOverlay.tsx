@@ -6,6 +6,16 @@ import { cn } from "@/lib/utils";
 import type { MediaRow } from "@/lib/api";
 import { fileSrc } from "@/lib/assets";
 import { thumbSrc } from "@/lib/thumbs";
+import { useViewer } from "@/state/viewer";
+
+/** mono timecode for the tile scrubber ("1:04") */
+function mmss(seconds: number): string {
+  if (!Number.isFinite(seconds) || seconds < 0) return "0:00";
+  const s = Math.floor(seconds % 60);
+  const m = Math.floor(seconds / 60) % 60;
+  const h = Math.floor(seconds / 3600);
+  return `${h > 0 ? `${h}:` : ""}${h > 0 ? String(m).padStart(2, "0") : m}:${String(s).padStart(2, "0")}`;
+}
 
 /**
  * Collage multi-viewer (FIX 4): a fullscreen composition of the selected items,
@@ -165,7 +175,17 @@ export function CollageOverlay({ rows, onClose }: { rows: MediaRow[]; onClose: (
         style={{ gap: 12, gridTemplateColumns: layout.cols, gridTemplateRows: layout.rows }}
       >
         {rows.slice(0, layout.tiles.length).map((row, i) => (
-          <CollageTile key={row.id} row={row} area={layout.tiles[i]} />
+          <CollageTile
+            key={row.id}
+            row={row}
+            area={layout.tiles[i]}
+            // double-click a tile: hand the whole collage to the full viewer,
+            // which then keeps walking the same queue
+            onOpen={() => {
+              onClose();
+              useViewer.getState().openAt(rows, i);
+            }}
+          />
         ))}
       </div>
 
@@ -194,7 +214,8 @@ export function CollageOverlay({ rows, onClose }: { rows: MediaRow[]; onClose: (
         </button>
       </div>
 
-      <span className="pointer-events-none absolute bottom-5 left-1/2 max-w-[calc(100%-3rem)] -translate-x-1/2 truncate whitespace-nowrap font-mono text-[11px] tracking-[0.06em] text-ttertiary">
+      {/* the hint sits LEFT (bottom-left, mono) — nothing is centred here */}
+      <span className="pointer-events-none absolute bottom-2.5 left-6 max-w-[52vw] truncate whitespace-nowrap font-mono text-[10.5px] tracking-[0.06em] text-ttertiary">
         {t("collage.hint")}
       </span>
     </motion.div>
@@ -204,16 +225,33 @@ export function CollageOverlay({ rows, onClose }: { rows: MediaRow[]; onClose: (
 function CollageTile({
   row,
   area,
+  onOpen,
 }: {
   row: MediaRow;
   area: { gridColumn: string; gridRow: string };
+  onOpen: () => void;
 }) {
   const { t } = useTranslation();
   const isVideo = row.kind === "video";
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [playing, setPlaying] = useState(false);
   const [muted, setMuted] = useState(true);
+  const [shown, setShown] = useState(0);
+  const [total, setTotal] = useState((row.durationMs ?? 0) / 1000);
+  const [buffered, setBuffered] = useState(0);
+  const [barHover, setBarHover] = useState(false);
   const thumb = row.thumbPath ? thumbSrc(row.thumbPath) : null;
+  const progress = total > 0 ? Math.min(1, shown / total) : 0;
+
+  /** click or drag anywhere on the bar seeks (the tile itself toggles play) */
+  const seekTo = (clientX: number, el: HTMLElement) => {
+    const v = videoRef.current;
+    if (!v || !total) return;
+    const rect = el.getBoundingClientRect();
+    const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    v.currentTime = ratio * total;
+    setShown(ratio * total);
+  };
 
   const togglePlay = () => {
     const v = videoRef.current;
@@ -237,8 +275,9 @@ function CollageTile({
     <div
       className="group relative min-h-0 min-w-0 overflow-hidden rounded-2xl bg-surface-1"
       style={{ ...area, backgroundColor: row.dominantColor ?? undefined }}
-      // click reserves the Phase 4 viewer hook; for video it is play/pause today
-      onClick={isVideo ? togglePlay : undefined}
+      // click: play/pause for a video, the full viewer for a photo
+      onClick={isVideo ? togglePlay : onOpen}
+      onDoubleClick={onOpen}
       data-viewer-hook={row.id}
     >
       {/* placeholder: cached 480w thumb, scaled → blur-free enough at tile size */}
@@ -261,6 +300,17 @@ function CollageTile({
           preload="metadata"
           onPlay={() => setPlaying(true)}
           onPause={() => setPlaying(false)}
+          onTimeUpdate={(e) => setShown(e.currentTarget.currentTime)}
+          onDurationChange={(e) => {
+            const d = e.currentTarget.duration;
+            if (Number.isFinite(d) && d > 0) setTotal(d);
+          }}
+          onProgress={(e) => {
+            const el = e.currentTarget;
+            if (el.buffered.length && el.duration > 0) {
+              setBuffered(el.buffered.end(el.buffered.length - 1) / el.duration);
+            }
+          }}
           className={cn(
             "absolute inset-0 h-full w-full bg-black object-contain transition-opacity duration-[160ms]",
             playing ? "opacity-100" : "opacity-0",
@@ -275,44 +325,101 @@ function CollageTile({
         />
       )}
 
+      {/* the name of THIS tile, left-aligned, on hover only */}
+      <span className="pointer-events-none absolute left-3 top-3 z-10 max-w-[70%] truncate rounded-[8px] bg-black/45 px-2 py-1 font-mono text-[10.5px] text-white/90 opacity-0 backdrop-blur-sm transition-opacity duration-[160ms] group-hover:opacity-100">
+        {row.path.split(/[\\/]/).pop()}
+      </span>
+
       {!thumb && !row.path && (
         <span className="absolute inset-0 flex items-center justify-center font-mono text-[11px] uppercase tracking-[0.08em] text-ttertiary">
           {t("thumbs.noPreview")}
         </span>
       )}
 
+      {/* video tile transport: mono timecodes + mini controls + a Material You
+          scrubber. Videos play on a loop in a collage, so this bar is about
+          jumping inside the clip, not about keeping it running. */}
       {isVideo && (
         <div
-          className={cn(
-            "glass absolute bottom-3 right-3 flex items-center gap-1 rounded-pill p-1",
-            "transition-opacity duration-[160ms]",
-            playing ? "opacity-100" : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100",
-          )}
+          className="absolute inset-x-3 bottom-3 z-20"
+          onPointerEnter={() => setBarHover(true)}
+          onPointerLeave={() => setBarHover(false)}
         >
-          <button
-            type="button"
-            aria-label={playing ? t("collage.pause") : t("collage.play")}
-            title={playing ? t("collage.pause") : t("collage.play")}
-            onClick={(e) => {
-              e.stopPropagation();
-              togglePlay();
-            }}
-            className="flex h-9 w-9 items-center justify-center rounded-pill text-tprimary transition-colors hover:bg-white/[.10]"
+          <div
+            className={cn(
+              "mb-2 flex items-end justify-between gap-2 transition-opacity duration-[160ms]",
+              playing || barHover ? "opacity-100" : "opacity-0",
+            )}
           >
-            {playing ? <Pause size={16} /> : <Play size={16} />}
-          </button>
-          <button
-            type="button"
-            aria-label={muted ? t("collage.unmute") : t("collage.mute")}
-            title={muted ? t("collage.unmute") : t("collage.mute")}
-            onClick={(e) => {
+            <span className="rounded-[7px] bg-black/45 px-1.5 py-0.5 font-mono text-[10.5px] tabular-nums text-white/85 backdrop-blur-sm">
+              {mmss(shown)} / {mmss(total)}
+            </span>
+            <div className="glass flex items-center gap-1 rounded-pill p-1">
+              <button
+                type="button"
+                aria-label={playing ? t("collage.pause") : t("collage.play")}
+                title={playing ? t("collage.pause") : t("collage.play")}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  togglePlay();
+                }}
+                className="flex h-9 w-9 items-center justify-center rounded-pill text-tprimary transition-colors hover:bg-white/[.10]"
+              >
+                {playing ? <Pause size={16} /> : <Play size={16} />}
+              </button>
+              <button
+                type="button"
+                aria-label={muted ? t("collage.unmute") : t("collage.mute")}
+                title={muted ? t("collage.unmute") : t("collage.mute")}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleMute();
+                }}
+                className="flex h-9 w-9 items-center justify-center rounded-pill text-tprimary transition-colors hover:bg-white/[.10]"
+              >
+                {muted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+              </button>
+            </div>
+          </div>
+          <div
+            role="slider"
+            aria-label={t("player.seek")}
+            aria-valuemin={0}
+            aria-valuemax={Math.round(total)}
+            aria-valuenow={Math.round(shown)}
+            tabIndex={0}
+            onPointerDown={(e) => {
               e.stopPropagation();
-              toggleMute();
+              e.currentTarget.setPointerCapture?.(e.pointerId);
+              seekTo(e.clientX, e.currentTarget);
             }}
-            className="flex h-9 w-9 items-center justify-center rounded-pill text-tprimary transition-colors hover:bg-white/[.10]"
+            onPointerMove={(e) => {
+              if (e.buttons !== 1) return;
+              e.stopPropagation();
+              seekTo(e.clientX, e.currentTarget);
+            }}
+            onClick={(e) => e.stopPropagation()}
+            className={cn(
+              "relative w-full cursor-pointer rounded-pill bg-white/15 transition-[height] duration-[160ms] ease-out",
+              barHover ? "h-2.5" : "h-1.5",
+            )}
           >
-            {muted ? <VolumeX size={16} /> : <Volume2 size={16} />}
-          </button>
+            <span
+              className="pointer-events-none absolute inset-y-0 left-0 rounded-pill bg-white/25"
+              style={{ width: `${buffered * 100}%` }}
+            />
+            <span
+              className="pointer-events-none absolute inset-y-0 left-0 rounded-pill bg-accent"
+              style={{ width: `${progress * 100}%` }}
+            />
+            <span
+              className={cn(
+                "pointer-events-none absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white shadow-[0_2px_8px_rgba(0,0,0,.5)] transition-transform duration-[140ms] ease-out",
+                barHover ? "scale-100" : "scale-[.7]",
+              )}
+              style={{ left: `${progress * 100}%` }}
+            />
+          </div>
         </div>
       )}
     </div>
