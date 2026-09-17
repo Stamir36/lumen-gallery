@@ -3,7 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { appCacheDir, join } from "@tauri-apps/api/path";
 import { exists, mkdir, writeFile } from "@tauri-apps/plugin-fs";
 import { getDb } from "@/lib/db";
-import { fileSrc } from "@/lib/assets";
+import { fileSrc, tauriAvailable } from "@/lib/assets";
 import type { MediaRow } from "@/lib/api";
 
 export interface ThumbState {
@@ -84,6 +84,7 @@ async function flush() {
 
 /** Lazy enqueue — called with the visible range (+ prefetch margin) only. */
 export function enqueueThumbs(ids: number[]) {
+  if (!tauriAvailable()) return; // browser preview: nothing to generate
   let added = false;
   for (const id of ids) {
     if (inFlight.has(id) || queued.has(id)) continue;
@@ -110,6 +111,7 @@ const vidThumbsInFlight = new Set<number>();
  * Writes a 480w JPEG through the fs plugin (scope: $APPCACHE/thumbs/**).
  */
 export async function makeVideoThumb(row: MediaRow): Promise<void> {
+  if (!tauriAvailable()) return;
   if (vidThumbsInFlight.has(row.id)) return;
   const known = useThumbStore.getState().thumbs[row.id];
   if (known?.status === "ok") return;
@@ -227,6 +229,7 @@ export async function makeVideoThumb(row: MediaRow): Promise<void> {
 
 /** Routes rows to the right generator: images → Rust, videos → webview. */
 export function enqueueRows(rows: MediaRow[]) {
+  if (!tauriAvailable()) return;
   const imageIds: number[] = [];
   for (const r of rows) {
     const known = useThumbStore.getState().thumbs[r.id];

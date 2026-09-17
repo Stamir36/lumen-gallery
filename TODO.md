@@ -1,9 +1,11 @@
 # LUMEN — Roadmap (Phases 1–6)## Deferred hardening (from fix batch, 2026-09-17)
 - [ ] Consolidate library stats on @tanstack/react-query (App.tsx currently hand-rolls useEffect + useState for libraryStats)
 - [ ] Restrictive CSP in tauri.conf.json — needs dev/prod split (`devUrl` requires relaxed CSP), do in packaging phase
-- [ ] Offline media UI: gray tiles per contract in scan.rs (offline flag, migration v2); `root-offline` event available
+- [x] Offline media UI: gray tiles + mono OFFLINE chip per contract in scan.rs (offline flag, migration v2); `root-offline` toast wired
+- [ ] Masonry is capped at 2,000 items (MASONRY_MAX) — the hand-rolled absolute virtual window holds 60fps there; revisit the windowed layout before lifting the cap to 50k
+- [ ] Grid reflow animation on window resize (rows repack instantly — `layout` on 9k tiles is not affordable)
 - [ ] THUMBNAILS ARE LAZY (user rule): generate ONLY when the user opens a directory/grid — never during scan, never eagerly for a whole root. Cache cleanup: measure scan perf (target 10k < 5s) when needed without a release bench run.
-
+
 
 Phase 0 (docs) — done: `docs/SPEC.md`, `docs/DESIGN.md`, `.clinerules`, `TODO.md`.
 
@@ -27,15 +29,19 @@ Phase 0 (docs) — done: `docs/SPEC.md`, `docs/DESIGN.md`, `.clinerules`, `TODO.
 - [x] cargo clippy clean (0 warnings, `-D warnings`) + pnpm typecheck clean
 - [x] Commits: `fix: tauri v2 capabilities permissions`, `feat: onboarding root picker`, `feat: scan core + sqlite`
 
-## Phase 3 — Library grid UI
-- [ ] Sidebar 240/64 rail: roots + capacity bars, Favorites, Albums, Videos, Images, Recents, Trash, settings/scan status
-- [ ] Top bar 48px glass: breadcrumb + mono count, search (`/`), segmented view control, sort menu, selection toggle
-- [ ] Justified grid (220px rows, 8px gap), masonry/square/list modes, sticky mono date headers + counts
-- [ ] Virtualization for 50k items (react-virtuoso), layout animations
-- [ ] Card hover interactions; video hover preview (400ms, 4-worker thumb queue, webp 480w, dominant-color placeholder)
-- [ ] Selection + floating glass action bar; status line bottom-left
-- [ ] Perf validation: cold start < 1.5s (10k cached), 60fps scroll, scan 10k < 5s
-- [ ] QA + screenshot pass; `feat: library grid`
+## Phase 3 — Library grid UI (DONE)
+- [x] Sidebar 260/68 rail: roots + capacity bars, all media, Photos, Videos, Favorites, Albums, Recents, Trash, settings/scan status — counts from `library_summary`
+- [x] Top bar 64px solid chrome + ephemeral chips row: breadcrumbs + mono count, search (`/`), chips All/Photos/Videos/Favorites, sort menu (date/name/size/duration asc-desc), segmented view modes, selection toggle
+- [x] Justified grid (target row height 220, gap 8), masonry/square/list modes, sticky mono uppercase date headers + counts
+- [x] Virtualization via react-virtuoso (whole 9,390-row library in one query; rows repack on resize)
+- [x] Card hover contract: inner scale 1.03, bottom gradient, mono duration/resolution chips, heart, selection checkbox; video scrub-preview (400ms delay, rate 6, stops + resets on leave, play glyph 40%)
+- [x] Folder navigation: root click → folder cards (cover = thumb/dominant color, mono count) + subfolder shelf + folder media grid; clickable mono breadcrumbs; alt+← up
+- [x] Selection + floating glass action bar (favorite / trash / clear); mono status line with live ago-ticker
+- [x] States: shimmer skeletons in final grid shape, dashed empty box + CTA, offline tiles, error box with retry
+- [ ] Perf validation on real hardware: cold start < 1.5s (10k cached), 60fps scroll at 9.4k, scan 10k < 5s — needs the user's run
+- [x] `feat: justified virtualized grid` · `feat: grid states + offline tiles` · `style: gallery polish pass`
+- [ ] Keyboard: arrows + Enter (selection) work; Enter must open the viewer once Phase 4 lands
+- Dev QA surface: `#/grid-demo` renders the real grid with synthetic rows (no Tauri calls) for layout screenshots
 
 ## Phase 4 — Viewers
 - [ ] Photo viewer: contain-fit, bottom bar (fit/1:1/zoom/rotate/favorite/info/trash), arrows, filmstrip, wheel zoom-to-cursor, drag pan, dbl-click 1:1

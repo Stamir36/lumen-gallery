@@ -8,14 +8,16 @@ import StylePage from "./pages/StylePage";
 import OnboardingPage from "./pages/OnboardingRoute";
 import SettingsPage from "./pages/SettingsPage";
 import AssetTest from "./pages/AssetTest";
+import GridDemo from "./pages/GridDemo";
 import { initI18n, readSavedLang, applyCursorPreference } from "./i18n";
 import { initScanListener, initOfflineListener } from "./state/library";
 import { queryClient } from "./lib/queryClient";
 import "./index.css";
 
 // subscribe to Rust scan-progress / root-offline events for the whole session
-initScanListener();
-initOfflineListener();
+// (a plain browser preview has no IPC — surface it, never leave it unhandled)
+initScanListener().catch((e) => console.warn("scan listener unavailable:", e));
+initOfflineListener().catch((e) => console.warn("offline listener unavailable:", e));
 
 async function bootstrap() {
   // apply the persisted/system language BEFORE the first render
@@ -35,6 +37,8 @@ async function bootstrap() {
             <Route path="/onboarding" element={<OnboardingPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/asset-test" element={<AssetTest />} />
+            {/* dev-only grid QA surface (synthetic rows, no Tauri calls) */}
+            <Route path="/grid-demo" element={<GridDemo />} />
           </Routes>
         </HashRouter>
         <Toaster

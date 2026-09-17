@@ -36,7 +36,9 @@ export function Masonry({
   const { t } = useTranslation();
   const scroller = useRef<HTMLDivElement>(null);
   const width = useElementWidth(scroller, 1200);
-  const usableWidth = Math.max(160, width - 72);
+  // 36px gutter each side + the 8px scrollbar (DESIGN.md §9) — mirrors the
+  // justified path so all modes share one content column.
+  const usableWidth = Math.max(160, width - 80);
 
   const limited = rows.length > MASONRY_MAX;
   const visibleRows = limited ? rows.slice(0, MASONRY_MAX) : rows;

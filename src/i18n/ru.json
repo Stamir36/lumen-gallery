@@ -100,10 +100,10 @@
     "items_few": "{{count}} элемента",
     "items_many": "{{count}} элементов",
     "items_other": "{{count}} элемента",
-    "selected_one": "{{count}} выбран",
-    "selected_few": "{{count}} выбрано",
-    "selected_many": "{{count}} выбрано",
-    "selected_other": "{{count}} выбрано"
+    "selected_one": "Выбран {{count}}",
+    "selected_few": "Выбрано {{count}}",
+    "selected_many": "Выбрано {{count}}",
+    "selected_other": "Выбрано {{count}}"
   },
   "status": {
     "scanned_ago": "сканировано {{ago}}",

@@ -89,6 +89,7 @@ export const MediaCard = memo(function MediaCard({
     >
       <button
         type="button"
+        title={name}
         aria-label={media.offline ? `${name} — ${t("offline.chip")}` : name}
         onClick={() => (selectionMode ? onToggleSelect(media.id) : onActivate?.(media))}
         className={cn(

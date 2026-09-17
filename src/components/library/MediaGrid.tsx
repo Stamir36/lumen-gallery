@@ -399,6 +399,8 @@ function GridRow({
       >
         <button
           type="button"
+          aria-label={baseName(media.path)}
+          title={baseName(media.path)}
           onClick={() => onActivate(media.id)}
           className={cn(
             "group flex h-14 w-full items-center gap-4 rounded-control px-2 text-left transition-colors duration-[160ms] hover:bg-white/[.05]",
@@ -469,12 +471,14 @@ function GridRow({
     x += cell.w + GRID_GAP;
   }
 
+  // NOTE: absolute children are positioned against the PADDING box, so the
+  // gutter must live on a wrapper and the cells inside a positioned box.
   return (
     <div
-      className={cn("relative", view === "square" && "overflow-visible")}
+      className={cn("h-full", view === "square" && "overflow-visible")}
       style={{ height: row.height, paddingLeft: GUTTER, paddingRight: GUTTER }}
     >
-      {cells}
+      <div className="relative h-full">{cells}</div>
     </div>
   );
 }
