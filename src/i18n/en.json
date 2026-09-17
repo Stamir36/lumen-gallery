@@ -213,6 +213,8 @@
     "close": "Close (Alt+F4)"
   },
   "settings": {
+    "swipe_navigate": "Swipe to browse",
+    "swipe_hint": "Drag a photo left or right to walk the queue",
     "hover_captions": "Hover captions",
     "title": "Settings",
     "nav_libraries": "Libraries",

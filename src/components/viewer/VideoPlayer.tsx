@@ -24,6 +24,7 @@ import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { cn } from "@/lib/utils";
 import { invoke } from "@tauri-apps/api/core";
 import { fileSrc, tauriAvailable } from "@/lib/assets";
+import { thumbSrc } from "@/lib/thumbs";
 import { formatBytes, type MediaRow } from "@/lib/api";
 import { useViewer } from "@/state/viewer";
 import { Filmstrip } from "./Filmstrip";
@@ -382,7 +383,10 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
               <ArrowLeft size={18} />
             </button>
             <div className="glass flex h-10 max-w-[46vw] items-center gap-3 rounded-pill px-4">
-              <span className="truncate text-[13px] text-tprimary">{row.path.split(/[\\/]/).pop()}</span>
+              {/* the name leads, LEFT-aligned, then the mono format chips */}
+              <span className="truncate text-[13px] font-medium text-tprimary">
+                {row.path.split(/[\\/]/).pop()}
+              </span>
               {chips.map((c) => (
                 <span key={c} className="shrink-0 font-mono text-[11px] text-ttertiary">
                   {c}
@@ -480,12 +484,17 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
             animate={{ opacity: 1, x: 0 }}
             exit={reduced ? { opacity: 0 } : { opacity: 0, x: 20 }}
             transition={{ duration: reduced ? 0 : 0.18, ease: "easeOut" }}
-            className="absolute right-0 top-0 z-40 h-full w-[128px] bg-gradient-to-l from-black/85 to-transparent px-2 py-4"
+            className="glass absolute bottom-4 right-3 top-4 z-40 flex w-[136px] flex-col rounded-viewer p-2.5"
           >
-            <p className="mb-2 text-center font-mono text-[10px] uppercase tracking-[0.1em] text-ttertiary">
-              {t("player.up_next")}
-            </p>
-            <div className="h-[calc(100%-28px)]">
+            <div className="mb-2 flex items-baseline gap-2">
+              <span className="min-w-0 flex-1 truncate font-mono text-[10px] uppercase tracking-[0.1em] text-ttertiary">
+                {t("player.up_next")}
+              </span>
+              <span className="shrink-0 font-mono text-[10px] tabular-nums text-ttertiary">
+                {index + 1}/{queue.length}
+              </span>
+            </div>
+            <div className="min-h-0 flex-1">
               <Filmstrip vertical />
             </div>
           </motion.aside>
@@ -494,7 +503,8 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
 
       {/* ---------- progress line + hover scrub bubble ---------- */}
       <div
-        className="absolute bottom-24 left-0 right-0 z-40"
+        className="absolute bottom-24 left-0 z-40 transition-[right] duration-[180ms] ease-out"
+        style={{ right: stripOpen ? 152 : 0 }}
         onPointerEnter={() => setBarHover(true)}
         onPointerLeave={() => {
           setBarHover(false);
@@ -508,7 +518,14 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
           >
             <div className="h-[60px] w-full overflow-hidden rounded-[10px] bg-black">
               {row.thumbPath && (
-                <img src={row.thumbPath} alt="" className="h-full w-full object-cover opacity-80" />
+                // every thumb path goes through thumbSrc (convertFileSrc): a raw
+                // DB path here floods DevTools with "Not allowed to load local
+                // resource: file:///..."
+                <img
+                  src={thumbSrc(row.thumbPath)}
+                  alt=""
+                  className="h-full w-full object-cover opacity-80"
+                />
               )}
             </div>
             <p className="mt-1 text-center font-mono text-[10px] text-tsecondary">
@@ -516,6 +533,9 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
             </p>
           </div>
         )}
+        {/* Material You scrubber: a thick rounded track that grows under the
+            pointer, a buffered ghost behind the fill and a thumb that is always
+            there (small at rest, full size on hover) — never a hairline */}
         <div
           ref={barRef}
           role="slider"
@@ -545,8 +565,8 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
             scrubbing.current = false;
           }}
           className={cn(
-            "group relative mx-6 cursor-pointer rounded-pill bg-white/10 transition-[height] duration-[160ms]",
-            barHover ? "h-1.5" : "h-0.5",
+            "group relative mx-6 cursor-pointer rounded-pill bg-white/12 transition-[height] duration-[160ms] ease-out",
+            barHover || scrub !== null ? "h-2.5" : "h-1.5",
           )}
         >
           {/* buffered ghost */}
@@ -557,6 +577,13 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
           <span
             className="pointer-events-none absolute inset-y-0 left-0 rounded-pill bg-accent"
             style={{ width: `${progress * 100}%` }}
+          />
+          <span
+            className={cn(
+              "pointer-events-none absolute top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white shadow-[0_2px_10px_rgba(0,0,0,.55)] transition-transform duration-[140ms] ease-out",
+              barHover || scrub !== null ? "scale-100" : "scale-[.72]",
+            )}
+            style={{ left: `${progress * 100}%` }}
           />
         </div>
         <div className="mx-6 mt-1 flex items-center justify-between font-mono text-[11px] text-ttertiary">

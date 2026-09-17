@@ -103,6 +103,11 @@ body::after {
 ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.12); border-radius: 999px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.2); }
 
+/* viewer strips hide their scrollbar entirely: the strip itself is the
+affordance, a bar running through it is only noise */
+.no-scrollbar::-webkit-scrollbar { width: 0; height: 0; }
+.no-scrollbar { scrollbar-width: none; }
+
 /* Cursor: default on controls (v2.2); .cursor-pointer on <html> opts in */
 button, [role="button"], a, [data-clickable] { cursor: default; }
 html.cursor-pointer button,

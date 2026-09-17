@@ -20,11 +20,15 @@ import { formatBytes, type MediaRow } from "@/lib/api";
 import { baseName, formatResolution } from "@/lib/format";
 import { trashMedia } from "@/lib/mediaActions";
 import { useViewer } from "@/state/viewer";
+import { useAppSettings } from "@/lib/settings";
+import { thumbSrc } from "@/lib/thumbs";
 import { Filmstrip } from "./Filmstrip";
 
 /** relative to the fit size: 1 = contain, MAX = deep zoom */
 const MAX_ZOOM = 12;
 const MIN_ZOOM = 1;
+/** height of the open filmstrip block — the control pill floats above it */
+const STRIP_H = 150;
 
 interface Fit {
   w: number;
@@ -55,6 +59,10 @@ export function Lightbox({ row }: { row: MediaRow }) {
   const [rotate, setRotate] = useState(0);
   const [dragging, setDragging] = useState(false);
   const drag = useRef<{ x: number; y: number; px: number; py: number } | null>(null);
+  /** offset of the in-flight swipe (px) — feedback while the finger moves */
+  const [swipeDx, setSwipeDx] = useState(0);
+  const swipeStart = useRef<{ x: number; y: number } | null>(null);
+  const swipeNavigate = useAppSettings((s) => s.swipeNavigate);
 
   const infoOpen = useViewer((s) => s.infoOpen);
   const stripOpen = useViewer((s) => s.stripOpen);
@@ -149,19 +157,43 @@ export function Lightbox({ row }: { row: MediaRow }) {
   }, [applyZoom, zoom, failed, loaded]);
 
   const onPointerDown = (e: React.PointerEvent) => {
-    if (zoom <= MIN_ZOOM || failed) return;
-    (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
-    drag.current = { x: e.clientX, y: e.clientY, px: pan.x, py: pan.y };
-    setDragging(true);
+    if (failed) return;
+    if (zoom > MIN_ZOOM) {
+      (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+      drag.current = { x: e.clientX, y: e.clientY, px: pan.x, py: pan.y };
+      setDragging(true);
+      return;
+    }
+    // contained image: a horizontal drag walks the queue (mouse, touchpad and
+    // touch alike). Settings › Appearance can switch the gesture off.
+    if (!swipeNavigate) return;
+    swipeStart.current = { x: e.clientX, y: e.clientY };
   };
   const onPointerMove = (e: React.PointerEvent) => {
     const d = drag.current;
-    if (!d) return;
-    setPan(clampPan(d.px + (e.clientX - d.x), d.py + (e.clientY - d.y), zoom));
+    if (d) {
+      setPan(clampPan(d.px + (e.clientX - d.x), d.py + (e.clientY - d.y), zoom));
+      return;
+    }
+    const s = swipeStart.current;
+    if (!s) return;
+    const dx = e.clientX - s.x;
+    const dy = e.clientY - s.y;
+    // only claim the gesture once it is clearly horizontal, so selecting text or
+    // a vertical wobble never drags the photo sideways
+    if (Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy)) setSwipeDx(dx);
   };
   const endDrag = () => {
     drag.current = null;
     setDragging(false);
+    swipeStart.current = null;
+    // a quarter of the stage (or a decisive flick) turns the page
+    const dx = swipeDx;
+    if (dx === 0) return;
+    setSwipeDx(0);
+    if (Math.abs(dx) > Math.min(140, Math.max(60, stage.w * 0.14))) {
+      useViewer.getState().step(dx < 0 ? 1 : -1);
+    }
   };
 
   // keys: arrows nav, Esc close, F favorite, I info, 0 fit, 1 1:1
@@ -254,7 +286,7 @@ export function Lightbox({ row }: { row: MediaRow }) {
                 // In the app this is the ORIGINAL file through the asset protocol.
                 // The browser QA route has no such protocol, so it shows the
                 // generated thumbnail instead of an unloadable path.
-                src={tauriAvailable() ? fileSrc(row.path) : (row.thumbPath ?? "")}
+                src={tauriAvailable() ? fileSrc(row.path) : (row.thumbPath ? thumbSrc(row.thumbPath) : "")}
                 alt={name}
                 draggable={false}
                 onLoad={(e) => {
@@ -270,8 +302,10 @@ export function Lightbox({ row }: { row: MediaRow }) {
                 style={{
                   width: fit.w || undefined,
                   height: fit.h || undefined,
-                  transform: `translate3d(${pan.x}px, ${pan.y}px, 0) scale(${zoom}) rotate(${rotate}deg)`,
-                  transition: dragging || reduced ? "none" : "transform 120ms ease-out",
+                  transform: `translate3d(${pan.x + swipeDx}px, ${pan.y}px, 0) scale(${zoom}) rotate(${rotate}deg)`,
+                  opacity: swipeDx ? Math.max(0.3, 1 - Math.abs(swipeDx) / 520) : 1,
+                  transition:
+                    dragging || reduced || swipeDx !== 0 ? "none" : "transform 120ms ease-out",
                   imageRendering: zoom * fit.scale > 2 ? "pixelated" : "auto",
                 }}
               />
@@ -312,6 +346,14 @@ export function Lightbox({ row }: { row: MediaRow }) {
         >
           <ChevronRight size={22} />
         </button>
+
+        {/* top-left name chip — the media name stays LEFT, never centred */}
+        <div className="glass pointer-events-none absolute left-4 top-4 z-40 flex h-10 max-w-[62vw] items-center gap-3 rounded-pill px-4">
+          <span className="truncate text-[13px] text-tprimary">{name}</span>
+          <span className="shrink-0 font-mono text-[10.5px] tabular-nums text-ttertiary">
+            {index + 1} / {queue.length}
+          </span>
+        </div>
 
         {/* close */}
         <button
@@ -370,20 +412,34 @@ export function Lightbox({ row }: { row: MediaRow }) {
         {stripOpen && (
           <motion.div
             initial={reduced ? false : { height: 0, opacity: 0 }}
-            animate={{ height: 112, opacity: 1 }}
+            animate={{ height: STRIP_H, opacity: 1 }}
             exit={reduced ? { opacity: 0 } : { height: 0, opacity: 0 }}
             transition={{ duration: reduced ? 0 : 0.18, ease: "easeOut" }}
             className="shrink-0 overflow-hidden"
           >
-            <div className="glass mx-auto mb-3 w-[min(1100px,92vw)] rounded-viewer px-2 py-1">
-              <Filmstrip />
+            <div className="glass mx-auto mb-3 w-[min(1100px,92vw)] rounded-viewer px-3 py-2">
+              {/* the name sits LEFT above its own queue (never centred) */}
+              <div className="mb-2 flex items-baseline gap-3">
+                <span className="min-w-0 flex-1 truncate text-[13px] text-tprimary">
+                  {name}
+                </span>
+                <span className="shrink-0 font-mono text-[10.5px] tabular-nums text-ttertiary">
+                  {index + 1} / {queue.length}
+                </span>
+              </div>
+              <Filmstrip height={96} />
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
       {/* ---------- floating glass control pill ---------- */}
-      <div className="pointer-events-none absolute bottom-5 left-1/2 z-40 -translate-x-1/2">
+      {/* the strip is part of the layout, so the pill lifts ABOVE it — the old
+          fixed bottom-5 sat right on top of the filmstrip */}
+      <div
+        className="pointer-events-none absolute left-1/2 z-40 -translate-x-1/2 transition-[bottom] duration-[180ms] ease-out"
+        style={{ bottom: stripOpen ? STRIP_H + 16 : 20 }}
+      >
         <motion.div
           initial={reduced ? false : { opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
