@@ -310,6 +310,14 @@ export const MediaCard = memo(function MediaCard({
         </AnimatePresence>
       </button>
 
+      {/* excluded folder (FIX 5): these rows only reach the grid when
+          "show excluded" is on, so the chip explains why they are here */}
+      {media.excluded && (
+        <span className="pointer-events-none absolute bottom-2 right-2 z-10">
+          <MonoChip>{t("menu.folder_excluded_chip")}</MonoChip>
+        </span>
+      )}
+
       {/* offline marker stays visible without hover (contract from scan.rs) */}
       {media.offline && (
         <span className="pointer-events-none absolute bottom-2 left-2 z-10">

@@ -19,6 +19,12 @@ export type PillAlign = "center" | "left" | "right";
 export const DEFAULT_PILL_ALIGN: PillAlign = "center";
 /** Live frame-rate chip in the status line (Settings › Appearance), default OFF. */
 export const SHOW_FPS_KEY = "perf_show_fps";
+/** Show media inside excluded folders, marked with a chip. Default OFF. */
+export const SHOW_EXCLUDED_KEY = "show_excluded";
+/** Parallel thumbnail decoders (the Rust engine reads `thumb_workers` live). */
+export const THUMB_WORKERS_KEY = "thumb_workers";
+export const THUMB_WORKER_OPTIONS = [2, 4, 6, 8, 12] as const;
+export const DEFAULT_THUMB_WORKERS = 4;
 
 /** Hover scrub speed presets. 6× (the original) felt like a fast-forward. */
 export const SCRUB_RATES = [1.5, 3, 6, 9] as const;
@@ -37,6 +43,10 @@ interface AppSettingsState {
   pillAlign: PillAlign;
   /** mono FPS / worst-frame chip in the status line */
   showFps: boolean;
+  /** media inside excluded folders are fetched and chipped (FIX 5) */
+  showExcluded: boolean;
+  /** parallel thumbnail decoders (1–16, applied by the engine on next request) */
+  thumbWorkers: number;
   loaded: boolean;
   load: () => Promise<void>;
   setVideoScrubRate: (rate: number) => Promise<void>;
@@ -44,6 +54,8 @@ interface AppSettingsState {
   setSwipeNavigate: (on: boolean) => Promise<void>;
   setPillAlign: (align: PillAlign) => Promise<void>;
   setShowFps: (on: boolean) => Promise<void>;
+  setShowExcluded: (on: boolean) => Promise<void>;
+  setThumbWorkers: (count: number) => Promise<void>;
 }
 
 export const useAppSettings = create<AppSettingsState>((set) => ({
@@ -52,13 +64,15 @@ export const useAppSettings = create<AppSettingsState>((set) => ({
   swipeNavigate: true,
   pillAlign: DEFAULT_PILL_ALIGN,
   showFps: false,
+  showExcluded: false,
+  thumbWorkers: DEFAULT_THUMB_WORKERS,
   loaded: false,
 
   load: async () => {
     try {
       const db = await getDb();
       const rows = await db.select<{ key: string; value: string }[]>(
-        "SELECT key, value FROM settings WHERE key IN ('video_scrub_rate', 'hover_captions', 'viewer_swipe', 'viewer_pill_align', 'perf_show_fps')",
+        "SELECT key, value FROM settings WHERE key IN ('video_scrub_rate', 'hover_captions', 'viewer_swipe', 'viewer_pill_align', 'perf_show_fps', 'show_excluded', 'thumb_workers')",
       );
       const byKey = new Map(rows.map((r) => [r.key, r.value]));
       const raw = Number(byKey.get(SCRUB_RATE_KEY));
@@ -70,6 +84,8 @@ export const useAppSettings = create<AppSettingsState>((set) => ({
         swipeNavigate: byKey.get(SWIPE_NAVIGATE_KEY) !== "false",
         pillAlign: readPillAlign(byKey.get(PILL_ALIGN_KEY)),
         showFps: byKey.get(SHOW_FPS_KEY) === "true",
+        showExcluded: byKey.get(SHOW_EXCLUDED_KEY) === "true",
+        thumbWorkers: readWorkers(byKey.get(THUMB_WORKERS_KEY)),
         loaded: true,
       });
     } catch (e) {
@@ -110,7 +126,7 @@ export const useAppSettings = create<AppSettingsState>((set) => ({
     }
   },
 
-  setPillAlign: async (pillAlign) => {
+  setPillAlign: async (pillAlign: PillAlign) => {
     set({ pillAlign }); // optimistic: the open viewer moves immediately
     try {
       await writeSetting(PILL_ALIGN_KEY, pillAlign);
@@ -129,9 +145,37 @@ export const useAppSettings = create<AppSettingsState>((set) => ({
       toast.error(i18n.t("errors.action_failed"));
     }
   },
+  setShowExcluded: async (showExcluded) => {
+    set({ showExcluded });
+    try {
+      await writeSetting(SHOW_EXCLUDED_KEY, String(showExcluded));
+    } catch (e) {
+      console.error("show excluded save failed", e);
+      toast.error(i18n.t("errors.action_failed"));
+    }
+  },
+
+  setThumbWorkers: async (thumbWorkers) => {
+    set({ thumbWorkers });
+    try {
+      // the Rust engine re-reads `thumb_workers` per request, so this takes
+      // effect on the next thumbnail without a restart
+      await writeSetting(THUMB_WORKERS_KEY, String(thumbWorkers));
+      toast.success(i18n.t("settings.workers_saved", { count: thumbWorkers }));
+    } catch (e) {
+      console.error("thumb workers save failed", e);
+      toast.error(i18n.t("errors.action_failed"));
+    }
+  },
 }));
 
 /** Anything unexpected in the stored value falls back to the centre. */
 function readPillAlign(raw: string | undefined): PillAlign {
   return raw === "left" || raw === "right" ? raw : DEFAULT_PILL_ALIGN;
+}
+
+/** Unknown or out-of-range worker counts fall back to the default (Rust clamps too). */
+function readWorkers(raw: string | undefined): number {
+  const n = Number(raw);
+  return Number.isFinite(n) && n >= 1 && n <= 16 ? n : DEFAULT_THUMB_WORKERS;
 }

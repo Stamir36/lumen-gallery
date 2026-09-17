@@ -1,5 +1,6 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { api, type MediaFilter, type MediaRow } from "@/lib/api";
+import { useAppSettings } from "@/lib/settings";
 import type { SortKey } from "@/state/library-ui";
 import type { Route } from "@/state/library-ui";
 
@@ -32,8 +33,11 @@ export function mediaQueryKey(p: MediaQueryParams) {
  * side sorts/filters, so this stays a single round trip per query change.
  */
 export function useMediaRows(p: MediaQueryParams) {
+  // media inside excluded folders stay hidden unless the user asked to see them
+  // (FIX 5) — the flag is part of the query key, so toggling it refetches
+  const includeExcluded = useAppSettings((s) => s.showExcluded);
   return useQuery({
-    queryKey: mediaQueryKey(p),
+    queryKey: [...mediaQueryKey(p), includeExcluded ? "excl" : "no-excl"],
     enabled: p.enabled,
     // keep the previous grid painted while the next query resolves (no flash)
     placeholderData: keepPreviousData,
@@ -48,6 +52,7 @@ export function useMediaRows(p: MediaQueryParams) {
         q: p.q,
         sort: p.sort,
         desc: p.desc,
+        includeExcluded,
       }),
   });
 }
@@ -58,6 +63,14 @@ export function useLibrarySummary(enabled = true) {
     enabled,
     staleTime: 5_000,
     queryFn: () => api.librarySummary(),
+  });
+}
+
+export function useExcludedFolders() {
+  return useQuery({
+    queryKey: ["excluded"],
+    staleTime: 5_000,
+    queryFn: () => api.listExcluded(),
   });
 }
 

@@ -1,14 +1,15 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { invoke } from "@tauri-apps/api/core";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Clipboard, Folder, FolderOpen, Eye } from "lucide-react";
+import { Clipboard, Eye, Folder, FolderOpen, FolderX } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { api, type FolderRow } from "@/lib/api";
 import { tauriAvailable } from "@/lib/assets";
-import { useContextMenu } from "@/state/contextMenu";
-import type { FolderRow } from "@/lib/api";
 import { enqueueThumbs, thumbSrc, useThumbStore } from "@/lib/thumbs";
 import { useFolders } from "@/lib/queries";
+import { useContextMenu } from "@/state/contextMenu";
 import { useLibraryUi } from "@/state/library-ui";
 
 /**
@@ -46,6 +47,7 @@ export function FolderGrid({
         {data.map((folder) => (
           <FolderCard
             key={folder.path}
+            rootId={rootId}
             folder={folder}
             onOpen={() => openFolder(folder.path)}
             countLabel={t("counts.media", { count: folder.count })}
@@ -57,10 +59,12 @@ export function FolderGrid({
 }
 
 function FolderCard({
+  rootId,
   folder,
   onOpen,
   countLabel,
 }: {
+  rootId: number;
   folder: FolderRow;
   onOpen: () => void;
   countLabel: string;
@@ -68,6 +72,21 @@ function FolderCard({
   // right-click menu (FIX 8): same actions as the kebab, one gesture away
   const { t } = useTranslation();
   const openMenu = useContextMenu((s) => s.openMenu);
+  const qc = useQueryClient();
+
+  /** hide the whole subtree from the library and from the next scan (FIX 5) */
+  const exclude = () => {
+    void api
+      .excludeFolder(rootId, folder.path)
+      .then(async () => {
+        toast.success(t("menu.folder_excluded", { name: folder.name }));
+        await qc.invalidateQueries();
+      })
+      .catch((err) => {
+        console.error("exclude folder failed", err);
+        toast.error(String(err));
+      });
+  };
 
   const onContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -107,6 +126,18 @@ function FolderCard({
                   .then(() => toast.success(t("menu.copied")))
                   .catch(() => toast.error(t("menu.copy_failed")));
               },
+            },
+          ],
+        },
+        {
+          id: "danger",
+          items: [
+            {
+              id: "exclude",
+              label: t("menu.folder_exclude"),
+              icon: <FolderX size={15} />,
+              danger: true,
+              onSelect: exclude,
             },
           ],
         },

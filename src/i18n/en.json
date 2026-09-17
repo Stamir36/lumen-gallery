@@ -161,6 +161,8 @@
     "folder_open": "Open folder",
     "folder_explorer": "Show in Explorer",
     "folder_exclude": "Exclude folder",
+    "folder_excluded": "Folder excluded: {{name}}",
+    "folder_excluded_chip": "excluded",
     "trash": "Move to trash"
   },
   "viewer": {
@@ -216,6 +218,16 @@
     "close": "Close (Alt+F4)"
   },
   "settings": {
+    "excluded_title": "Hidden folders",
+    "excluded_hidden": "{{count}} hidden",
+    "excluded_restore": "Restore folder to the library",
+    "excluded_restored": "Folder restored to the library",
+    "excluded_hint": "Excluded folders are skipped by scans and hidden from the library.",
+    "thumb_workers": "Thumbnail workers",
+    "thumb_workers_hint": "How many frames are decoded in parallel — applies to the next thumbnails",
+    "workers_saved": "Thumbnail workers: {{count}}",
+    "show_excluded": "Show excluded",
+    "show_excluded_hint": "Files from hidden folders are shown, marked as excluded",
     "show_fps": "FPS meter",
     "show_fps_hint": "Frame rate and the longest frame in the status line",
     "pill_align": "Control bar position",

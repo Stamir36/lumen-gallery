@@ -13,7 +13,8 @@ import {
   Play,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { SCRUB_RATES, useAppSettings } from "@/lib/settings";
+import { SCRUB_RATES, THUMB_WORKER_OPTIONS, useAppSettings } from "@/lib/settings";
+import { ExcludedFolders } from "@/components/settings/ExcludedFolders";
 import { LanguageDropdown } from "@/components/LanguageSwitcher";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { PillButton } from "@/components/ui/PillButton";
@@ -89,6 +90,10 @@ export function SettingsContent() {
   const pillAlign = useAppSettings((s) => s.pillAlign);
   const setPillAlign = useAppSettings((s) => s.setPillAlign);
   const showFps = useAppSettings((s) => s.showFps);
+  const showExcluded = useAppSettings((s) => s.showExcluded);
+  const setShowExcluded = useAppSettings((s) => s.setShowExcluded);
+  const thumbWorkers = useAppSettings((s) => s.thumbWorkers);
+  const setThumbWorkers = useAppSettings((s) => s.setThumbWorkers);
   const setShowFps = useAppSettings((s) => s.setShowFps);
 
   useEffect(() => {
@@ -194,6 +199,7 @@ export function SettingsContent() {
         {/* 01 Libraries */}
         <Section index="01" id="libraries" title={t("settings.nav_libraries")}>
           <GlassCard>
+            <ExcludedFolders />
             {!roots.length && (
               <p className="mb-6 text-tsecondary">
                 {t(ready ? "settings.no_libraries" : "settings.loading")}
@@ -390,6 +396,63 @@ export function SettingsContent() {
                   className={
                     "absolute top-0.5 h-5 w-5 rounded-pill bg-white transition-all duration-[160ms] ease-out " +
                     (hoverCaptions ? "left-[22px]" : "left-0.5")
+                  }
+                />
+              </button>
+            </div>
+            <div className="flex items-center justify-between border-t border-hairline py-4">
+              <span className="flex flex-col gap-0.5">
+                <span className="text-sm text-tprimary">{t("settings.thumb_workers")}</span>
+                <span className="text-[12px] text-ttertiary">
+                  {t("settings.thumb_workers_hint")}
+                </span>
+              </span>
+              <div
+                role="radiogroup"
+                aria-label={t("settings.thumb_workers")}
+                className="flex shrink-0 items-center gap-1 rounded-pill bg-surface-3 p-1"
+              >
+                {THUMB_WORKER_OPTIONS.map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    role="radio"
+                    aria-checked={thumbWorkers === n}
+                    aria-label={String(n)}
+                    onClick={() => void setThumbWorkers(n)}
+                    className={
+                      "flex h-7 w-9 items-center justify-center rounded-pill font-mono text-[12px] tabular-nums transition-colors duration-[160ms] " +
+                      (thumbWorkers === n
+                        ? "bg-white/[.14] text-tprimary"
+                        : "text-tsecondary hover:text-tprimary")
+                    }
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="flex items-center justify-between border-t border-hairline py-4">
+              <span className="flex flex-col gap-0.5">
+                <span className="text-sm text-tprimary">{t("settings.show_excluded")}</span>
+                <span className="text-[12px] text-ttertiary">
+                  {t("settings.show_excluded_hint")}
+                </span>
+              </span>
+              <button
+                role="switch"
+                aria-checked={showExcluded}
+                aria-label={t("settings.show_excluded")}
+                onClick={() => void setShowExcluded(!showExcluded)}
+                className={
+                  "relative h-6 w-11 shrink-0 rounded-pill transition-colors duration-[160ms] ease-out " +
+                  (showExcluded ? "bg-accent" : "bg-surface-3")
+                }
+              >
+                <span
+                  className={
+                    "absolute top-0.5 h-5 w-5 rounded-pill bg-white transition-all duration-[160ms] ease-out " +
+                    (showExcluded ? "left-[22px]" : "left-0.5")
                   }
                 />
               </button>

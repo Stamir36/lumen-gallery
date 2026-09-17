@@ -67,6 +67,7 @@ function mockRows(): MediaRow[] {
       dominantColor: i % 17 === 5 ? PALETTE[i % PALETTE.length][0] : null,
       offline: i % 23 === 7,
       thumbError: false,
+      excluded: false,
     });
   }
   return rows;

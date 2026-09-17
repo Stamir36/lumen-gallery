@@ -49,6 +49,8 @@ export interface MediaRow {
   dominantColor: string | null;
   /** root was unreachable during the last scan — tile renders offline */
   offline: boolean;
+  /** inside a folder the user excluded (FIX 5) — only fetched when "show excluded" is on */
+  excluded: boolean;
   /**
    * decode failed permanently for this file (corrupt / mislabeled content):
    * the tile renders a "no preview" state instead of retrying on every scroll.
@@ -87,6 +89,19 @@ export interface ListMediaParams {
   q?: string;
   sort?: "date" | "name" | "size" | "duration" | "added";
   desc?: boolean;
+  /** show media inside excluded folders (Settings › Appearance), default false */
+  includeExcluded?: boolean;
+}
+
+/** A folder the user hid from the library (FIX 5). */
+export interface ExcludedFolderRow {
+  id: number;
+  rootId: number;
+  rootPath: string;
+  path: string;
+  name: string;
+  /** how many media rows this exclusion currently hides */
+  hidden: number;
 }
 
 export interface ScanProgress {
@@ -123,6 +138,7 @@ export const api = {
       q: params.q && params.q.trim() ? params.q.trim() : null,
       sort: params.sort ?? "date",
       desc: params.desc ?? true,
+      includeExcluded: params.includeExcluded ?? false,
     });
     // THE unit boundary: seconds in Rust/SQLite -> ms everywhere in the UI.
     // Missing this made every date group render as January 1970.
@@ -137,6 +153,11 @@ export const api = {
   librarySummary: () => invoke<LibrarySummary>("library_summary"),
   libraryStats: () => invoke<[number, number]>("library_stats"),
   cancelScan: (rootId: number) => invoke<void>("cancel_scan", { rootId }),
+  listExcluded: () => invoke<ExcludedFolderRow[]>("list_excluded"),
+  excludeFolder: (rootId: number, path: string) =>
+    invoke<void>("exclude_folder", { rootId, path }),
+  restoreFolder: (rootId: number, path: string) =>
+    invoke<void>("restore_folder", { rootId, path }),
 };
 
 /** Human-readable byte size, mono-friendly (e.g. "212 GB"). */
