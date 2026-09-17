@@ -12,6 +12,7 @@ import { useElementWidth } from "@/lib/hooks";
 import { formatDuration, formatResolution, baseName } from "@/lib/format";
 import { setFavorite, trashMedia } from "@/lib/mediaActions";
 import { enqueueRows, seedThumbs, setViewportIds } from "@/lib/thumbs";
+import { useViewer } from "@/state/viewer";
 import { useLibraryUi } from "@/state/library-ui";
 import { MediaCard } from "./MediaCard";
 import { Masonry } from "./Masonry";
@@ -60,7 +61,6 @@ export function MediaGrid({
   const selectionMode = useLibraryUi((s) => s.selectionMode);
   const selected = useLibraryUi((s) => s.selected);
   const toggleSelected = useLibraryUi((s) => s.toggleSelected);
-  const toggleSelectionMode = useLibraryUi((s) => s.toggleSelectionMode);
   const clearSelection = useLibraryUi((s) => s.clearSelection);
   const setQ = useLibraryUi((s) => s.setQ);
 
@@ -84,6 +84,7 @@ export function MediaGrid({
   }, [collageOpen, collageRows.length]);
 
   // ---------- sticky date header ----------
+  const openViewer = useViewer((s) => s.openAt);
   const [rangeStart, setRangeStart] = useState(0);
   const startItem = built.items[rangeStart];
   const activeGroup =
@@ -262,6 +263,10 @@ export function MediaGrid({
         selectionMode={selectionMode}
         selectedIds={selected}
         onToggleSelect={toggleSelected}
+        onActivate={(id) => {
+          const at = rows.findIndex((r) => r.id === id);
+          openViewer(rows, at < 0 ? 0 : at);
+        }}
       />
     );
   } else {
@@ -297,10 +302,12 @@ export function MediaGrid({
             selectionMode={selectionMode}
             selected={selectedSet}
             onToggleSelect={toggleSelected}
+            // STEP 1: a click on the card (not the checkbox) opens the viewer at
+            // that index; the queue is the CURRENT view order, so arrows and the
+            // filmstrip walk exactly what the grid is showing
             onActivate={(id) => {
-              // TODO(phase 4): open the item in the viewer instead
-              if (!selectionMode) toggleSelectionMode();
-              toggleSelected(id);
+              const at = rows.findIndex((r) => r.id === id);
+              openViewer(rows, at < 0 ? 0 : at);
             }}
           />
         )}

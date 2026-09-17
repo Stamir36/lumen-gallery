@@ -26,12 +26,15 @@ export function Masonry({
   selectionMode,
   selectedIds,
   onToggleSelect,
+  onActivate,
 }: {
   rows: MediaRow[];
   radius: number;
   selectionMode: boolean;
   selectedIds: number[];
   onToggleSelect: (id: number) => void;
+  /** click on the card body opens the viewer (STEP 1) */
+  onActivate: (id: number) => void;
 }) {
   const { t } = useTranslation();
   const scroller = useRef<HTMLDivElement>(null);
@@ -110,6 +113,7 @@ export function Masonry({
                 selectionMode={selectionMode}
                 selected={selected.has(media.id)}
                 onToggleSelect={onToggleSelect}
+                onActivate={() => onActivate(media.id)}
               />
             </div>
           ))}

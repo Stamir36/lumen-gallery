@@ -9,6 +9,7 @@ import { Segmented } from "@/components/ui/Segmented";
 import { useLibraryUi } from "@/state/library-ui";
 import { LibraryTopBar } from "@/components/library/LibraryTopBar";
 import { StatusLine } from "@/components/library/StatusLine";
+import { ViewerOverlay } from "@/components/viewer/ViewerOverlay";
 
 /**
  * DEV-ONLY visual QA route (`#/grid-demo`): the real grid components rendered
@@ -129,6 +130,8 @@ export default function GridDemo() {
         scanning={false}
         scanText=""
       />
+      {/* the real viewers, so #/grid-demo QA covers them too (STEP 1/2) */}
+      <ViewerOverlay />
     </div>
   );
 }

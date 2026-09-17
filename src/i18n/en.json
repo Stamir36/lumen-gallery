@@ -145,6 +145,28 @@
     "action_failed": "Action failed — see console (F12)",
     "action_nothing": "Nothing changed — the list was stale, refresh it"
   },
+  "viewer": {
+    "controls": "Viewer controls",
+    "close": "Close",
+    "prev": "Previous",
+    "next": "Next",
+    "fit": "Fit",
+    "actual": "Actual size",
+    "zoom": "Zoom",
+    "rotate": "Rotate",
+    "favorite": "Favourite",
+    "info": "Info",
+    "filmstrip": "Filmstrip",
+    "trash": "Move to trash",
+    "video": "video",
+    "position": "{{index}} of {{total}}",
+    "info_path": "Path",
+    "info_res": "Resolution",
+    "info_size": "Size",
+    "info_date": "Date",
+    "info_ext": "Format",
+    "info_zoom": "Zoom"
+  },
   "titlebar": {
     "minimize": "Minimize",
     "maximize": "Maximize",
