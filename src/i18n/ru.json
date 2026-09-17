@@ -31,6 +31,7 @@
   },
   "sidebar": {
     "library": "Библиотека",
+    "all": "Вся медиатека",
     "favorites": "Избранное",
     "albums": "Альбомы",
     "videos": "Видео",
@@ -45,10 +46,14 @@
     "items_summary": "{{count}} элементов · {{size}}"
   },
   "topbar": {
-    "search_placeholder": "Поиск…",
+    "search_placeholder": "Поиск по имени файла…",
+    "clear_search": "Очистить",
     "sort_by": "Сортировка",
     "view_mode": "Вид",
     "selection_mode": "Режим выбора",
+    "folder_scope": "Область папки",
+    "scope_folders": "Папки",
+    "scope_all": "Все медиа",
     "sort_date": "По дате",
     "sort_name": "По имени",
     "sort_size": "По размеру",
@@ -60,11 +65,65 @@
     "view_square": "Квадраты",
     "view_list": "Список"
   },
+  "chips": {
+    "all": "Все",
+    "images": "Фото",
+    "videos": "Видео",
+    "favorites": "Избранное"
+  },
+  "grid": {
+    "aria_grid": "Сетка медиатеки",
+    "empty_media": "Здесь пока нет медиа",
+    "empty_favorites": "В избранном пусто",
+    "empty_trash": "Корзина пуста",
+    "empty_albums": "Альбомы появятся на этапе 5",
+    "empty_search": "Ничего не найдено",
+    "empty_hint": "ДОБАВЬТЕ БИБЛИОТЕКУ ИЛИ ОТКРОЙТЕ ДРУГУЮ ПАПКУ",
+    "add_library": "Добавить библиотеку",
+    "clear_search": "Сбросить поиск",
+    "retry": "Повторить",
+    "error_title": "Не удалось загрузить медиатеку",
+    "results": "{{count}} НАЙДЕНО",
+    "results_suffix": "совпадений",
+    "masonry_limited": "МОЗАИКА ОГРАНИЧЕНА ПЕРВЫМИ {{shown}} ИЗ {{total}} — СМ. TODO.md"
+  },
+  "counts": {
+    "media_one": "{{count}} файл",
+    "media_few": "{{count}} файла",
+    "media_many": "{{count}} файлов",
+    "media_other": "{{count}} файла",
+    "folders_one": "{{count}} папка",
+    "folders_few": "{{count}} папки",
+    "folders_many": "{{count}} папок",
+    "folders_other": "{{count}} папки",
+    "items_one": "{{count}} элемент",
+    "items_few": "{{count}} элемента",
+    "items_many": "{{count}} элементов",
+    "items_other": "{{count}} элемента",
+    "selected_one": "{{count}} выбран",
+    "selected_few": "{{count}} выбрано",
+    "selected_many": "{{count}} выбрано",
+    "selected_other": "{{count}} выбрано"
+  },
+  "status": {
+    "scanned_ago": "сканировано {{ago}}",
+    "offline_one": "{{count}} вне доступа",
+    "offline_few": "{{count}} вне доступа",
+    "offline_many": "{{count}} вне доступа",
+    "offline_other": "{{count}} вне доступа"
+  },
+  "offline": {
+    "chip": "OFFLINE",
+    "toast": "{{label}} недоступен — файлы помечены как offline и вернутся после повторного сканирования"
+  },
   "empty_states": {
     "no_media": "Пока нет медиа",
     "no_favorites": "В избранном пусто",
     "no_albums": "Пока нет альбомов",
-    "library_summary": "{{roots}} · {{count}} медиафайлов. Сетка-коллаж появится на этапе 3."
+    "library_summary": "{{roots}} · {{count}} медиафайлов."
+  },
+  "errors": {
+    "action_failed": "Не удалось выполнить действие — подробности в консоли (F12)"
   },
   "titlebar": {
     "minimize": "Свернуть",
@@ -107,6 +166,10 @@
     "open_folder": "Открыть содержащую папку",
     "remove_root": "Удалить корень",
     "rescan_root": "Пересканировать корень",
-    "back": "Назад"
+    "up": "На уровень вверх",
+    "back": "Назад",
+    "trash": "Удалить в корзину",
+    "trashed": "{{count}} перемещено в корзину",
+    "clear_selection": "Снять выделение"
   }
 }

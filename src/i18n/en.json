@@ -31,6 +31,7 @@
   },
   "sidebar": {
     "library": "Library",
+    "all": "All media",
     "favorites": "Favorites",
     "albums": "Albums",
     "videos": "Videos",
@@ -45,10 +46,14 @@
     "items_summary": "{{count}} items · {{size}}"
   },
   "topbar": {
-    "search_placeholder": "Search…",
+    "search_placeholder": "Search by file name…",
+    "clear_search": "Clear",
     "sort_by": "Sort by",
     "view_mode": "View mode",
     "selection_mode": "Selection mode",
+    "folder_scope": "Folder scope",
+    "scope_folders": "Folders",
+    "scope_all": "All media",
     "sort_date": "Date captured",
     "sort_name": "Name",
     "sort_size": "Size",
@@ -60,11 +65,55 @@
     "view_square": "Square",
     "view_list": "List"
   },
+  "chips": {
+    "all": "All",
+    "images": "Photos",
+    "videos": "Videos",
+    "favorites": "Favorites"
+  },
+  "grid": {
+    "aria_grid": "Media grid",
+    "empty_media": "No media here yet",
+    "empty_favorites": "No favorites yet",
+    "empty_trash": "Trash is empty",
+    "empty_albums": "Albums arrive in Phase 5",
+    "empty_search": "Nothing matches",
+    "empty_hint": "ADD A LIBRARY OR OPEN ANOTHER FOLDER",
+    "add_library": "Add library",
+    "clear_search": "Clear search",
+    "retry": "Retry",
+    "error_title": "Couldn't load the library",
+    "results": "{{count}} FOUND",
+    "results_suffix": "matches",
+    "masonry_limited": "MASONRY LIMITED TO THE FIRST {{shown}} OF {{total}} — SEE TODO.md"
+  },
+  "counts": {
+    "media_one": "{{count}} file",
+    "media_other": "{{count}} files",
+    "folders_one": "{{count}} folder",
+    "folders_other": "{{count}} folders",
+    "items_one": "{{count}} item",
+    "items_other": "{{count}} items",
+    "selected_one": "{{count}} selected",
+    "selected_other": "{{count}} selected"
+  },
+  "status": {
+    "scanned_ago": "scanned {{ago}}",
+    "offline_one": "{{count}} offline",
+    "offline_other": "{{count}} offline"
+  },
+  "offline": {
+    "chip": "OFFLINE",
+    "toast": "{{label}} is unreachable — files are flagged offline and return after a rescan"
+  },
   "empty_states": {
     "no_media": "No media yet",
     "no_favorites": "No favorites yet",
     "no_albums": "No albums yet",
-    "library_summary": "{{roots}} indexed · {{count}} media items. The justified grid arrives in Phase 3."
+    "library_summary": "{{roots}} indexed · {{count}} media items."
+  },
+  "errors": {
+    "action_failed": "Action failed — see console (F12)"
   },
   "titlebar": {
     "minimize": "Minimize",
@@ -107,6 +156,10 @@
     "open_folder": "Open containing folder",
     "remove_root": "Remove root",
     "rescan_root": "Rescan root",
-    "back": "Back"
+    "up": "Go up one level",
+    "back": "Back",
+    "trash": "Move to trash",
+    "trashed": "{{count}} moved to trash",
+    "clear_selection": "Clear selection"
   }
 }

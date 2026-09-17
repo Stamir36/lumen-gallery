@@ -1,7 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { HashRouter, Route, Routes } from "react-router-dom";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "sonner";
 import App from "./App";
 import StylePage from "./pages/StylePage";
@@ -9,15 +9,13 @@ import OnboardingPage from "./pages/OnboardingRoute";
 import SettingsPage from "./pages/SettingsPage";
 import AssetTest from "./pages/AssetTest";
 import { initI18n, readSavedLang, applyCursorPreference } from "./i18n";
-import { initScanListener } from "./state/library";
+import { initScanListener, initOfflineListener } from "./state/library";
+import { queryClient } from "./lib/queryClient";
 import "./index.css";
 
-const queryClient = new QueryClient({
-  defaultOptions: { queries: { staleTime: 30_000, retry: false } },
-});
-
-// subscribe to Rust scan-progress events for the whole session
+// subscribe to Rust scan-progress / root-offline events for the whole session
 initScanListener();
+initOfflineListener();
 
 async function bootstrap() {
   // apply the persisted/system language BEFORE the first render

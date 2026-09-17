@@ -34,6 +34,45 @@ export interface MediaRow {
   favorite: boolean;
   trashed: boolean;
   addedAt: number;
+  /** cached thumbnail file (appCacheDir/thumbs/<id>.jpg) once generated */
+  thumbPath: string | null;
+  /** dominant color placeholder "#RRGGBB" for instant tiles */
+  dominantColor: string | null;
+  /** root was unreachable during the last scan — tile renders offline */
+  offline: boolean;
+}
+
+/** One folder card in root/folder navigation (STEP 3B). */
+export interface FolderRow {
+  path: string;
+  name: string;
+  count: number;
+  coverId: number | null;
+  coverThumb: string | null;
+  coverColor: string | null;
+}
+
+/** Sidebar/status counters in one round trip. */
+export interface LibrarySummary {
+  total: number;
+  bytes: number;
+  images: number;
+  videos: number;
+  favorites: number;
+  offline: number;
+}
+
+export interface ListMediaParams {
+  limit?: number;
+  offset?: number;
+  filter?: MediaFilter;
+  rootId?: number | null;
+  /** folder scope: only files DIRECTLY inside this directory */
+  dir?: string | null;
+  /** filename substring search */
+  q?: string;
+  sort?: "date" | "name" | "size" | "duration" | "added";
+  desc?: boolean;
 }
 
 export interface ScanProgress {
@@ -60,16 +99,20 @@ export const api = {
   removeRoot: (id: number) => invoke<void>("remove_root", { id }),
   rescanRoot: (id: number) => invoke<number>("rescan_root", { id }),
   rescanAll: () => invoke<number>("rescan_all"),
-  listMedia: (
-    limit = 200,
-    offset = 0,
-    filter: MediaFilter | "all" = "all",
-  ) =>
+  listMedia: (params: ListMediaParams = {}) =>
     invoke<MediaRow[]>("list_media", {
-      limit,
-      offset,
-      filter: filter === "all" ? null : filter,
+      limit: params.limit ?? 200_000,
+      offset: params.offset ?? 0,
+      filter: params.filter && params.filter !== "all" ? params.filter : null,
+      rootId: params.rootId ?? null,
+      dir: params.dir ?? null,
+      q: params.q && params.q.trim() ? params.q.trim() : null,
+      sort: params.sort ?? "date",
+      desc: params.desc ?? true,
     }),
+  listFolders: (rootId: number, dir: string | null) =>
+    invoke<FolderRow[]>("list_folders", { rootId, dir }),
+  librarySummary: () => invoke<LibrarySummary>("library_summary"),
   libraryStats: () => invoke<[number, number]>("library_stats"),
   cancelScan: (rootId: number) => invoke<void>("cancel_scan", { rootId }),
 };

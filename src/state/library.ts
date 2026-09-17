@@ -1,7 +1,9 @@
 import { create } from "zustand";
 import { listen } from "@tauri-apps/api/event";
 import { toast } from "sonner";
+import i18n from "@/i18n";
 import { api, type ScanProgress, type RootRow } from "@/lib/api";
+import { queryClient } from "@/lib/queryClient";
 
 const LOG_TAIL = 200;
 
@@ -97,6 +99,13 @@ export const useScanStore = create<ScanState>((set) => ({
   clearLog: () => set({ log: [] }),
 }));
 
+/** Anything that changes the rows on disk must refresh what the grid shows. */
+export function refreshLibraryData() {
+  void queryClient.invalidateQueries({ queryKey: ["media"] });
+  void queryClient.invalidateQueries({ queryKey: ["library-summary"] });
+  void queryClient.invalidateQueries({ queryKey: ["folders"] });
+}
+
 /** Subscribes to Rust `scan-progress` events exactly once per session. */
 let listenerPromise: Promise<() => void> | null = null;
 export function initScanListener() {
@@ -106,10 +115,30 @@ export function initScanListener() {
       useScanStore.getState().applyProgress(p);
       if (p.phase === "finalize") {
         useRootsStore.getState().refresh();
+        refreshLibraryData();
       }
     });
   }
   return listenerPromise;
+}
+
+/**
+ * `root-offline` (scan.rs): the drive vanished mid-session. Its rows are kept
+ * and flagged offline in Rust — the UI must say so out loud instead of
+ * silently painting grey tiles.
+ */
+let offlinePromise: Promise<() => void> | null = null;
+export function initOfflineListener() {
+  if (!offlinePromise) {
+    offlinePromise = listen<{ rootId: number; path: string }>("root-offline", (e) => {
+      const label = e.payload.path.split(/[\\/]/).filter(Boolean).pop() ?? e.payload.path;
+      console.warn("root offline:", e.payload);
+      toast.warning(i18n.t("offline.toast", { label }));
+      void useRootsStore.getState().refresh();
+      refreshLibraryData();
+    });
+  }
+  return offlinePromise;
 }
 
 interface RootsState {
@@ -144,6 +173,7 @@ export const useRootsStore = create<RootsState>((set, get) => ({
   remove: async (id) => {
     await api.removeRoot(id);
     await get().refresh();
+    refreshLibraryData();
   },
 
   rescan: async (id) => {
@@ -153,6 +183,7 @@ export const useRootsStore = create<RootsState>((set, get) => ({
     } finally {
       useScanStore.getState().finish();
       await get().refresh();
+      refreshLibraryData();
     }
   },
 }));

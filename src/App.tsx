@@ -1,16 +1,18 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 import {
-  FolderOpen,
-  Heart,
-  Images,
-  Film,
   Clock,
-  Trash2,
+  Film,
   HardDrive,
-  RefreshCw,
+  Heart,
+  Image as ImageIcon,
+  Images,
+  Layers,
   Plus,
+  RefreshCw,
   Settings,
+  Trash2,
 } from "lucide-react";
 import { WindowTitleBar } from "@/components/WindowTitleBar";
 import { SidebarRail, type SidebarItem } from "@/components/ui/SidebarRail";
@@ -18,8 +20,15 @@ import { LanguageDropdown, LanguageDropdownIcon } from "@/components/LanguageSwi
 import { NavTooltip } from "@/components/ui/NavTooltip";
 import { IconButton } from "@/components/ui/IconButton";
 import { Onboarding } from "@/pages/Onboarding";
-import { api, formatBytes, formatCount } from "@/lib/api";
+import { LibraryTopBar } from "@/components/library/LibraryTopBar";
+import { MediaGrid } from "@/components/library/MediaGrid";
+import { FolderShelf } from "@/components/library/FolderCards";
+import { StatusLine } from "@/components/library/StatusLine";
+import { formatBytes, formatCount } from "@/lib/api";
+import { useLibrarySummary, useMediaRows } from "@/lib/queries";
 import { useRootsStore, useScanStore } from "@/state/library";
+import { filterForRoute, useLibraryUi, type SmartView } from "@/state/library-ui";
+import { getDb } from "@/lib/db";
 
 /** Every "Add library" entry point resets the onboarding state machine. */
 function useOpenOnboarding() {
@@ -31,26 +40,42 @@ function useOpenOnboarding() {
   };
   return { show, open, close: () => setShow(false) };
 }
-import { getDb } from "@/lib/db";
-import { useNavigate } from "react-router-dom";
+
+const SMART_ITEMS: { id: SmartView; labelKey: string; icon: React.ReactNode }[] = [
+  { id: "all", labelKey: "sidebar.all", icon: <Images /> },
+  { id: "images", labelKey: "sidebar.images", icon: <ImageIcon /> },
+  { id: "videos", labelKey: "sidebar.videos", icon: <Film /> },
+  { id: "favorites", labelKey: "sidebar.favorites", icon: <Heart /> },
+  { id: "albums", labelKey: "sidebar.albums", icon: <Layers /> },
+  { id: "recents", labelKey: "sidebar.recents", icon: <Clock /> },
+  { id: "trash", labelKey: "sidebar.trash", icon: <Trash2 /> },
+];
 
 /**
- * App shell after Phase 2: frameless TitleBar + roots sidebar + onboarding.
- * The grid lands in Phase 3; this proves the scan pipeline end to end.
+ * Library shell (Phase 3): sidebar routing + topbar + virtualized grid +
+ * mono status line. Onboarding still owns the no-roots case.
  */
 export default function App() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { roots, loaded, load, rescan, remove } = useRootsStore();
-  const { scanningRootId, done, added } = useScanStore();
-  const [stats, setStats] = useState<[number, number]>([0, 0]);
+  const { roots, loaded, load, rescan } = useRootsStore();
+  const { scanningRootId, done, added, lastScanAt } = useScanStore();
   const onboarding = useOpenOnboarding();
   const [ready, setReady] = useState(false);
+
+  const route = useLibraryUi((s) => s.route);
+  const setRoute = useLibraryUi((s) => s.setRoute);
+  const openRoot = useLibraryUi((s) => s.openRoot);
+  const chip = useLibraryUi((s) => s.chip);
+  const q = useLibraryUi((s) => s.q);
+  const sort = useLibraryUi((s) => s.sort);
+  const desc = useLibraryUi((s) => s.desc);
+  const foldersView = useLibraryUi((s) => s.foldersView);
 
   useEffect(() => {
     (async () => {
       try {
-        await getDb(); // runs migrations v1
+        await getDb(); // runs migrations
       } catch (e) {
         console.error("db load failed", e);
       }
@@ -59,12 +84,53 @@ export default function App() {
     })();
   }, [load]);
 
+  // alt+← = up one folder level (STEP 3B)
   useEffect(() => {
-    if (!ready) return;
-    api.libraryStats().then(setStats).catch(() => setStats([0, 0]));
-  }, [ready, scanningRootId]);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.altKey && e.key === "ArrowLeft") {
+        e.preventDefault();
+        useLibraryUi.getState().goUp();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
+  const summary = useLibrarySummary(ready);
   const noRoots = loaded && roots.length === 0;
+  const root = route.kind === "root" ? roots.find((r) => r.id === route.rootId) : undefined;
+
+  // folder routes: "folders" scope lists the current directory only
+  const dir =
+    route.kind === "root"
+      ? foldersView
+        ? (route.dir ?? root?.path ?? null)
+        : null
+      : null;
+
+  // albums are DB-only collections (Phase 5): no rows to query yet
+  const enabled =
+    ready &&
+    roots.length > 0 &&
+    !onboarding.show &&
+    (route.kind !== "root" || root !== undefined) &&
+    !(route.kind === "smart" && route.id === "albums");
+
+  const params = useMemo(
+    () => ({
+      filter: filterForRoute(route, chip),
+      sort: route.kind === "smart" && route.id === "recents" ? ("added" as const) : sort,
+      desc: route.kind === "smart" && route.id === "recents" ? true : desc,
+      q,
+      rootId: route.kind === "root" ? route.rootId : null,
+      dir,
+      enabled,
+    }),
+    [route, chip, sort, desc, q, dir, enabled],
+  );
+
+  const media = useMediaRows(params);
+  const rows = media.data ?? [];
 
   const items: SidebarItem[] = [
     ...roots.map((r) => ({
@@ -72,6 +138,8 @@ export default function App() {
       label: r.label || r.path,
       icon: <HardDrive />,
       badge: r.itemCount ? formatCount(r.itemCount) : undefined,
+      active: route.kind === "root" && route.rootId === r.id,
+      onSelect: () => openRoot(r.id),
       capacity:
         r.totalBytes > 0
           ? {
@@ -85,13 +153,45 @@ export default function App() {
         onClick: () => void rescan(r.id),
       },
     })),
-    { id: "photos", label: t("sidebar.images"), icon: <FolderOpen />, badge: formatCount(stats[0]) },
-    { id: "favorites", label: t("sidebar.favorites"), icon: <Heart /> },
-    { id: "albums", label: t("sidebar.albums"), icon: <Images /> },
-    { id: "videos", label: t("sidebar.videos"), icon: <Film /> },
-    { id: "recents", label: t("sidebar.recents"), icon: <Clock /> },
-    { id: "trash", label: t("sidebar.trash"), icon: <Trash2 /> },
+    ...SMART_ITEMS.map((s) => {
+      const badge =
+        s.id === "all"
+          ? summary.data?.total
+          : s.id === "images"
+            ? summary.data?.images
+            : s.id === "videos"
+              ? summary.data?.videos
+              : s.id === "favorites"
+                ? summary.data?.favorites
+                : undefined;
+      return {
+        id: s.id,
+        label: t(s.labelKey),
+        icon: s.icon,
+        badge: badge ? formatCount(badge) : undefined,
+        active: route.kind === "smart" && route.id === s.id,
+        onSelect: () => setRoute({ kind: "smart", id: s.id }),
+      };
+    }),
   ];
+
+  const title = t(
+    route.kind === "root"
+      ? "sidebar.library"
+      : `sidebar.${route.id === "images" ? "images" : route.id}`,
+  );
+
+  const emptyKind = q.trim()
+    ? ("search" as const)
+    : route.kind === "smart" &&
+        (route.id === "favorites" || route.id === "trash" || route.id === "albums")
+      ? route.id
+      : ("media" as const);
+
+  const scanText = `${t("scan_progress.scanning")} ${t("scan_progress.seen_added", {
+    done: formatCount(done),
+    added: formatCount(added),
+  })}`;
 
   return (
     <div className="flex h-full flex-col">
@@ -121,13 +221,10 @@ export default function App() {
                 </button>
                 <div className="px-3 font-mono text-[10px] leading-relaxed text-ttertiary">
                   {scanningRootId !== null
-                    ? `${t("scan_progress.scanning")} ${t("scan_progress.seen_added", {
-                        done: formatCount(done),
-                        added: formatCount(added),
-                      })}`
+                    ? scanText
                     : t("sidebar.items_summary", {
-                        count: formatCount(stats[0]),
-                        size: formatBytes(stats[1]),
+                        count: formatCount(summary.data?.total ?? 0),
+                        size: formatBytes(summary.data?.bytes ?? 0),
                       })}
                 </div>
               </div>
@@ -136,10 +233,7 @@ export default function App() {
               <>
                 <LanguageDropdownIcon />
                 <NavTooltip label={t("sidebar.add_library")}>
-                  <IconButton
-                    label={t("sidebar.add_library")}
-                    onClick={onboarding.open}
-                  >
+                  <IconButton label={t("sidebar.add_library")} onClick={onboarding.open}>
                     <Plus size={18} />
                   </IconButton>
                 </NavTooltip>
@@ -156,58 +250,42 @@ export default function App() {
           />
         )}
 
-        <main className="min-w-0 flex-1 overflow-hidden">
+        <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
           {noRoots || onboarding.show ? (
             <Onboarding onDone={onboarding.close} />
           ) : (
-            <div className="flex h-full flex-col items-center justify-center gap-6 px-10">
-              <h1 className="text-4xl font-bold tracking-tight text-tprimary">
-                {t("sidebar.library")}
-              </h1>
-              <p className="max-w-md text-center text-[15px] text-tsecondary">
-                {t("empty_states.library_summary", {
-                  roots: `${roots.length}`,
-                  count: formatCount(stats[0]),
-                })}
-              </p>
-              <div className="flex flex-wrap justify-center gap-4">
-                {roots.map((r) => (
-                  <div
-                    key={r.id}
-                    className="flex items-center gap-4 rounded-card bg-surface-1 px-6 py-5 shadow-elev1"
-                  >
-                    <HardDrive size={20} className="text-tsecondary" />
-                    <div>
-                      <div className="text-sm font-medium text-tprimary">
-                        {r.label || r.path}
-                      </div>
-                      <div className="font-mono text-[11px] text-ttertiary">
-                        {formatCount(r.itemCount)}
-                      </div>
-                    </div>
-                    <IconButton
-                      label={t("actions.rescan_root")}
-                      onClick={() => rescan(r.id)}
-                      disabled={scanningRootId !== null}
-                    >
-                      <RefreshCw size={16} />
-                    </IconButton>
-                    <IconButton
-                      label={t("actions.remove_root")}
-                      className="text-danger"
-                      onClick={() => remove(r.id)}
-                    >
-                      <Trash2 size={16} />
-                    </IconButton>
-                  </div>
-                ))}
+            <>
+              <LibraryTopBar title={title} count={rows.length} />
+              <div className="relative min-h-0 flex-1">
+                <MediaGrid
+                  rows={rows}
+                  pending={media.isPending}
+                  error={media.error}
+                  query={q}
+                  emptyKind={emptyKind}
+                  onRetry={() => void media.refetch()}
+                  onAddLibrary={onboarding.open}
+                  folderZone={
+                    route.kind === "root" && foldersView && root ? (
+                      <FolderShelf
+                        rootId={root.id}
+                        dir={route.dir}
+                        enabled={route.dir !== null || root.path.length > 0}
+                      />
+                    ) : undefined
+                  }
+                />
               </div>
-            </div>
+              <StatusLine
+                summary={summary.data}
+                lastScanAt={lastScanAt}
+                scanning={scanningRootId !== null}
+                scanText={scanText}
+              />
+            </>
           )}
         </main>
       </div>
     </div>
   );
 }
-
-

@@ -42,6 +42,12 @@ pub struct MediaRow {
     pub favorite: bool,
     pub trashed: bool,
     pub added_at: i64,
+    /// cached thumbnail file (appCacheDir/thumbs/<id>.jpg) — None until lazy gen
+    pub thumb_path: Option<String>,
+    /// dominant color placeholder "#RRGGBB" (instant tile fill before the thumb)
+    pub dominant_color: Option<String>,
+    /// root was unreachable last scan: rows kept, tile renders offline
+    pub offline: bool,
 }
 
 fn mtime_secs(meta: &std::fs::Metadata) -> i64 {
