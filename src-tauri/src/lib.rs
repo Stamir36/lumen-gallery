@@ -92,7 +92,11 @@ pub fn run() {
               .await;
 
             // single-writer: EVERY media write (thumbs batched, UI immediate)
-            // goes through one task — no more write-lock contention storms
+            // goes through one task — no more write-lock contention storms.
+            // The loop is non-exiting by construction (a quiet period is NOT a
+            // shutdown — that was the "writer task stopped" bug); the managed
+            // handle is also Clone + Send, so a broken channel surfaces as a
+            // db_exec error and the frontend surfaces a toast, not a hang.
             let w = writer::spawn(pool.clone());
             handle.manage(w);
             log::info!("single-writer db task started (batch 64 / 200ms)");

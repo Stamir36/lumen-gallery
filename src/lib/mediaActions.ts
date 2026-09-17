@@ -4,6 +4,7 @@ import i18n from "@/i18n";
 import { queryClient } from "@/lib/queryClient";
 import { tauriAvailable } from "@/lib/assets";
 import { getDb } from "@/lib/db";
+import type { MediaRow } from "@/lib/api";
 
 /**
  * Row-level writes for the library UI. All state lives in SQLite; the grid
@@ -58,14 +59,36 @@ export async function setFavorite(ids: number[], favorite: boolean) {
   }
 }
 
+/**
+ * Optimistic toggle (FIX 2): the heart flips instantly, a failure rolls it
+ * back and toasts. Uses the LOCAL row cache (no full refetch needed to see
+ * the change), invalidated queries update the DB copy in the background.
+ */
 export async function toggleFavorite(id: number) {
+  let rollback: (() => void) | undefined;
   try {
+    // optimistic: flip the heart in every cached "media" payload NOW
+    const queries = queryClient.getQueryCache().findAll({ queryKey: ["media"] });
+    const snapshots = queries.map((q) => ({ q, data: q.state.data }));
+    rollback = () => {
+      for (const { q, data } of snapshots) q.setData(data);
+    };
+    for (const q of queries) {
+      const rows = q.state.data as MediaRow[] | undefined;
+      if (Array.isArray(rows)) {
+        q.setData(
+          rows.map((r) => (r.id === id ? { ...r, favorite: !r.favorite } : r)),
+        );
+      }
+    }
+
     await run(
       `UPDATE media SET favorite = CASE favorite WHEN 1 THEN 0 ELSE 1 END WHERE id = ?1`,
       [id],
     );
   } catch (e) {
     console.error("toggle favorite failed", e);
+    rollback?.();
     toast.error(i18n.t("errors.action_failed"));
   }
 }
