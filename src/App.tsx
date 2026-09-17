@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import {
@@ -123,8 +123,13 @@ export default function App() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  // explorer mode always needs a folder: fall back to the first library
+  // Switching INTO the explorer opens the first library — but only at the moment
+  // of the switch: smart views must keep working afterwards instead of bouncing
+  // the user back to a folder.
+  const lastBrowse = useRef(browse);
   useEffect(() => {
+    if (lastBrowse.current === browse) return;
+    lastBrowse.current = browse;
     if (browse === "explorer" && route.kind !== "root" && roots.length > 0) {
       openRoot(roots[0].id);
     }
