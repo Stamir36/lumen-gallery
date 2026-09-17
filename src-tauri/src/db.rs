@@ -111,6 +111,24 @@ CREATE TABLE IF NOT EXISTS watch_progress (
 );
 "#;
 
+/// v7: watch_progress rebuilt in MILLISECONDS.
+///
+/// v6 declared the table with `CREATE TABLE IF NOT EXISTS`, but v1 had already
+/// created `watch_progress(media_id, position_s, updated_at)` — so on every
+/// existing database the ms columns never appeared and every progress save died
+/// with "table watch_progress has no column named position_ms". The v1 columns
+/// were never read by any code path (the reader always asked for position_ms),
+/// so the table is rebuilt from scratch instead of carrying dead columns along.
+pub const MIGRATION_V7: &str = r#"
+DROP TABLE IF EXISTS watch_progress;
+CREATE TABLE watch_progress (
+  media_id    INTEGER PRIMARY KEY REFERENCES media(id) ON DELETE CASCADE,
+  position_ms INTEGER NOT NULL DEFAULT 0,
+  duration_ms INTEGER,
+  updated_at  INTEGER NOT NULL DEFAULT (unixepoch())
+);
+"#;
+
 /// v5: versioned thumbnail cache (S1.4). `thumb_mtime` alone was not enough — a
 /// file replaced with an identical mtime kept serving a stale thumbnail, and a
 /// previously failed row was only retried when the mtime moved. Validity is now

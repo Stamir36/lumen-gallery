@@ -84,6 +84,12 @@ pub fn run() {
       sql: db::MIGRATION_V6,
       kind: MigrationKind::Up,
     },
+    Migration {
+      version: 7,
+      description: "lumen_v7_watch_progress_ms",
+      sql: db::MIGRATION_V7,
+      kind: MigrationKind::Up,
+    },
   ];
 
   tauri::Builder::default()
