@@ -1,5 +1,7 @@
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
+import { invoke } from "@tauri-apps/api/core";
+import { tauriAvailable } from "@/lib/assets";
 import en from "./en.json";
 import ru from "./ru.json";
 
@@ -49,12 +51,7 @@ export async function initI18n(saved?: string | null) {
 
 /** Persists the chosen language in SQLite (settings.kv). */
 export async function persistLang(lng: Lang) {
-  const { getDb } = await import("@/lib/db");
-  const db = await getDb();
-  await db.execute(
-    "INSERT INTO settings(key, value) VALUES (?1, ?2) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
-    [LANG_KEY, lng],
-  );
+  await writeSetting(LANG_KEY, lng);
 }
 
 /** Reads the saved language, if any. */
@@ -88,13 +85,24 @@ export async function readSetting(key: string): Promise<string | null> {
   }
 }
 
+/**
+ * The ONE write path for frontend-owned settings keys (S1.12).
+ *
+ * In the app it goes through `db_exec`, i.e. the Rust single-writer task: a
+ * settings write used to open its own pool connection and contend with the
+ * thumbnail batch transactions. The sql-plugin fallback only serves the browser
+ * QA route, where there is no IPC at all.
+ */
 export async function writeSetting(key: string, value: string) {
+  const sql =
+    "INSERT INTO settings(key, value) VALUES (?1, ?2) ON CONFLICT(key) DO UPDATE SET value = excluded.value";
+  if (tauriAvailable()) {
+    await invoke("db_exec", { sql, params: [key, value] });
+    return;
+  }
   const { getDb } = await import("@/lib/db");
   const db = await getDb();
-  await db.execute(
-    "INSERT INTO settings(key, value) VALUES (?1, ?2) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
-    [key, value],
-  );
+  await db.execute(sql, [key, value]);
 }
 
 /** Cursor pointer preference (default OFF). */

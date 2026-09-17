@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { toast } from "sonner";
-import i18n from "@/i18n";
+import i18n, { writeSetting } from "@/i18n";
 import { getDb } from "@/lib/db";
 
 /**
@@ -46,11 +46,8 @@ export const useAppSettings = create<AppSettingsState>((set) => ({
   setVideoScrubRate: async (rate) => {
     set({ videoScrubRate: rate }); // optimistic: the grid reacts instantly
     try {
-      const db = await getDb();
-      await db.execute(
-        "INSERT INTO settings(key, value) VALUES ('video_scrub_rate', ?1) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
-        [String(rate)],
-      );
+      // through the single writer (S1.12), never a private pool connection
+      await writeSetting(SCRUB_RATE_KEY, String(rate));
       toast.success(i18n.t("settings.scrub_saved", { rate }));
     } catch (e) {
       console.error("settings save failed", e);

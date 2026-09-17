@@ -351,11 +351,9 @@ export function SettingsContent() {
               onSubmit={(e) => {
                 e.preventDefault();
                 void perform(async () => {
-                  const db = await getDb();
-                  await db.execute(
-                    "INSERT INTO settings(key, value) VALUES ('external_player', ?1) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
-                    [player.trim()],
-                  );
+                  // single-writer path (S1.12): settings writes no longer open a
+                  // private pool connection next to the thumbnail batches
+                  await writeSetting("external_player", player.trim());
                 });
               }}
             >
