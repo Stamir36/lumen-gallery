@@ -26,6 +26,7 @@ import { MediaGrid } from "@/components/library/MediaGrid";
 import { FolderShelf } from "@/components/library/FolderCards";
 import { StatusLine } from "@/components/library/StatusLine";
 import { ViewModeSwitch } from "@/components/library/ViewModeSwitch";
+import { BrowseModeSwitch } from "@/components/library/BrowseModeSwitch";
 import { FolderTree } from "@/components/library/FolderTree";
 import { formatBytes, formatCount } from "@/lib/api";
 import { useLibrarySummary, useMediaRows } from "@/lib/queries";
@@ -252,10 +253,14 @@ export default function App() {
       <WindowTitleBar
         leftAction={<span className="font-mono text-xs text-ttertiary">v0.1</span>}
         // only on library routes: the onboarding shell has no grid to switch
-        /* titlebar right = ONLY view-mode icons; the gallery/explorer switch
-           moved into the library bar (FIX 3) */
+        /* titlebar right (FIX 5): mode toggle FIRST, then view-mode icons */
         right={
-          !noRoots && !onboarding.show ? <ViewModeSwitch /> : undefined
+          !noRoots && !onboarding.show ? (
+            <div className="flex items-center gap-2">
+              <BrowseModeSwitch />
+              <ViewModeSwitch />
+            </div>
+          ) : undefined
         }
       />
       <div className="flex min-h-0 flex-1">

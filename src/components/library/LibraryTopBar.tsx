@@ -13,9 +13,10 @@ import {
 import { cn } from "@/lib/utils";
 import { formatCount } from "@/lib/api";
 import { Segmented } from "@/components/ui/Segmented";
+// (the gallery/explorer switch moved to the titlebar — FIX 5)
 import { IconButton } from "@/components/ui/IconButton";
 import { GlassTopBar } from "@/components/ui/GlassTopBar";
-import { useLibraryUi, type BrowseMode, type SortKey } from "@/state/library-ui";
+import { useLibraryUi, type SortKey } from "@/state/library-ui";
 import { useRootsStore } from "@/state/library";
 import { Breadcrumbs } from "./Breadcrumbs";
 
@@ -27,10 +28,10 @@ const SORTS: { key: SortKey; labelKey: string }[] = [
 ];
 
 /**
- * Library bar — ONE row (v2.2, decluttered): browse-mode segmented (left),
- * breadcrumbs/title + mono count, search, sort, selection toggle. The chips row
- * was deleted — the sidebar smart views already cover All/Photos/Videos/Favorites
- * (duplicated controls taught nothing and cost a row of grid).
+ * Library bar — ONE row (v2.2): breadcrumbs/title + mono count, search, sort,
+ * folder scope, selection toggle. The chips row was deleted — the sidebar smart
+ * views already cover All/Photos/Videos/Favorites; the gallery/explorer switch
+ * lives in the titlebar (FIX 5), next to the view icons.
  */
 export function LibraryTopBar({ title, count }: { title: string; count: number }) {
   const { t } = useTranslation();
@@ -38,7 +39,6 @@ export function LibraryTopBar({ title, count }: { title: string; count: number }
   const route = useLibraryUi((s) => s.route);
   const q = useLibraryUi((s) => s.q);
   const setQ = useLibraryUi((s) => s.setQ);
-  const setBrowse = useLibraryUi((s) => s.setBrowse);
   const foldersView = useLibraryUi((s) => s.foldersView);
   const setFoldersView = useLibraryUi((s) => s.setFoldersView);
   const browse = useLibraryUi((s) => s.browse);
@@ -69,20 +69,6 @@ export function LibraryTopBar({ title, count }: { title: string; count: number }
     <GlassTopBar
       left={
         <>
-          {/* gallery/explorer switch lives at the head of the LIBRARY bar (v2.2
-              chunky segmented, compact): it is a navigation mode, not a chrome
-              control, so it sits next to the navigation it switches */}
-          <Segmented
-            className="mr-1 shrink-0"
-            aria-label={t("browse.mode")}
-            value={browse}
-            onChange={(v) => setBrowse(v as BrowseMode)}
-            options={[
-              { value: "gallery", label: t("browse.gallery"), icon: <ImagesIcon size={16} /> },
-              { value: "explorer", label: t("browse.explorer"), icon: <FolderTreeIcon size={16} /> },
-            ]}
-          />
-
           {root ? (
             <Breadcrumbs
               rootLabel={root.label || root.path}
