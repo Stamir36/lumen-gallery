@@ -1,7 +1,21 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useTranslation } from "react-i18next";
-import { Check, Heart, Play, Unplug } from "lucide-react";
+import {
+  Check,
+  Clipboard,
+  Eye,
+  FolderOpen,
+  Heart,
+  Play,
+  Star,
+  Trash2,
+  Unplug,
+} from "lucide-react";
+import { toast } from "sonner";
+import { invoke } from "@tauri-apps/api/core";
+import { useContextMenu } from "@/state/contextMenu";
+import { tauriAvailable } from "@/lib/assets";
 import { cn } from "@/lib/utils";
 import type { MediaRow } from "@/lib/api";
 import { fileSrc } from "@/lib/assets";
@@ -84,12 +98,102 @@ export const MediaCard = memo(function MediaCard({
   const duration = isVideo ? formatDuration(media.durationMs) : null;
   const resolution = isVideo ? null : formatResolution(media.width, media.height);
   const name = baseName(media.path);
+  const openMenu = useContextMenu((s) => s.openMenu);
+
+  /**
+   * Right-click menu (FIX 8): the card describes its own actions, the host
+   * renders them. Everything here is one gesture away instead of two screens.
+   */
+  const onContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const dir = media.path.slice(0, media.path.length - name.length - 1);
+    openMenu({
+      x: e.clientX,
+      y: e.clientY,
+      title: name,
+      mono: resolution ?? duration ?? media.ext.toUpperCase(),
+      sections: [
+        {
+          id: "open",
+          items: [
+            {
+              id: "open",
+              label: t("menu.open"),
+              icon: <Eye size={15} />,
+              onSelect: () => onActivate?.(media),
+            },
+          ],
+        },
+        {
+          id: "actions",
+          items: [
+            {
+              id: "fav",
+              label: media.favorite ? t("menu.unfavorite") : t("menu.favorite"),
+              icon: <Star size={15} />,
+              onSelect: () =>
+                void import("@/lib/mediaActions").then((m) => m.toggleFavorite(media.id)),
+            },
+            {
+              id: "select",
+              label: selected ? t("menu.deselect") : t("menu.select"),
+              icon: <Check size={15} />,
+              onSelect: () => onToggleSelect(media.id),
+            },
+          ],
+        },
+        {
+          id: "system",
+          items: [
+            {
+              id: "copy",
+              label: t("menu.copy_path"),
+              icon: <Clipboard size={15} />,
+              hint: media.ext.toUpperCase(),
+              onSelect: () => {
+                void navigator.clipboard
+                  .writeText(media.path)
+                  .then(() => toast.success(t("menu.copied")))
+                  .catch(() => toast.error(t("menu.copy_failed")));
+              },
+            },
+            {
+              id: "folder",
+              label: t("menu.open_folder"),
+              icon: <FolderOpen size={15} />,
+              disabled: !tauriAvailable(),
+              onSelect: () => {
+                void invoke("open_external", { path: dir }).catch((err) =>
+                  toast.error(String(err)),
+                );
+              },
+            },
+          ],
+        },
+        {
+          id: "danger",
+          items: [
+            {
+              id: "trash",
+              label: t("menu.trash"),
+              icon: <Trash2 size={15} />,
+              danger: true,
+              onSelect: () => {
+                void import("@/lib/mediaActions").then((m) => m.trashMedia([media.id]));
+              },
+            },
+          ],
+        },
+      ],
+    });
+  };
 
   return (
     <div
       className={cn("group relative h-full w-full select-none", media.offline && "opacity-80")}
       onPointerEnter={onEnter}
       onPointerLeave={stopPreview}
+      onContextMenu={onContextMenu}
     >
       <button
         type="button"

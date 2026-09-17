@@ -145,6 +145,21 @@
     "action_failed": "Action failed — see console (F12)",
     "action_nothing": "Nothing changed — the list was stale, refresh it"
   },
+  "menu": {
+    "open": "Open",
+    "favorite": "Add to favorites",
+    "unfavorite": "Remove from favorites",
+    "select": "Select",
+    "deselect": "Deselect",
+    "copy_path": "Copy path",
+    "copied": "Path copied",
+    "copy_failed": "Could not copy the path",
+    "open_folder": "Open the file's folder",
+    "folder_open": "Open folder",
+    "folder_explorer": "Show in Explorer",
+    "folder_exclude": "Exclude folder",
+    "trash": "Move to trash"
+  },
   "viewer": {
     "controls": "Viewer controls",
     "close": "Close",

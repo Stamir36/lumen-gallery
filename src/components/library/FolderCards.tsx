@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Folder } from "lucide-react";
+import { invoke } from "@tauri-apps/api/core";
+import { toast } from "sonner";
+import { Clipboard, Folder, FolderOpen, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { tauriAvailable } from "@/lib/assets";
+import { useContextMenu } from "@/state/contextMenu";
 import type { FolderRow } from "@/lib/api";
 import { enqueueThumbs, thumbSrc, useThumbStore } from "@/lib/thumbs";
 import { useFolders } from "@/lib/queries";
@@ -61,10 +65,60 @@ function FolderCard({
   onOpen: () => void;
   countLabel: string;
 }) {
+  // right-click menu (FIX 8): same actions as the kebab, one gesture away
+  const { t } = useTranslation();
+  const openMenu = useContextMenu((s) => s.openMenu);
+
+  const onContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    openMenu({
+      x: e.clientX,
+      y: e.clientY,
+      title: folder.name,
+      mono: `${countLabel} · ${folder.path}`,
+      sections: [
+        {
+          id: "folder",
+          items: [
+            {
+              id: "open",
+              label: t("menu.folder_open"),
+              icon: <Eye size={15} />,
+              onSelect: onOpen,
+            },
+            {
+              id: "explorer",
+              label: t("menu.folder_explorer"),
+              icon: <FolderOpen size={15} />,
+              disabled: !tauriAvailable(),
+              onSelect: () => {
+                void invoke("open_external", { path: folder.path }).catch((err) =>
+                  toast.error(String(err)),
+                );
+              },
+            },
+            {
+              id: "copy",
+              label: t("menu.copy_path"),
+              icon: <Clipboard size={15} />,
+              onSelect: () => {
+                void navigator.clipboard
+                  .writeText(folder.path)
+                  .then(() => toast.success(t("menu.copied")))
+                  .catch(() => toast.error(t("menu.copy_failed")));
+              },
+            },
+          ],
+        },
+      ],
+    });
+  };
+
   return (
     <button
       type="button"
       onClick={onOpen}
+      onContextMenu={onContextMenu}
       aria-label={folder.name}
       className={cn(
         "hover-lift group w-full min-w-0 rounded-card bg-surface-1 p-2.5 text-left",

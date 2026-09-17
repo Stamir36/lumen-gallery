@@ -30,6 +30,7 @@ import { ViewModeSwitch } from "@/components/library/ViewModeSwitch";
 import { BrowseModeSwitch } from "@/components/library/BrowseModeSwitch";
 import { FolderTree } from "@/components/library/FolderTree";
 import { ViewerOverlay } from "@/components/viewer/ViewerOverlay";
+import { ContextMenuHost } from "@/components/ui/ContextMenu";
 import { formatBytes, formatCount } from "@/lib/api";
 import { waitBackendReady } from "@/lib/backend";
 import { startThumbBridge } from "@/lib/thumbs";
@@ -385,6 +386,7 @@ export default function App() {
       </div>
       {/* viewer: portal, so nothing underneath re-renders (STEP 3) */}
       <ViewerOverlay />
+      <ContextMenuHost />
     </div>
   );
 }
