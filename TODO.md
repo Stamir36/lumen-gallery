@@ -1,5 +1,23 @@
 # LUMEN — Roadmap (Phases 1–6)
 
+## Phase 4.1 — user-reported fixes (2026-09-18) — DONE
+- [x] `fix: watch_progress rebuilt in milliseconds` — v1 had already created the table with `position_s`,
+      so v6's `CREATE TABLE IF NOT EXISTS` never added the ms columns and every save failed every 5s.
+      Verified on a copy of the real DB (`scripts/db-schema-check.cjs`)
+- [x] `fix: real scrub frames, left-aligned caption, pill alignment setting` — the progress bubble seeks a
+      real frame; the caption is `text-left` (a `<button>` centres its text) and brighter; the viewer pill
+      can sit centre/left/right; wheel zoom + scrub + swipe are coalesced to one update per frame, and
+      opening a viewer stops any card scrub-preview left running
+- [x] `feat: perf watchdog + measured fps chip` — long-task observer + main-thread drift probe log stalls
+      (`[perf] long task …ms`), and the status line can show measured rAF frame rate + worst frame
+- [x] `feat: folder exclusions` — `excluded_folders` + `media.excluded`, scan prunes the subtree,
+      exclude/restore through the single writer; checked against real data (1542 rows hidden, restore exact,
+      prefix boundary exact)
+- [x] `feat: hidden-folder UI and thumbnail worker setting` — right-click a folder card to exclude it,
+      restore list in Settings › Libraries, "show excluded" chip mode, thumbnail workers 2/4/6/8/12
+- [ ] Still open from the earlier list: a measured 60 fps **claim** at 9.4k (the chip now exists — numbers
+      from a real run are the missing piece)
+
 ## Phase 3.8 — stabilization batch S1 (2026-09-17) — DONE
 Findings + evidence: `docs/AUDIT-2026-09-17.md`.
 - [x] S1.1 warm seed: `seedThumbs` renders rows that already carry `thumb_path` from the DB value; only rows needing work are enqueued (`4a417ec`, `9f154dd`)
