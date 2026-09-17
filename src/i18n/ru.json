@@ -116,6 +116,16 @@
   "thumbs": {
     "noPreview": "нет превью"
   },
+  "browse": {
+    "mode": "Режим просмотра",
+    "explorer": "Проводник",
+    "gallery": "Галерея"
+  },
+  "explorer": {
+    "expand": "Развернуть",
+    "collapse": "Свернуть",
+    "no_subfolders": "нет подпапок"
+  },
   "collage": {
     "title": "Коллаж",
     "open": "Открыть коллажем",

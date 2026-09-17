@@ -106,6 +106,16 @@
   "thumbs": {
     "noPreview": "no preview"
   },
+  "browse": {
+    "mode": "Browse mode",
+    "explorer": "Folders",
+    "gallery": "Gallery"
+  },
+  "explorer": {
+    "expand": "Expand",
+    "collapse": "Collapse",
+    "no_subfolders": "no subfolders"
+  },
   "collage": {
     "title": "Collage",
     "open": "Open as collage",

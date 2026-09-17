@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import {
   Clock,
   Film,
-  FolderTree,
+  FolderTree as FolderTreeIcon,
   HardDrive,
   Heart,
   Image as ImageIcon,
@@ -26,6 +26,8 @@ import { MediaGrid } from "@/components/library/MediaGrid";
 import { FolderShelf } from "@/components/library/FolderCards";
 import { StatusLine } from "@/components/library/StatusLine";
 import { ViewModeSwitch } from "@/components/library/ViewModeSwitch";
+import { BrowseModeSwitch } from "@/components/library/BrowseModeSwitch";
+import { FolderTree } from "@/components/library/FolderTree";
 import { formatBytes, formatCount } from "@/lib/api";
 import { useLibrarySummary, useMediaRows } from "@/lib/queries";
 import { useRootsStore, useScanStore } from "@/state/library";
@@ -73,6 +75,9 @@ export default function App() {
   const sort = useLibraryUi((s) => s.sort);
   const desc = useLibraryUi((s) => s.desc);
   const foldersView = useLibraryUi((s) => s.foldersView);
+  const browse = useLibraryUi((s) => s.browse);
+  /** explorer = file manager: folder tree + only the open folder's contents */
+  const explorer = browse === "explorer";
 
   useEffect(() => {
     (async () => {
@@ -104,6 +109,13 @@ export default function App() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  // explorer mode always needs a folder: fall back to the first library
+  useEffect(() => {
+    if (browse === "explorer" && route.kind !== "root" && roots.length > 0) {
+      openRoot(roots[0].id);
+    }
+  }, [browse, route, roots, openRoot]);
+
   const summary = useLibrarySummary(ready);
   const noRoots = loaded && roots.length === 0;
   const root = route.kind === "root" ? roots.find((r) => r.id === route.rootId) : undefined;
@@ -111,7 +123,7 @@ export default function App() {
   // folder routes: "folders" scope lists the current directory only
   const dir =
     route.kind === "root"
-      ? foldersView
+      ? explorer || foldersView
         ? (route.dir ?? root?.path ?? null)
         : null
       : null;
@@ -168,7 +180,7 @@ export default function App() {
           {
             id: "folders",
             label: t("sidebar.folders"),
-            icon: <FolderTree />,
+            icon: <FolderTreeIcon />,
             active: route.kind === "root" && foldersView,
             onSelect: () => {
               const target = route.kind === "root" ? route.rootId : roots[0]?.id;
@@ -222,7 +234,14 @@ export default function App() {
       <WindowTitleBar
         leftAction={<span className="font-mono text-xs text-ttertiary">v0.1</span>}
         // only on library routes: the onboarding shell has no grid to switch
-        right={!noRoots && !onboarding.show ? <ViewModeSwitch /> : undefined}
+        right={
+          !noRoots && !onboarding.show ? (
+            <div className="flex items-center gap-2">
+              <BrowseModeSwitch />
+              <ViewModeSwitch />
+            </div>
+          ) : undefined
+        }
       />
       <div className="flex min-h-0 flex-1">
         {!noRoots && (
@@ -282,25 +301,35 @@ export default function App() {
           ) : (
             <>
               <LibraryTopBar title={title} count={rows.length} />
-              <div className="relative min-h-0 flex-1">
-                <MediaGrid
-                  rows={rows}
-                  pending={media.isPending}
-                  error={media.error}
-                  query={q}
-                  emptyKind={emptyKind}
-                  onRetry={() => void media.refetch()}
-                  onAddLibrary={onboarding.open}
-                  folderZone={
-                    route.kind === "root" && foldersView && root ? (
-                      <FolderShelf
-                        rootId={root.id}
-                        dir={route.dir}
-                        enabled={route.dir !== null || root.path.length > 0}
-                      />
-                    ) : undefined
-                  }
-                />
+              <div className="relative flex min-h-0 flex-1">
+                {explorer && route.kind === "root" && root && (
+                  <FolderTree
+                    rootId={root.id}
+                    rootPath={root.path}
+                    rootLabel={root.label || root.path}
+                    className="w-[264px] shrink-0 border-r border-hairline bg-surface-1"
+                  />
+                )}
+                <div className="relative min-h-0 min-w-0 flex-1">
+                  <MediaGrid
+                    rows={rows}
+                    pending={media.isPending}
+                    error={media.error}
+                    query={q}
+                    emptyKind={emptyKind}
+                    onRetry={() => void media.refetch()}
+                    onAddLibrary={onboarding.open}
+                    folderZone={
+                      !explorer && route.kind === "root" && foldersView && root ? (
+                        <FolderShelf
+                          rootId={root.id}
+                          dir={route.dir}
+                          enabled={route.dir !== null || root.path.length > 0}
+                        />
+                      ) : undefined
+                    }
+                  />
+                </div>
               </div>
               <StatusLine
                 summary={summary.data}

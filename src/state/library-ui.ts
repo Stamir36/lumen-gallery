@@ -2,6 +2,8 @@ import { create } from "zustand";
 import type { MediaFilter } from "@/lib/api";
 
 export type ViewMode = "justified" | "masonry" | "square" | "list";
+/** gallery = the library as one stream · explorer = the library as a disk tree */
+export type BrowseMode = "gallery" | "explorer";
 export type SortKey = "date" | "name" | "size" | "duration" | "added";
 
 export type SmartView =
@@ -42,6 +44,7 @@ export function filterForRoute(route: Route, chip: MediaFilter): MediaFilter {
 interface LibraryUiState {
   route: Route;
   view: ViewMode;
+  browse: BrowseMode;
   sort: SortKey;
   desc: boolean;
   q: string;
@@ -56,6 +59,7 @@ interface LibraryUiState {
   /** `rootPath` bounds the walk: the root level is as far up as we go. */
   goUp: (rootPath?: string) => void;
   setView: (view: ViewMode) => void;
+  setBrowse: (browse: BrowseMode) => void;
   setSort: (sort: SortKey) => void;
   setDesc: (desc: boolean) => void;
   setQ: (q: string) => void;
@@ -70,6 +74,12 @@ interface LibraryUiState {
 }
 
 const VIEW_KEY = "ui.view_mode";
+const BROWSE_KEY = "ui.browse_mode";
+
+function persistedBrowse(): BrowseMode {
+  const v = typeof localStorage !== "undefined" ? localStorage.getItem(BROWSE_KEY) : null;
+  return v === "explorer" ? "explorer" : "gallery";
+}
 
 function persistedView(): ViewMode {
   const v = typeof localStorage !== "undefined" ? localStorage.getItem(VIEW_KEY) : null;
@@ -81,6 +91,7 @@ function persistedView(): ViewMode {
 export const useLibraryUi = create<LibraryUiState>((set, get) => ({
   route: { kind: "smart", id: "all" },
   view: persistedView(),
+  browse: persistedBrowse(),
   sort: "date",
   desc: true,
   q: "",
@@ -131,6 +142,24 @@ export const useLibraryUi = create<LibraryUiState>((set, get) => ({
       /* private mode — view just isn't persisted */
     }
     set({ view });
+  },
+
+  setBrowse: (browse) => {
+    try {
+      localStorage.setItem(BROWSE_KEY, browse);
+    } catch {
+      /* private mode — mode just isn't persisted */
+    }
+    // the explorer is always folder-scoped and name-ordered: date headers in a
+    // file manager are noise, and the folder listing must read like a disk
+    set((s) => ({
+      browse,
+      foldersView: true,
+      sort: browse === "explorer" ? "name" : s.sort,
+      desc: browse === "explorer" ? false : s.desc,
+      selectionMode: false,
+      selected: [],
+    }));
   },
 
   setSort: (sort) => set({ sort, desc: sort !== "name" }),

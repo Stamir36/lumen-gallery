@@ -48,6 +48,7 @@ export function LibraryTopBar({ title, count }: { title: string; count: number }
   const setChip = useLibraryUi((s) => s.setChip);
   const foldersView = useLibraryUi((s) => s.foldersView);
   const setFoldersView = useLibraryUi((s) => s.setFoldersView);
+  const browse = useLibraryUi((s) => s.browse);
   const selectionMode = useLibraryUi((s) => s.selectionMode);
   const toggleSelectionMode = useLibraryUi((s) => s.toggleSelectionMode);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -159,7 +160,8 @@ export function LibraryTopBar({ title, count }: { title: string; count: number }
             )}
           </div>
 
-          {route.kind === "root" && (
+          {/* the folders/all scope is meaningless in explorer mode (it is the folders) */}
+          {route.kind === "root" && browse !== "explorer" && (
             <Segmented
               aria-label={t("topbar.folder_scope")}
               value={foldersView ? "folders" : "all"}
