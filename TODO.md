@@ -1,5 +1,11 @@
 # LUMEN — Roadmap (Phases 1–6)
 
+## Phase 3.7 — perf + declutter (2026-09-17)
+- [x] FIX 1 single-writer SQLite: ALL media writes through one tokio task (mpsc); thumb updates batched — flush at 200ms or 64 items, ONE transaction; favorite/trash/settings via whitelisted `db_exec` command with oneshot completion; busy_timeout=10000; WAL + NORMAL kept. Dev console logs `[perf] db_exec Nms` per UI write (favorite <50ms contract).
+- [x] FIX 2 honest tiles: WebView-decoder fallback (fs-read + createImageBitmap) tried once per file when Rust decode fails; folder covers skip thumb_error rows, chain = thumb → color → newest decodable child → tonal surface + folder glyph; broken-glyph eliminated everywhere.
+- [x] FIX 3 IA declutter: chips row deleted (sidebar covers it); Галерея/Проводник segmented moved into the library bar left; gallery = pure flat date-grouped feed (folder shelf removed, explorer covers it); per-mode state (route/query/sort/foldersView + scroll offsets) preserved across toggles.
+- [ ] FIX 4 numbers (user run): `[perf] boot`, `[perf] db_exec`, zero sqlx slow-statement warnings over a 60s scroll; fps profile still pending.
+
 ## Phase 3.5 — user acceptance fixes (2026-09-17)
 - [x] FIX 1 thumbnails: tiles rendered the raw DB path (`C:\...\thumbs\1.jpg`) as the <img> src — never went through convertFileSrc, so NO photo ever showed its thumb and the dominant-color placeholder stayed forever. Rust also decoded by extension (`image::open`), which threw "Invalid PNG signature" on mislabeled files. Now: convertFileSrc via `thumbSrc`, content-based decode (`ImageReader::with_guessed_format`), permanent failures persisted in `thumb_error` (migration v4) → mono "no preview" tile, one WARN per file, no retry loops. Video capture sets crossOrigin="anonymous" (the tauri asset protocol answers with `Access-Control-Allow-Origin: <window origin>`, verified in tauri 2.11.5 src/protocol/asset.rs) so the canvas stays untainted.
 - [x] FIX 2 dates: epoch seconds vs ms mismatch fixed once at the api.ts IPC boundary (raw 1789588545 → 1970-01-21; ×1000 → 2026-09-16).
