@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import {
   ArrowLeft,
   Camera,
+  EyeOff,
   Gauge,
   Heart,
   Info,
@@ -28,6 +29,7 @@ import { thumbSrc } from "@/lib/thumbs";
 import { formatBytes, type MediaRow } from "@/lib/api";
 import { useAppSettings } from "@/lib/settings";
 import { useViewer } from "@/state/viewer";
+import { NavTooltip } from "@/components/ui/NavTooltip";
 import { Filmstrip } from "./Filmstrip";
 
 const HIDE_AFTER_MS = 2_000;
@@ -82,6 +84,8 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
   const [chrome, setChrome] = useState(true);
   /** pointer is over the control pill — idle-hide must hold (FIX 1) */
   const [pillHover, setPillHover] = useState(false);
+  /** FIX 3: manual interface hide (pill button / H) — wins over the idle timer */
+  const [manualHide, setManualHide] = useState(false);
   const [volumeOpen, setVolumeOpen] = useState(false);
   const [barHover, setBarHover] = useState(false);
   const [scrub, setScrub] = useState<{ x: number; time: number } | null>(null);
@@ -189,6 +193,20 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
     hideAt.current = Date.now() + HIDE_AFTER_MS;
   }, []);
 
+  // FIX 3: any pointer move, click or key press reveals the interface again
+  // and resets the 2s idle timer.
+  const revealControls = useCallback(() => {
+    setManualHide(false);
+    poke();
+  }, [poke]);
+
+  // FIX 3: manual hide — spring-hides pill, line, chips and the up-next rail.
+  const hideInterface = useCallback(() => {
+    setVolumeOpen(false);
+    setManualHide(true);
+    hideAt.current = Date.now() + HIDE_AFTER_MS;
+  }, []);
+
   useEffect(() => {
     const id = window.setInterval(() => {
       const el = video.current;
@@ -250,6 +268,14 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
     const onKey = (e: KeyboardEvent) => {
       const el = video.current;
       const v = useViewer.getState();
+      // FIX 3: H toggles the manual interface hide; any other key reveals.
+      if (e.key === "h" || e.key === "H") {
+        setVolumeOpen(false);
+        setManualHide((prev) => !prev);
+        hideAt.current = Date.now() + HIDE_AFTER_MS;
+        return;
+      }
+      revealControls();
       if (e.key === "Escape") {
         // fullscreen first, viewer second
         if (document.fullscreenElement) return;
@@ -291,7 +317,7 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [applyVolume, row, seekBy, toggle, toggleFavorite, toggleInfo, volume, muted]);
+  }, [applyVolume, row, seekBy, toggle, toggleFavorite, toggleInfo, volume, muted, revealControls]);
 
   // wheel = volume, attached natively so preventDefault is allowed (a passive
   // React handler cannot cancel the gesture)
@@ -351,15 +377,16 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
   ].filter(Boolean) as string[];
 
   // FIX 1: one visibility condition for the pill AND the progress line —
-  // the chrome-error card keeps both up even past the 2s idle point.
-  const showChrome = chrome || !!error;
+  // the codec-error card keeps both up even past the 2s idle point.
+  // FIX 3: the manual hide (H / pill button) wins over everything else.
+  const showChrome = !manualHide && (chrome || !!error);
 
   return (
     <div
       ref={shell}
       className="relative flex h-full w-full overflow-hidden bg-black"
-      onPointerMove={poke}
-      onPointerDown={poke}
+      onPointerMove={revealControls}
+      onPointerDown={revealControls}
       onDoubleClick={onFullscreen}
     >
       {/* ---------- ambient mode ---------- */}
@@ -416,7 +443,7 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
 
       {/* ---------- top-left glass chip row ---------- */}
       <AnimatePresence>
-        {chrome && !error && (
+        {showChrome && !error && (
           <motion.div
             initial={reduced ? false : { opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -529,7 +556,7 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
 
       {/* ---------- right rail: up next (collapsible) ---------- */}
       <AnimatePresence>
-        {stripOpen && queue.length > 1 && (
+        {stripOpen && !manualHide && queue.length > 1 && (
           <motion.aside
             initial={reduced ? false : { opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -812,6 +839,23 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
               <IconBtn label={t("player.up_next")} active={stripOpen} onClick={toggleStrip}>
                 <PanelRight size={18} />
               </IconBtn>
+              {/* FIX 3: manual interface hide — mono tooltip + hotkey H */}
+              <NavTooltip
+                label={t("player.hide_interface")}
+                caption="H"
+                side="top"
+                mono
+              >
+                <button
+                  type="button"
+                  aria-label={t("player.hide_interface")}
+                  aria-pressed={manualHide}
+                  onClick={hideInterface}
+                  className="flex h-10 w-10 items-center justify-center rounded-pill text-tsecondary transition-all duration-[160ms] ease-out hover:bg-white/[.08] hover:text-tprimary active:scale-[.97]"
+                >
+                  <EyeOff size={18} />
+                </button>
+              </NavTooltip>
               <IconBtn label={t("player.fullscreen")} onClick={onFullscreen}>
                 <Maximize2 size={18} />
               </IconBtn>

@@ -203,6 +203,7 @@
     "pip": "Picture in picture",
     "pip_failed": "Picture in picture is unavailable",
     "fullscreen": "Fullscreen",
+    "hide_interface": "Hide interface",
     "seek": "Playback position",
     "up_next": "Up next",
     "resume": "Continue from {{time}}",

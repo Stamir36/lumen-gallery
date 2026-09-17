@@ -2,29 +2,41 @@ import type { ReactNode } from "react";
 import * as TooltipPrimitive from "@radix-ui/react-tooltip";
 import { cn } from "@/lib/utils";
 
-/** Tooltip used by the collapsed 64px sidebar rail. */
+/** Tooltip used by the collapsed 64px sidebar rail and the player pill. */
 export function NavTooltip({
   children,
   label,
   caption,
+  side = "right",
+  mono = false,
 }: {
   children: ReactNode;
   label: string;
   caption?: string;
+  side?: "top" | "right" | "bottom" | "left";
+  /** mono label — for technical/meta controls (DESIGN §2) */
+  mono?: boolean;
 }) {
   return (
     <TooltipPrimitive.Root>
       <TooltipPrimitive.Trigger asChild>{children}</TooltipPrimitive.Trigger>
       <TooltipPrimitive.Portal>
         <TooltipPrimitive.Content
-          side="right"
+          side={side}
           sideOffset={8}
           className={cn(
             "glass z-50 rounded-control px-3 py-2",
             "shadow-popover",
           )}
         >
-          <div className="text-[13px] font-medium text-tprimary">{label}</div>
+          <div
+            className={cn(
+              "text-[13px] font-medium text-tprimary",
+              mono && "font-mono text-[12px]",
+            )}
+          >
+            {label}
+          </div>
           {caption && (
             <div className="mt-0.5 font-mono text-[10px] text-ttertiary">
               {caption}
