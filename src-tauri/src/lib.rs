@@ -7,7 +7,9 @@ mod scan;
 mod thumbs;
 mod volumes;
 mod watch;
+mod writer;
 
+use tauri::Manager;
 use tauri_plugin_sql::{Migration, MigrationKind};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -59,6 +61,7 @@ pub fn run() {
       commands::library_stats,
       commands::library_summary,
       commands::cancel_scan,
+      commands::db_exec,
       cache::thumbnail_cache_size,
       cache::clear_thumbnail_cache,
       thumbs::generate_thumbs,
@@ -84,6 +87,15 @@ pub fn run() {
             let _ = sqlx::query("PRAGMA foreign_keys = ON").execute(&pool).await;
             let _ = sqlx::query("PRAGMA journal_mode = WAL").execute(&pool).await;
             let _ = sqlx::query("PRAGMA synchronous = NORMAL").execute(&pool).await;
+            let _ = sqlx::query(format!("PRAGMA busy_timeout = {}", writer::BUSY_TIMEOUT_MS).as_str())
+              .execute(&pool)
+              .await;
+
+            // single-writer: EVERY media write (thumbs batched, UI immediate)
+            // goes through one task — no more write-lock contention storms
+            let w = writer::spawn(pool.clone());
+            handle.manage(w);
+            log::info!("single-writer db task started (batch 64 / 200ms)");
             let fk: i64 =
               sqlx::query_scalar("PRAGMA foreign_keys").fetch_one(&pool).await.unwrap_or(0);
             let mode: String = sqlx::query_scalar("PRAGMA journal_mode")

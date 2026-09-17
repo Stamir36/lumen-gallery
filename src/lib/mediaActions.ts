@@ -1,20 +1,45 @@
+import { invoke } from "@tauri-apps/api/core";
 import { toast } from "sonner";
 import i18n from "@/i18n";
-import { getDb } from "@/lib/db";
 import { queryClient } from "@/lib/queryClient";
+import { tauriAvailable } from "@/lib/assets";
+import { getDb } from "@/lib/db";
 
 /**
  * Row-level writes for the library UI. All state lives in SQLite; the grid
  * refetches through react-query, and failures surface on the console AND as a
  * toast (no silent data loss) — .clinerules error contract.
+ *
+ * In the Tauri app every write here goes through the Rust SINGLE-WRITER task
+ * (`db_exec`): thumb updates are batched on the same queue, so a favorite
+ * toggle can no longer wait behind a storm of thumbnail transactions. In the
+ * browser QA route there is no IPC — fall back to the sql plugin directly.
  */
 function placeholderList(count: number, startAt = 2) {
   return Array.from({ length: count }, (_, i) => `?${i + startAt}`).join(", ");
 }
 
+/** dev-only latency probe: favorite round-trip must stay under 50ms */
+export const lastWriteMs = { value: 0 };
+
 async function run(sql: string, params: (number | string)[]) {
-  const db = await getDb();
-  await db.execute(sql, params);
+  const t0 = performance.now();
+  try {
+    if (tauriAvailable()) {
+      await invoke("db_exec", {
+        sql,
+        params: params.map((p) => String(p)),
+      });
+    } else {
+      const db = await getDb();
+      await db.execute(sql, params);
+    }
+  } finally {
+    lastWriteMs.value = Math.round(performance.now() - t0);
+    if (import.meta.env.DEV) {
+      console.info(`[perf] db_exec ${lastWriteMs.value}ms · ${sql.slice(0, 40)}`);
+    }
+  }
   await queryClient.invalidateQueries({ queryKey: ["media"] });
   await queryClient.invalidateQueries({ queryKey: ["library-summary"] });
   await queryClient.invalidateQueries({ queryKey: ["folders"] });

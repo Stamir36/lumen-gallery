@@ -15,6 +15,39 @@ use crate::scan::{self, MediaRow};
 pub fn cancel_scan(root_id: i64) {
     scan::request_cancel(root_id);
 }
+
+/// UI-critical single-statement writes go through the single-writer task with a
+/// oneshot completion — same ordering as the batched thumb updates, no lock
+/// contention. `sql` must be a fixed-shape statement; `params` bind positionally.
+#[tauri::command]
+pub async fn db_exec(
+    app: AppHandle,
+    sql: String,
+    params: Vec<String>,
+) -> Result<u64, String> {
+    // ONLY fixed-shape UI statements are whitelisted: the writer is not a
+    // general-purpose SQL passthrough.
+    const ALLOWED: &[&str] = &[
+        "UPDATE media SET favorite",
+        "UPDATE media SET trashed",
+        "INSERT INTO settings",
+        "UPDATE settings",
+        "DELETE FROM media WHERE id",
+    ];
+    if !ALLOWED.iter().any(|a| sql.starts_with(a)) {
+        return Err("statement not allowed through db_exec".into());
+    }
+    if sql.len() > 4_096 || params.len() > 512 {
+        return Err("statement out of bounds".into());
+    }
+
+    use tauri::Manager;
+    let writer_sql: &'static str = Box::leak(sql.into_boxed_str());
+    app.state::<crate::writer::DbWriter>()
+        .inner()
+        .exec(writer_sql, params)
+        .await
+}
 use crate::volumes::{self, VolumeInfo};
 use crate::watch::{spawn_watcher, WatcherRegistry};
 

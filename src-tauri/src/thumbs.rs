@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 use serde::Serialize;
 use sqlx::{Row, SqlitePool};
 use tauri::{AppHandle, Manager};
+use crate::writer::DbWriter;
 use tokio::sync::Semaphore;
 
 const THUMB_WIDTH: u32 = 480;
@@ -142,6 +143,7 @@ pub async fn generate_one(
     pool: &SqlitePool,
     sem: &Semaphore,
     media_id: i64,
+    writer: &DbWriter,
 ) -> ThumbResult {
     let fail = |error: String| ThumbResult {
         media_id,
@@ -164,7 +166,8 @@ pub async fn generate_one(
         Err(e) => return fail(e.to_string()),
     };
 
-    if let Some(c) = cached(pool, media_id).await {
+    let cached_row = cached(pool, media_id).await;
+    if let Some(c) = &cached_row {
         // Known-bad file at an unchanged mtime: never decode it twice and never
         // warn twice. A rescan that touches the file (mtime moves) retries.
         if c.thumb_error && c.thumb_mtime == Some(c.mtime) {
@@ -215,19 +218,11 @@ pub async fn generate_one(
     match rendered {
         Ok((w, h, dominant)) => {
             let thumb = out.to_string_lossy().to_string();
-            let _ = sqlx::query(
-                "UPDATE media SET thumb_path = ?1, thumb_mtime = mtime,
-                 dominant_color = ?2, thumb_error = 0,
-                 width = COALESCE(width, ?3), height = COALESCE(height, ?4)
-                 WHERE id = ?5",
-            )
-            .bind(&thumb)
-            .bind(&dominant)
-            .bind(w as i64)
-            .bind(h as i64)
-            .bind(media_id)
-            .execute(pool)
-            .await;
+            // batched by the writer task (one transaction per 200ms / 64 items):
+            // a scroll session no longer fires hundreds of single-row writes
+            writer
+                .thumb_ok(media_id, thumb.clone(), dominant.clone(), w as i64, h as i64)
+                .await;
 
             ThumbResult {
                 media_id,
@@ -245,12 +240,9 @@ pub async fn generate_one(
             // next attempts, so a corrupt file cannot flood the log.
             log::warn!("thumb failed for media {media_id}: {}", f.message);
             if f.permanent {
-                let _ = sqlx::query(
-                    "UPDATE media SET thumb_error = 1, thumb_mtime = mtime WHERE id = ?1",
-                )
-                .bind(media_id)
-                .execute(pool)
-                .await;
+                writer
+                    .thumb_err(media_id, cached_row.as_ref().map(|c| c.mtime).unwrap_or(0))
+                    .await;
             }
             ThumbResult {
                 media_id,
@@ -319,6 +311,7 @@ pub async fn generate_thumbs(app: AppHandle, ids: Vec<i64>) -> Result<Vec<ThumbR
         return Ok(Vec::new());
     }
     let pool = crate::commands::pool_for(&app).await?;
+    let writer = app.state::<crate::writer::DbWriter>().inner().clone();
     let sem = std::sync::Arc::new(Semaphore::new(WORKERS));
 
     let mut handles = Vec::with_capacity(ids.len());
@@ -326,8 +319,9 @@ pub async fn generate_thumbs(app: AppHandle, ids: Vec<i64>) -> Result<Vec<ThumbR
         let app = app.clone();
         let pool = pool.clone();
         let sem = sem.clone();
+        let writer = writer.clone();
         handles.push(tauri::async_runtime::spawn(async move {
-            generate_one(&app, &pool, &sem, id).await
+            generate_one(&app, &pool, &sem, id, &writer).await
         }));
     }
 
