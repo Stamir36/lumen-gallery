@@ -20,7 +20,7 @@ export function NavTooltip({
           side="right"
           sideOffset={8}
           className={cn(
-            "z-50 rounded-control border border-hairline bg-surface-1 px-3 py-2",
+            "glass z-50 rounded-control px-3 py-2",
             "shadow-popover",
           )}
         >

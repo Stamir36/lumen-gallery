@@ -35,23 +35,32 @@ steps + soft ambient shadow. Hairlines remain only as editorial dividers
 | `elev-3` | surface-3 + shadow `0 12px 32px rgba(0,0,0,.55)` (dialogs, popovers) |
 | hover | lift −2px + shadow `0 12px 28px rgba(0,0,0,.4)` + faint accent glow `0 0 0 1px rgba(110,193,255,.18)` |
 
-## 3. Glass Whitelist — v2.2
+## 3. Glass Whitelist — v2.3
 
-**backdrop-filter is allowed ONLY on small floating overlay pills:**
-video player control bar, floating selection action bar, scrub preview
-bubble, tooltips. **FORBIDDEN on:** topbar, sidebar, menus, dialogs, cards,
-segmented track, settings panels. macOS-style muddy blur on structural chrome
-is a bug.
+**backdrop-filter is allowed ONLY on small floating overlays:**
+video player pill, top chips, filmstrip rail, scrub preview bubble,
+floating selection action bar, context menu, scroll-top FAB, tooltips.
+**FORBIDDEN on:** topbar, sidebar, dialogs, cards, segmented track,
+settings panels. macOS-style muddy blur on structural chrome is a bug.
 
-### 3.1 Glass pill recipe (the single place blur lives)
+### 3.1 Dark glass recipe (v2.3 — the single place blur lives)
 
 ```
-background: linear-gradient(180deg, rgba(255,255,255,.09), rgba(255,255,255,.03));
-backdrop-filter: blur(28px) saturate(1.4) brightness(1.08);
+background: linear-gradient(180deg, rgba(14,14,18,.68), rgba(14,14,18,.55));
+backdrop-filter: blur(28px) saturate(1.4);
 border: 1px solid rgba(255,255,255,.08);
 box-shadow: inset 0 1px 0 rgba(255,255,255,.10), 0 8px 24px rgba(0,0,0,.35);
-border-radius: 999px;
+border-radius: 999px (pills) · 16px (menu, bubble, filmstrip rail);
 ```
+
+**Why dark:** the v2.2 white-tinted recipe (white 9%→3% + brightness 1.08)
+washed out over white/bright frames — selection pill and context menu text
+became invisible. The dark tint keeps the frosted look while guaranteeing
+contrast over pure-white content.
+
+**QA contract:** /style section 07 renders the same pill + context menu
+over (a) pure white, (b) a bright photo, (c) pure black — text must be
+readable in all three.
 
 ### 3.2 Structural chrome = solid tonal
 

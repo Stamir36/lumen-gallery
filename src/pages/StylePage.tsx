@@ -194,40 +194,75 @@ function SectionsDemo({
         </FAB>
       </Section>
 
-      {/* 07 — Glass whitelist: only floating pills over colorful media */}
-      <Section index="07" title="Glass pills over content">
-        <div className="relative w-full overflow-hidden rounded-card">
-          {/* colorful media stand-in */}
-          <div
-            className="h-72 w-full"
-            style={{
-              background:
-                "radial-gradient(circle at 20% 30%, #6EC1FF 0%, transparent 45%)," +
-                "radial-gradient(circle at 80% 20%, #F5B85C 0%, transparent 40%)," +
-                "radial-gradient(circle at 70% 85%, #3ECF8E 0%, transparent 45%)," +
-                "radial-gradient(circle at 30% 90%, #FF5C5C 0%, transparent 40%)," +
-                "#141518",
-            }}
-          />
-          {/* whitelisted floating glass pills only */}
-          <div className="absolute inset-x-8 bottom-8 flex items-center gap-3">
-            <div className="glass flex items-center gap-2 rounded-pill px-3 py-2">
-              <IconButton label="Favorite">
-                <Heart size={18} />
-              </IconButton>
-              <IconButton label="Add to album">
-                <Images size={18} />
-              </IconButton>
-              <IconButton label="Collage">
-                <Star size={18} />
-              </IconButton>
-            </div>
-            <div className="glass flex-1 rounded-pill px-5 py-2.5">
-              <span className="font-mono text-[12px] text-tsecondary">
-                00:04:32 / 00:12:08 · 3840×2160
+      {/* 07 — Glass QA (v2.3 dark glass): the same selection pill + context
+          menu over (a) pure white, (b) a bright photo, (c) pure black —
+          text must stay readable in all three */}
+      <Section index="07" title="Dark glass over content (QA)">
+        <div className="grid w-full grid-cols-1 gap-3 md:grid-cols-3">
+          {[
+            {
+              key: "white",
+              label: "Pure white",
+              fg: "rgba(10,10,12,.55)",
+              bg: "#FFFFFF",
+            },
+            {
+              key: "bright",
+              label: "Bright photo",
+              fg: "rgba(120,80,10,.6)",
+              bg:
+                "radial-gradient(circle at 25% 20%, #FFFBEA 0%, transparent 60%)," +
+                "radial-gradient(circle at 80% 25%, #FFE9C2 0%, transparent 55%)," +
+                "linear-gradient(180deg, #FFF3D9 0%, #F5B85C 100%)",
+            },
+            {
+              key: "black",
+              label: "Pure black",
+              fg: "rgba(242,242,244,.5)",
+              bg: "#000000",
+            },
+          ].map((panel) => (
+            <div
+              key={panel.key}
+              className="relative flex h-72 w-full flex-col items-center justify-center gap-4 overflow-hidden rounded-card"
+              style={{ background: panel.bg }}
+            >
+              <span
+                className="absolute left-4 top-4 text-[11px] uppercase tracking-[0.08em]"
+                style={{ color: panel.fg }}
+              >
+                {panel.label}
               </span>
+              {/* selection action bar sample */}
+              <div className="glass flex items-center gap-1 rounded-pill p-2">
+                <IconButton label="Favorite">
+                  <Heart size={18} />
+                </IconButton>
+                <IconButton label="Add to album">
+                  <Images size={18} />
+                </IconButton>
+                <span className="mx-1 flex h-9 items-center rounded-pill bg-white/[.07] px-3 font-mono text-[12px] tabular-nums text-tprimary">
+                  12
+                </span>
+              </div>
+              {/* context menu sample */}
+              <div className="glass w-52 overflow-hidden rounded-[16px] p-1.5">
+                <div className="px-2.5 pb-1 pt-2 font-mono text-[10px] uppercase tracking-[0.1em] text-ttertiary">
+                  photo_2026.jpg
+                </div>
+                {["Favorite", "Add to album", "Open containing folder"].map(
+                  (item) => (
+                    <div
+                      key={item}
+                      className="flex h-10 items-center rounded-[10px] px-3 text-[13px] text-tprimary"
+                    >
+                      {item}
+                    </div>
+                  ),
+                )}
+              </div>
             </div>
-          </div>
+          ))}
         </div>
 
         {/* chrome surfaces comparison row: all SOLID, no blur */}

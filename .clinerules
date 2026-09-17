@@ -45,3 +45,11 @@
   against docs/DESIGN.md, fix discrepancies BEFORE committing.
 - Offline-first: zero network, zero telemetry. All state in SQLite.
 - Work phase-by-phase per TODO.md; docs in docs/ are source of truth.
+
+DISK GUARD — HARD RULE:
+- NEVER run `cargo test`, `cargo build --release`, or any command expected to write >500 MB without explicit user approval first.
+- Before ANY heavy Rust operation, check disk space: `Get-PSDrive C | Select-Object Free`.
+- If free space <20 GB, STOP and ask user; suggest `cargo clean --profile release` or skipping tests.
+- `pnpm tauri dev` is allowed (incremental, ~1-2 GB).
+- `cargo check` and `cargo clippy` are allowed (no full linking).
+- Log disk usage before/after heavy operations.
