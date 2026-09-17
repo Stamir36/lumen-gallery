@@ -1,19 +1,26 @@
 # LUMEN — Roadmap (Phases 1–6)
 
-## Phase 3.8 — stabilization batch S1 (2026-09-17)
+## Phase 3.8 — stabilization batch S1 (2026-09-17) — DONE
 Findings + evidence: `docs/AUDIT-2026-09-17.md`.
-- [ ] S1.1 seed warm thumbs from DB (instant render, enqueue only `thumb_path = null` + new version)
-- [ ] S1.2 app-wide thumb queue: ONE semaphore (settings workers, default 4), dedupe by `(id, mtime, size)`, 24-item sub-batches with incremental delivery
-- [ ] S1.3 subscribe the frontend to the writer's `thumbs-ready` event (patch the row cache, drop stuck placeholders)
-- [ ] S1.4 versioned thumb cache `(id, mtime, size)`, migration v5 `thumb_size`, stale file deleted + regenerated (incl. previous `thumb_error` rows)
-- [ ] S1.5 persistent browser fallback: decoded bitmap written to `appCacheDir/thumbs` through the writer; negative marker keyed by file version
-- [ ] S1.6 tile state contract: shimmer → thumb → neutral tile + mono ext chip; never a broken glyph
-- [ ] S1.7 bulk favorite/trash: placeholder list starts at `?1`, chunks ≤512, `rows_affected > 0` asserted with an i18n toast on mismatch
-- [ ] S1.8 scan upsert compares `excluded.mtime`/`excluded.size` + in-memory regression test on the real SQL
-- [ ] S1.9 explorer `tree | grid` sub-toggle (persisted), folders never in both panes, v2.2 gutters in folder mode
-- [ ] S1.10 `backend-ready` gate before the first library query (kills the first-open flicker)
-- [ ] S1.11 restore fs watchers for stored roots at boot
-- [ ] S1.12 route the remaining direct writes (video thumb, settings, cache clear) through the writer / `db_exec`
+- [x] S1.1 warm seed: `seedThumbs` renders rows that already carry `thumb_path` from the DB value; only rows needing work are enqueued (`4a417ec`, `9f154dd`)
+- [x] S1.2 app-wide queue: ONE `ThumbEngine` semaphore (`thumb_workers` setting, default 4, rebuilds on change) + in-flight dedupe, sub-batches of 24, per-row `thumb-result` push, frontend dedupe by `(id, mtime, size)`, visible-first ordering
+- [x] S1.3 the writer emits `thumbs-ready {ids}` after a committed flush; the frontend patches the cached row (warm on remount) — verified through the dev-server module graph (`ingest` → ok)
+- [x] S1.4 versioned cache `(mtime, size)` + migration v5 `thumb_size`; a stale entry deletes its file and re-renders, `thumb_error` rows retry when the version moves (`cache_version_needs_mtime_and_size`)
+- [x] S1.5 browser fallback persists its JPEG into `appCacheDir/thumbs` through `thumb_record`; the negative marker is keyed by `(id, mtime, size)`
+- [x] S1.6 tile contract: shimmer → thumb → neutral tile + mono ext chip; videos keep the play glyph instead of an error patch
+- [x] S1.7 bulk favourite/trash: placeholders start at `?1`, chunks ≤512, `rows_affected` checked with an i18n toast (`errors.action_nothing`)
+- [x] S1.8 scan upsert compares `excluded.mtime`/`excluded.size`; `unchanged_rescan_counts_zero_changes` runs the real statement
+- [x] S1.9 explorer `tree | grid` sub-toggle (persisted, `ui.explorer_layout`), folders never in both panes, capped self-scrolling folder strip with v2.2 gutters
+- [x] S1.10 `backend-ready` event + `backend_ready` probe; the first library query awaits it
+- [x] S1.11 fs watchers restored for every stored root at boot (unreachable roots are logged, not crashed)
+- [x] S1.12 video thumb frames, browser-fallback thumbs, settings and the cache wipe all go through the writer (`thumb_record`, `ResetThumbs`, `writeSetting` → `db_exec`)
+
+### Numbers measured while landing S1
+- scan upsert (real SQL, in-memory SQLite): OLD guard `1/1/1` on an unchanged file; NEW `0/0/0` with `1` on a new mtime and `1` on a new size → an unchanged folder now reports 0 changes.
+- bulk favourite (in-memory SQLite): the fixed placeholder list affects all 3 of 3 rows; 600 ids chunk into `512 + 88`.
+- warm seed / streamed ingest / failure tile / explorer layout persistence: DOM-runtime check through the dev module graph (`status: ok` with `path`+`color`, `noPreview: true` on a decode failure, `ui.explorer_layout` = `grid` ↔ `tree`).
+- STILL THE USER'S TO CAPTURE (needs the GUI): warm tile paint, cold first-tile time, 20 heart clicks with `[perf] db_exec` under 50 ms, zero sqlx slow-statement warnings over a 60 s scroll, fps on 9.4k. Probe line: `[perf] boot: backend … · db … · roots … · total …`.
+- `cargo test --lib` cannot run in this environment: the test binary dies with `STATUS_ENTRYPOINT_NOT_FOUND` (WebView2/wry linkage, not our code) even with the loader DLL copied next to it — tests are therefore type-checked via `cargo clippy --all-targets` and the SQL behaviour is proven with `node:sqlite` instead.
 
 ## Backlog (audit 2026-09-17) — deferred, not dropped
 - [ ] Folder exclusions (`excluded_folders`, scan skip, Settings list + restore, show-excluded toggle) — Phase 3.5 FIX 6, still open
