@@ -95,7 +95,8 @@ export function MediaGrid({
   // lands you in a different place than you left. The grid itself is never
   // re-rendered while the viewer is open (portal), so its state is intact.
   useEffect(() => {
-    if (revealId === null) return;
+    // masonry owns its own scroller and consumes the reveal id itself
+    if (revealId === null || view === "masonry") return;
     const itemIndex = built.items.findIndex((item) =>
       item.kind === "cells"
         ? item.cells.some((c) => c.media.id === revealId)
@@ -107,7 +108,7 @@ export function MediaGrid({
       virtuoso.current?.scrollIntoView({ index: itemIndex, behavior: "auto" });
     }
     clearReveal();
-  }, [revealId, built, clearReveal]);
+  }, [revealId, built, clearReveal, view]);
   const startItem = built.items[rangeStart];
   const activeGroup =
     !pending && startItem && startItem.kind !== "header" && built.groups.length > 1
@@ -299,6 +300,8 @@ export function MediaGrid({
           const at = rows.findIndex((r) => r.id === id);
           openViewer(rows, at < 0 ? 0 : at);
         }}
+        revealId={revealId}
+        onRevealed={clearReveal}
       />
     );
   } else {

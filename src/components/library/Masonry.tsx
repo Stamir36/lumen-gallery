@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { MediaRow } from "@/lib/api";
 import { GRID_GAP, computeMasonryColumns, ratioOf } from "@/lib/justified";
@@ -27,6 +27,8 @@ export function Masonry({
   selectedIds,
   onToggleSelect,
   onActivate,
+  revealId,
+  onRevealed,
 }: {
   rows: MediaRow[];
   radius: number;
@@ -35,6 +37,9 @@ export function Masonry({
   onToggleSelect: (id: number) => void;
   /** click on the card body opens the viewer (STEP 1) */
   onActivate: (id: number) => void;
+  /** item the viewer was showing — scroll the masonry back to it on close */
+  revealId?: number | null;
+  onRevealed?: () => void;
 }) {
   const { t } = useTranslation();
   const scroller = useRef<HTMLDivElement>(null);
@@ -69,6 +74,29 @@ export function Masonry({
 
   const pad = 700;
   const selected = useMemo(() => new Set(selectedIds), [selectedIds]);
+
+  /** media id → its y offset in the packed layout (for return-to-item) */
+  const positionOf = useMemo(() => {
+    const map = new Map<number, number>();
+    packed.columns.forEach((col) => {
+      col.items.forEach((itemIndex, k) => {
+        const row = visibleRows[itemIndex];
+        if (row) map.set(row.id, col.offsets[k]);
+      });
+    });
+    return map;
+  }, [packed, visibleRows]);
+
+  // Return-to-item (STEP 3) in the hand-rolled scroller: closing the viewer must
+  // land on the same tile here as in the virtualized views.
+  useEffect(() => {
+    if (revealId == null) return;
+    const y = positionOf.get(revealId);
+    if (y != null) {
+      scroller.current?.scrollTo({ top: Math.max(0, y - 140), behavior: "smooth" });
+    }
+    onRevealed?.();
+  }, [revealId, positionOf, onRevealed]);
 
   const columnWidth = packed.colW;
   const tiles: { media: MediaRow; x: number; y: number; h: number }[] = [];

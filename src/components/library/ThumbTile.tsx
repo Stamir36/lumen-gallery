@@ -69,7 +69,12 @@ export const ThumbTile = memo(function ThumbTile({
       className={cn("relative h-full w-full overflow-hidden bg-surface-2", className)}
       style={color ? { backgroundColor: color } : undefined}
     >
-      {shimmer && !src && !failed && <div className="shimmer-bg absolute inset-0" />}
+      {/* shimmer ONLY while a thumbnail is genuinely being generated for this
+          row: a tile that was never enqueued should look like a quiet surface,
+          not like work in progress */}
+      {shimmer && !src && !failed && (status === "pending" || !state) && (
+        <div className="shimmer-bg absolute inset-0" />
+      )}
       {src && !failed ? (
         <img
           src={src}
