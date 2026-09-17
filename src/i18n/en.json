@@ -204,6 +204,8 @@
     "pip_failed": "Picture in picture is unavailable",
     "fullscreen": "Fullscreen",
     "hide_interface": "Hide interface",
+    "vr": "VR mode (SBS 180)",
+    "vr_eye": "Switch stereo half",
     "seek": "Playback position",
     "up_next": "Up next",
     "resume": "Continue from {{time}}",

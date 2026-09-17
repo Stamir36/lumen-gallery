@@ -8,7 +8,9 @@ import {
   ChevronLeft,
   ChevronRight,
   EyeOff,
+  FlipHorizontal,
   Gauge,
+  Globe,
   Heart,
   Info,
   Maximize2,
@@ -33,6 +35,7 @@ import { useAppSettings } from "@/lib/settings";
 import { useViewer } from "@/state/viewer";
 import { NavTooltip } from "@/components/ui/NavTooltip";
 import { Filmstrip } from "./Filmstrip";
+import { VrView } from "./VrView";
 
 const HIDE_AFTER_MS = 2_000;
 const SAVE_EVERY_MS = 5_000;
@@ -88,6 +91,11 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
   const [pillHover, setPillHover] = useState(false);
   /** FIX 3: manual interface hide (pill button / H) — wins over the idle timer */
   const [manualHide, setManualHide] = useState(false);
+  /** VR immersion (SBS 180): mono projection of one stereo half */
+  const [vrMode, setVrMode] = useState(false);
+  const [vrEye, setVrEye] = useState<0 | 1>(0);
+  /** natural size from metadata (row.width/height can be NULL until thumbs) */
+  const [nat, setNat] = useState({ w: 0, h: 0 });
   const [volumeOpen, setVolumeOpen] = useState(false);
   const [barHover, setBarHover] = useState(false);
   const [scrub, setScrub] = useState<{ x: number; time: number } | null>(null);
@@ -138,6 +146,10 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
   const pillAlign = useAppSettings((s) => s.pillAlign);
 
   const src = tauriAvailable() ? fileSrc(row.path) : "";
+  // SBS 180 detection: two 1:1 eye halves side by side → frame aspect ≈ 2:1
+  const effW = row.width ?? nat.w;
+  const effH = row.height ?? nat.h;
+  const isSbs = effW > 0 && effH > 0 && Math.abs(effW / effH - 2) <= 0.35;
   const ambience = useMemo(
     () => !reduced && (row.width ?? 0) * (row.height ?? 0) <= AMBIENT_MAX_PIXELS,
     [reduced, row.width, row.height],
@@ -394,7 +406,7 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
       onDoubleClick={onFullscreen}
     >
       {/* ---------- ambient mode ---------- */}
-      {ambience && !error && src && (
+      {ambience && !error && src && !vrMode && (
         <video
           ref={ambient}
           src={src}
@@ -417,9 +429,15 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
         src={src}
         playsInline
         loop={loop}
-        className="relative z-10 h-full w-full object-contain"
+        className={
+          vrMode
+            ? // hidden decoder: audio + frame decode keep running for the VR canvas
+              "pointer-events-none absolute left-0 top-0 h-2 w-2 opacity-[.02]"
+            : "relative z-10 h-full w-full object-contain"
+        }
         onLoadedMetadata={(e) => {
           setDuration(e.currentTarget.duration || 0);
+          setNat({ w: e.currentTarget.videoWidth, h: e.currentTarget.videoHeight });
           e.currentTarget.volume = volume;
         }}
         onTimeUpdate={(e) => {
@@ -445,6 +463,9 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
         }}
         onError={() => setError("codec")}
       />
+
+      {/* ---------- VR immersion (SBS 180): mono 180° projection ---------- */}
+      {vrMode && <VrView videoRef={video} eye={vrEye} />}
 
       {/* ---------- top-left glass chip row ---------- */}
       <AnimatePresence>
@@ -899,6 +920,24 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
               >
                 <PictureInPicture2 size={18} />
               </IconBtn>
+              {/* VR immersion: only for SBS-shaped sources (aspect ≈ 2:1) */}
+              {isSbs && (
+                <IconBtn
+                  label={t("player.vr")}
+                  active={vrMode}
+                  onClick={() => setVrMode((v) => !v)}
+                >
+                  <Globe size={18} />
+                </IconBtn>
+              )}
+              {isSbs && vrMode && (
+                <IconBtn
+                  label={t("player.vr_eye")}
+                  onClick={() => setVrEye((v) => (v === 0 ? 1 : 0))}
+                >
+                  <FlipHorizontal size={18} />
+                </IconBtn>
+              )}
               <IconBtn label={t("player.up_next")} active={stripOpen} onClick={toggleStrip}>
                 <PanelRight size={18} />
               </IconBtn>
