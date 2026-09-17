@@ -1,10 +1,9 @@
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { fileSrc } from "@/lib/assets";
 import { baseName } from "@/lib/format";
-import type { MediaRow } from "@/lib/api";
 import { useViewer } from "@/state/viewer";
 import { Lightbox } from "./Lightbox";
+import { VideoPlayer } from "./VideoPlayer";
 
 /**
  * Viewer overlay (STEP 3): rendered through a PORTAL at the end of <body>, so
@@ -28,9 +27,8 @@ export function ViewerOverlay() {
       className="fixed inset-0 z-[120] bg-black"
     >
       {row.kind === "video" ? (
-        // STEP 2 swaps this for the custom player; there are NO native controls
-        // in either surface, by contract.
-        <VideoStagePlaceholder key={row.id} row={row} />
+        // key: a new item gets a fresh <video> (no stale decoder state)
+        <VideoPlayer key={row.id} row={row} />
       ) : (
         <Lightbox row={row} />
       )}
@@ -41,21 +39,4 @@ export function ViewerOverlay() {
   );
 }
 
-/**
- * Temporary surface for the STEP 1 checkpoint: the full custom player arrives in
- * STEP 2. Deliberately has NO native controls (that rule holds from the start).
- */
-function VideoStagePlaceholder({ row }: { row: MediaRow }) {
-  return (
-    <div className="flex h-full w-full items-center justify-center bg-black">
-      <video
-        src={fileSrc(row.path)}
-        autoPlay
-        muted
-        loop
-        playsInline
-        className="max-h-full max-w-full"
-      />
-    </div>
-  );
-}
+

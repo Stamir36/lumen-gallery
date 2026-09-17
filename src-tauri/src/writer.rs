@@ -74,6 +74,13 @@ pub enum Write {
     ResetThumbs {
         done: oneshot::Sender<Result<u64, String>>,
     },
+    /// Watch progress upsert (STEP 2). Fire-and-forget: the player saves every
+    /// few seconds and a failure must never interrupt playback.
+    Progress {
+        media_id: i64,
+        position_ms: i64,
+        duration_ms: Option<i64>,
+    },
 }
 
 /// Handle clones cheaply; every clone feeds the same writer task.
@@ -104,6 +111,18 @@ impl DbWriter {
 
     pub async fn thumb_err(&self, media_id: i64) {
         let _ = self.tx.send(Write::ThumbErr { media_id }).await;
+    }
+
+    /// Resume position for one media item (never awaited by the player).
+    pub async fn progress(&self, media_id: i64, position_ms: i64, duration_ms: Option<i64>) {
+        let _ = self
+            .tx
+            .send(Write::Progress {
+                media_id,
+                position_ms,
+                duration_ms,
+            })
+            .await;
     }
 
     /// Cache wipe; awaits the transaction so the caller can report real numbers.
@@ -179,6 +198,29 @@ async fn writer_loop(
                 // cannot starve behind pending thumb work
                 flush_guarded(emitter.as_ref(), &pool, &mut thumb_ok, &mut thumb_err).await;
                 let _ = done.send(run_statement(&pool, &sql, &params).await);
+            }
+            Write::Progress {
+                media_id,
+                position_ms,
+                duration_ms,
+            } => {
+                // one tiny upsert, on the writer's connection like every other write
+                if let Err(e) = sqlx::query(
+                    "INSERT INTO watch_progress (media_id, position_ms, duration_ms, updated_at)
+                     VALUES (?1, ?2, ?3, unixepoch())
+                     ON CONFLICT(media_id) DO UPDATE SET
+                       position_ms = excluded.position_ms,
+                       duration_ms = excluded.duration_ms,
+                       updated_at  = excluded.updated_at",
+                )
+                .bind(media_id)
+                .bind(position_ms)
+                .bind(duration_ms)
+                .execute(&pool)
+                .await
+                {
+                    log::warn!("watch progress save failed for media {media_id}: {e}");
+                }
             }
             Write::ResetThumbs { done } => {
                 flush_guarded(emitter.as_ref(), &pool, &mut thumb_ok, &mut thumb_err).await;

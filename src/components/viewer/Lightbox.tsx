@@ -127,18 +127,26 @@ export function Lightbox({ row }: { row: MediaRow }) {
 
   const oneToOne = fit.scale > 0 ? 1 / fit.scale : 1;
 
-  // wheel = zoom towards the cursor (STEP 1 contract)
-  const onWheel = (e: React.WheelEvent) => {
-    if (failed || !loaded) return;
-    e.preventDefault();
-    const rect = stageRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    const cursor = {
-      x: e.clientX - rect.left - rect.width / 2,
-      y: e.clientY - rect.top - rect.height / 2,
+  // Wheel = zoom towards the cursor (STEP 1 contract). Attached NATIVELY with
+  // `passive: false`: React's synthetic wheel listener is passive, so calling
+  // preventDefault there only logged "Unable to preventDefault inside passive
+  // event listener" (and let the gesture scroll the page behind the viewer).
+  useEffect(() => {
+    const el = stageRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      if (failed || !loaded) return;
+      e.preventDefault();
+      const rect = el.getBoundingClientRect();
+      const cursor = {
+        x: e.clientX - rect.left - rect.width / 2,
+        y: e.clientY - rect.top - rect.height / 2,
+      };
+      applyZoom(zoom * (e.deltaY < 0 ? 1.14 : 1 / 1.14), cursor);
     };
-    applyZoom(zoom * (e.deltaY < 0 ? 1.14 : 1 / 1.14), cursor);
-  };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, [applyZoom, zoom, failed, loaded]);
 
   const onPointerDown = (e: React.PointerEvent) => {
     if (zoom <= MIN_ZOOM || failed) return;
@@ -197,7 +205,6 @@ export function Lightbox({ row }: { row: MediaRow }) {
       {/* ---------- stage ---------- */}
       <div
         ref={stageRef}
-        onWheel={onWheel}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={endDrag}

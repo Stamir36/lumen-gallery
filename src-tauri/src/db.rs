@@ -99,6 +99,18 @@ ALTER TABLE media ADD COLUMN thumb_error BOOLEAN NOT NULL DEFAULT 0;
 CREATE INDEX IF NOT EXISTS idx_media_thumb_error ON media(thumb_error);
 "#;
 
+/// v6: watch progress (STEP 2). Resume playback: the player writes every ~5s and
+/// on close, so re-opening a film offers "continue 12:34" instead of starting at
+/// zero. Keyed by media id, cascading with the media row.
+pub const MIGRATION_V6: &str = r#"
+CREATE TABLE IF NOT EXISTS watch_progress (
+  media_id    INTEGER PRIMARY KEY REFERENCES media(id) ON DELETE CASCADE,
+  position_ms INTEGER NOT NULL DEFAULT 0,
+  duration_ms INTEGER,
+  updated_at  INTEGER NOT NULL DEFAULT (unixepoch())
+);
+"#;
+
 /// v5: versioned thumbnail cache (S1.4). `thumb_mtime` alone was not enough — a
 /// file replaced with an identical mtime kept serving a stale thumbnail, and a
 /// previously failed row was only retried when the mtime moved. Validity is now

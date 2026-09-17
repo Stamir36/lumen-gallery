@@ -78,6 +78,12 @@ pub fn run() {
       sql: db::MIGRATION_V5,
       kind: MigrationKind::Up,
     },
+    Migration {
+      version: 6,
+      description: "lumen_v6_watch_progress",
+      sql: db::MIGRATION_V6,
+      kind: MigrationKind::Up,
+    },
   ];
 
   tauri::Builder::default()
@@ -103,6 +109,10 @@ pub fn run() {
       commands::db_exec,
       commands::thumb_record,
       commands::backend_ready,
+      commands::watch_progress,
+      commands::save_progress,
+      commands::save_snapshot,
+      commands::open_external,
       cache::thumbnail_cache_size,
       cache::clear_thumbnail_cache,
       thumbs::generate_thumbs,

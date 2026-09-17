@@ -17,6 +17,127 @@ pub fn cancel_scan(root_id: i64) {
     scan::request_cancel(root_id);
 }
 
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WatchProgress {
+    pub media_id: i64,
+    pub position_ms: i64,
+    pub duration_ms: Option<i64>,
+}
+
+/// Resume position for the requested media ids (STEP 2). Read-only, so the pool
+/// is fine; the player asks once per opened item, not per frame.
+#[tauri::command]
+pub async fn watch_progress(
+    app: AppHandle,
+    ids: Vec<i64>,
+) -> Result<Vec<WatchProgress>, String> {
+    if ids.is_empty() {
+        return Ok(Vec::new());
+    }
+    let pool = pool_for(&app).await?;
+    let placeholders = (1..=ids.len())
+        .map(|i| format!("?{i}"))
+        .collect::<Vec<_>>()
+        .join(", ");
+    let sql = format!(
+        "SELECT media_id, position_ms, duration_ms FROM watch_progress WHERE media_id IN ({placeholders})"
+    );
+    let mut query = sqlx::query(&sql);
+    for id in &ids {
+        query = query.bind(*id);
+    }
+    let rows = query.fetch_all(&pool).await.map_err(|e| e.to_string())?;
+    Ok(rows
+        .iter()
+        .map(|r| WatchProgress {
+            media_id: r.get("media_id"),
+            position_ms: r.get("position_ms"),
+            duration_ms: r.try_get("duration_ms").unwrap_or(None),
+        })
+        .collect())
+}
+
+/// Stores a watch position through the single writer. Fire-and-forget by design:
+/// playback must never wait on (or fail because of) the database.
+#[tauri::command]
+pub async fn save_progress(
+    app: AppHandle,
+    id: i64,
+    position_ms: i64,
+    duration_ms: Option<i64>,
+) -> Result<(), String> {
+    app.state::<crate::writer::DbWriter>()
+        .progress(id, position_ms, duration_ms)
+        .await;
+    Ok(())
+}
+
+/// Saves a webview-captured frame to `<Pictures>/Lumen` and returns the path
+/// (STEP 2 frame snapshot). The name is sanitised here, not in the frontend.
+#[tauri::command]
+pub async fn save_snapshot(
+    app: AppHandle,
+    bytes: Vec<u8>,
+    name: String,
+) -> Result<String, String> {
+    let dir = app
+        .path()
+        .picture_dir()
+        .map_err(|e| e.to_string())?
+        .join("Lumen");
+    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    let safe: String = name
+        .chars()
+        .filter(|c| !matches!(c, '\\' | '/' | ':' | '*' | '?' | '"' | '<' | '>' | '|'))
+        .take(80)
+        .collect();
+    let stem = safe.trim().trim_end_matches(".jpg").trim();
+    let stem = if stem.is_empty() { "snapshot" } else { stem };
+    let path = dir.join(format!("{stem}.jpg"));
+    std::fs::write(&path, bytes).map_err(|e| e.to_string())?;
+    Ok(path.to_string_lossy().to_string())
+}
+
+/// Hands a file to the configured external player, falling back to the OS
+/// association (used when a codec cannot be played in the webview).
+#[tauri::command]
+pub async fn open_external(app: AppHandle, path: String) -> Result<(), String> {
+    let pool = pool_for(&app).await?;
+    let configured: Option<String> =
+        sqlx::query_scalar("SELECT value FROM settings WHERE key = 'external_player'")
+            .fetch_optional(&pool)
+            .await
+            .ok()
+            .flatten();
+    let player = configured.unwrap_or_default();
+    let player = player.trim();
+
+    #[cfg(windows)]
+    {
+        // `start` takes a window title first: pass an empty one so a quoted
+        // player path (with spaces) is not mistaken for the title.
+        let mut cmd = std::process::Command::new("cmd");
+        if player.is_empty() {
+            cmd.args(["/C", "start", "", &path]);
+        } else {
+            cmd.args(["/C", "start", "", player, &path]);
+        }
+        cmd.spawn().map_err(|e| e.to_string())?;
+        Ok(())
+    }
+
+    #[cfg(not(windows))]
+    {
+        let _ = player;
+        std::process::Command::new("xdg-open")
+            .arg(&path)
+            .spawn()
+            .map_err(|e| e.to_string())?;
+        Ok(())
+    }
+}
+
 /// Set once the writer task and the asset scope are live (S1.10). The frontend
 /// awaits this before its first library query, which is what removes the
 /// first-open flicker (queries used to race migrations + scope extension).
