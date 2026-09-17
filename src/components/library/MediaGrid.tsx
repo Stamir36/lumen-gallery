@@ -344,10 +344,15 @@ export function MediaGrid({
             animate={{ opacity: 1, y: 0 }}
             exit={reduced ? { opacity: 0 } : { opacity: 0, y: -6 }}
             transition={{ duration: reduced ? 0 : 0.14, ease: "easeOut" }}
-            className="pointer-events-none absolute inset-x-0 top-0 z-30"
-            style={{ paddingLeft: GUTTER, paddingRight: GUTTER }}
+            /* EDGE-TO-EDGE band (F1): the tonal fill + hairline live on the
+               full-width element; only the LABEL is inset to the grid gutter,
+               so the band no longer shows empty margins left and right */
+            className="pointer-events-none absolute inset-x-0 top-0 z-30 border-b border-hairline bg-surface-1"
           >
-            <div className="flex h-11 items-center gap-3 border-b border-hairline bg-surface-1">
+            <div
+              className="flex h-11 items-center gap-3"
+              style={{ paddingLeft: GUTTER, paddingRight: GUTTER }}
+            >
               <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-tsecondary">
                 {activeGroup.label}
               </span>

@@ -8,33 +8,44 @@ import { getDb } from "@/lib/db";
  * key/value table (the same place the Rust side reads `extensions` from).
  */
 export const SCRUB_RATE_KEY = "video_scrub_rate";
+/** Filename caption over the hover gradient (Settings › Appearance), default ON. */
+export const HOVER_CAPTIONS_KEY = "hover_captions";
 
 /** Hover scrub speed presets. 6× (the original) felt like a fast-forward. */
 export const SCRUB_RATES = [1.5, 3, 6, 9] as const;
 export const DEFAULT_SCRUB_RATE = 3;
 
+export const WATCH_PROGRESS_PREFIX = "watch:";
+
 interface AppSettingsState {
   /** playback rate used by the grid's hover preview */
   videoScrubRate: number;
+  /** filename caption on card hover (F2) */
+  hoverCaptions: boolean;
   loaded: boolean;
   load: () => Promise<void>;
   setVideoScrubRate: (rate: number) => Promise<void>;
+  setHoverCaptions: (on: boolean) => Promise<void>;
 }
 
 export const useAppSettings = create<AppSettingsState>((set) => ({
   videoScrubRate: DEFAULT_SCRUB_RATE,
+  hoverCaptions: true,
   loaded: false,
 
   load: async () => {
     try {
       const db = await getDb();
-      const rows = await db.select<{ value: string }[]>(
-        "SELECT value FROM settings WHERE key = 'video_scrub_rate'",
+      const rows = await db.select<{ key: string; value: string }[]>(
+        "SELECT key, value FROM settings WHERE key IN ('video_scrub_rate', 'hover_captions')",
       );
-      const raw = Number(rows[0]?.value);
+      const byKey = new Map(rows.map((r) => [r.key, r.value]));
+      const raw = Number(byKey.get(SCRUB_RATE_KEY));
       set({
         videoScrubRate:
           Number.isFinite(raw) && raw > 0 ? raw : DEFAULT_SCRUB_RATE,
+        // absent = first run: captions are ON by default (F2)
+        hoverCaptions: byKey.get(HOVER_CAPTIONS_KEY) !== "false",
         loaded: true,
       });
     } catch (e) {
@@ -52,6 +63,16 @@ export const useAppSettings = create<AppSettingsState>((set) => ({
     } catch (e) {
       console.error("settings save failed", e);
       toast.error(i18n.t("settings.scrub_failed"));
+    }
+  },
+
+  setHoverCaptions: async (on) => {
+    set({ hoverCaptions: on }); // optimistic: the grid reacts instantly
+    try {
+      await writeSetting(HOVER_CAPTIONS_KEY, String(on));
+    } catch (e) {
+      console.error("hover captions save failed", e);
+      toast.error(i18n.t("errors.action_failed"));
     }
   },
 }));

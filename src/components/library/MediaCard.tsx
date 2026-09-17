@@ -40,6 +40,8 @@ export const MediaCard = memo(function MediaCard({
   const { t } = useTranslation();
   const reduced = useReducedMotion();
   const scrubRate = useAppSettings((s) => s.videoScrubRate);
+  // Settings › Appearance: filename caption over the hover gradient (F2)
+  const hoverCaptions = useAppSettings((s) => s.hoverCaptions);
   const isVideo = media.kind === "video";
   const [preview, setPreview] = useState(false);
   const [scrubFailed, setScrubFailed] = useState(false);
@@ -121,10 +123,23 @@ export const MediaCard = memo(function MediaCard({
         {/* bottom gradient + mono metadata chips (hover only, per v2.2) */}
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/75 via-black/25 to-transparent opacity-0 transition-opacity duration-[160ms] ease-out group-hover:opacity-100" />
         {!media.offline && (duration || resolution) && (
-          <div className="pointer-events-none absolute inset-x-2 bottom-2 z-10 flex translate-y-1 items-center gap-1.5 opacity-0 transition-all duration-[160ms] ease-out group-hover:translate-y-0 group-hover:opacity-100">
+          <div
+            className={cn(
+              "pointer-events-none absolute inset-x-2 z-10 flex translate-y-1 items-center gap-1.5 opacity-0 transition-all duration-[160ms] ease-out group-hover:translate-y-0 group-hover:opacity-100",
+              // the caption owns the last line, so the chips step up when it shows
+              hoverCaptions ? "bottom-8" : "bottom-2",
+            )}
+          >
             {duration && <MonoChip>{duration}</MonoChip>}
             {resolution && <MonoChip>{resolution}</MonoChip>}
           </div>
+        )}
+
+        {/* filename caption (F2) — body size, secondary, over the gradient */}
+        {hoverCaptions && !media.offline && (
+          <span className="pointer-events-none absolute inset-x-3 bottom-2.5 z-10 truncate text-[12.5px] leading-tight text-tsecondary opacity-0 transition-opacity duration-[160ms] ease-out group-hover:opacity-100">
+            {name}
+          </span>
         )}
 
         {isVideo && !media.offline && (

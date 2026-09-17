@@ -152,6 +152,7 @@
     "close": "Close (Alt+F4)"
   },
   "settings": {
+    "hover_captions": "Hover captions",
     "title": "Settings",
     "nav_libraries": "Libraries",
     "nav_appearance": "Appearance",

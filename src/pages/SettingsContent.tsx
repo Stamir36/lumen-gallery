@@ -82,6 +82,8 @@ export function SettingsContent() {
   const [cursorPointer, setCursorPointer] = useState(false);
   const scrubRate = useAppSettings((s) => s.videoScrubRate);
   const setScrubRate = useAppSettings((s) => s.setVideoScrubRate);
+  const hoverCaptions = useAppSettings((s) => s.hoverCaptions);
+  const setHoverCaptions = useAppSettings((s) => s.setHoverCaptions);
 
   useEffect(() => {
     void readSetting(CURSOR_KEY).then((v) =>
@@ -275,6 +277,28 @@ export function SettingsContent() {
                   className={
                     "absolute top-0.5 h-5 w-5 rounded-pill bg-white transition-all duration-[160ms] ease-out " +
                     (cursorPointer ? "left-[22px]" : "left-0.5")
+                  }
+                />
+              </button>
+            </div>
+            <div className="flex items-center justify-between border-t border-hairline py-4">
+              <span className="text-sm text-tprimary">
+                {t("settings.hover_captions")}
+              </span>
+              <button
+                role="switch"
+                aria-checked={hoverCaptions}
+                aria-label={t("settings.hover_captions")}
+                onClick={() => void setHoverCaptions(!hoverCaptions)}
+                className={
+                  "relative h-6 w-11 rounded-pill transition-colors duration-[160ms] ease-out " +
+                  (hoverCaptions ? "bg-accent" : "bg-surface-3")
+                }
+              >
+                <span
+                  className={
+                    "absolute top-0.5 h-5 w-5 rounded-pill bg-white transition-all duration-[160ms] ease-out " +
+                    (hoverCaptions ? "left-[22px]" : "left-0.5")
                   }
                 />
               </button>
