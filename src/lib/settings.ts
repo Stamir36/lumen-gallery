@@ -12,6 +12,11 @@ export const SCRUB_RATE_KEY = "video_scrub_rate";
 export const HOVER_CAPTIONS_KEY = "hover_captions";
 /** Swipe left/right to walk the photo queue in the lightbox, default ON. */
 export const SWIPE_NAVIGATE_KEY = "viewer_swipe";
+/** Where the floating control pill sits in the viewers (center | left | right). */
+export const PILL_ALIGN_KEY = "viewer_pill_align";
+
+export type PillAlign = "center" | "left" | "right";
+export const DEFAULT_PILL_ALIGN: PillAlign = "center";
 
 /** Hover scrub speed presets. 6× (the original) felt like a fast-forward. */
 export const SCRUB_RATES = [1.5, 3, 6, 9] as const;
@@ -26,24 +31,28 @@ interface AppSettingsState {
   hoverCaptions: boolean;
   /** horizontal swipe walks the photo queue (Settings › Appearance) */
   swipeNavigate: boolean;
+  /** where the viewer control pill floats (Settings › Appearance) */
+  pillAlign: PillAlign;
   loaded: boolean;
   load: () => Promise<void>;
   setVideoScrubRate: (rate: number) => Promise<void>;
   setHoverCaptions: (on: boolean) => Promise<void>;
   setSwipeNavigate: (on: boolean) => Promise<void>;
+  setPillAlign: (align: PillAlign) => Promise<void>;
 }
 
 export const useAppSettings = create<AppSettingsState>((set) => ({
   videoScrubRate: DEFAULT_SCRUB_RATE,
   hoverCaptions: true,
   swipeNavigate: true,
+  pillAlign: DEFAULT_PILL_ALIGN,
   loaded: false,
 
   load: async () => {
     try {
       const db = await getDb();
       const rows = await db.select<{ key: string; value: string }[]>(
-        "SELECT key, value FROM settings WHERE key IN ('video_scrub_rate', 'hover_captions', 'viewer_swipe')",
+        "SELECT key, value FROM settings WHERE key IN ('video_scrub_rate', 'hover_captions', 'viewer_swipe', 'viewer_pill_align')",
       );
       const byKey = new Map(rows.map((r) => [r.key, r.value]));
       const raw = Number(byKey.get(SCRUB_RATE_KEY));
@@ -53,6 +62,7 @@ export const useAppSettings = create<AppSettingsState>((set) => ({
         // absent = first run: captions are ON by default (F2)
         hoverCaptions: byKey.get(HOVER_CAPTIONS_KEY) !== "false",
         swipeNavigate: byKey.get(SWIPE_NAVIGATE_KEY) !== "false",
+        pillAlign: readPillAlign(byKey.get(PILL_ALIGN_KEY)),
         loaded: true,
       });
     } catch (e) {
@@ -92,4 +102,19 @@ export const useAppSettings = create<AppSettingsState>((set) => ({
       toast.error(i18n.t("errors.action_failed"));
     }
   },
+
+  setPillAlign: async (pillAlign) => {
+    set({ pillAlign }); // optimistic: the open viewer moves immediately
+    try {
+      await writeSetting(PILL_ALIGN_KEY, pillAlign);
+    } catch (e) {
+      console.error("pill align save failed", e);
+      toast.error(i18n.t("errors.action_failed"));
+    }
+  },
 }));
+
+/** Anything unexpected in the stored value falls back to the centre. */
+function readPillAlign(raw: string | undefined): PillAlign {
+  return raw === "left" || raw === "right" ? raw : DEFAULT_PILL_ALIGN;
+}

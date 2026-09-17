@@ -1,6 +1,8 @@
+import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { baseName } from "@/lib/format";
+import { stopCardPreviews } from "@/components/library/MediaCard";
 import { useViewer } from "@/state/viewer";
 import { Lightbox } from "./Lightbox";
 import { VideoPlayer } from "./VideoPlayer";
@@ -16,6 +18,13 @@ export function ViewerOverlay() {
   const open = useViewer((s) => s.open);
   const queue = useViewer((s) => s.queue);
   const index = useViewer((s) => s.index);
+  // A hover scrub-preview left running behind the overlay is a decoder burning
+  // CPU for nobody — on a big library that background load is exactly what makes
+  // the whole UI feel stuck.
+  useEffect(() => {
+    if (open) stopCardPreviews();
+  }, [open]);
+
   const row = queue[index];
   if (!open || !row) return null;
 

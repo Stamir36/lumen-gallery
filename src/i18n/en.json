@@ -213,6 +213,11 @@
     "close": "Close (Alt+F4)"
   },
   "settings": {
+    "pill_align": "Control bar position",
+    "pill_align_hint": "Where the floating control pill sits in the viewers",
+    "pill_left": "Left",
+    "pill_center": "Center",
+    "pill_right": "Right",
     "swipe_navigate": "Swipe to browse",
     "swipe_hint": "Drag a photo left or right to walk the queue",
     "hover_captions": "Hover captions",

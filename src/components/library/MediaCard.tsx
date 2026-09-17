@@ -32,6 +32,15 @@ const SCRUB_DELAY_MS = 400;
 /** Only ONE card scrubs at a time — a second hover stops the first. */
 let stopActiveScrub: (() => void) | null = null;
 
+/**
+ * Called when a viewer or the collage opens: a hover preview looping behind a
+ * fullscreen overlay is a decoder burning CPU for nobody (and on a big library
+ * that is exactly the kind of background load that makes the UI feel frozen).
+ */
+export function stopCardPreviews() {
+  stopActiveScrub?.();
+}
+
 export interface MediaCardProps {
   media: MediaRow;
   radius?: number;
@@ -241,7 +250,13 @@ export const MediaCard = memo(function MediaCard({
 
         {/* filename caption (F2) — body size, secondary, over the gradient */}
         {hoverCaptions && !media.offline && (
-          <span className="pointer-events-none absolute inset-x-3 bottom-2.5 z-10 truncate text-[12.5px] leading-tight text-tsecondary opacity-0 transition-opacity duration-[160ms] ease-out group-hover:opacity-100">
+          // text-left is load-bearing: a <button> centres its text by default,
+          // which is why the caption looked centred. Brighter + medium weight
+          // so it stays readable over the gradient.
+          <span
+            className="pointer-events-none absolute inset-x-3 bottom-2.5 z-10 truncate text-left text-[12.5px] font-medium leading-tight text-white opacity-0 transition-opacity duration-[160ms] ease-out group-hover:opacity-100"
+            style={{ textShadow: "0 1px 3px rgba(0,0,0,.7)" }}
+          >
             {name}
           </span>
         )}

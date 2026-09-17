@@ -86,6 +86,8 @@ export function SettingsContent() {
   const setHoverCaptions = useAppSettings((s) => s.setHoverCaptions);
   const swipeNavigate = useAppSettings((s) => s.swipeNavigate);
   const setSwipeNavigate = useAppSettings((s) => s.setSwipeNavigate);
+  const pillAlign = useAppSettings((s) => s.pillAlign);
+  const setPillAlign = useAppSettings((s) => s.setPillAlign);
 
   useEffect(() => {
     void readSetting(CURSOR_KEY).then((v) =>
@@ -282,6 +284,45 @@ export function SettingsContent() {
                   }
                 />
               </button>
+            </div>
+            <div className="flex items-center justify-between border-t border-hairline py-4">
+              <span className="flex flex-col gap-0.5">
+                <span className="text-sm text-tprimary">{t("settings.pill_align")}</span>
+                <span className="text-[12px] text-ttertiary">
+                  {t("settings.pill_align_hint")}
+                </span>
+              </span>
+              <div
+                role="radiogroup"
+                aria-label={t("settings.pill_align")}
+                className="flex shrink-0 items-center gap-1 rounded-pill bg-surface-3 p-1"
+              >
+                {(
+                  [
+                    ["left", "settings.pill_left"],
+                    ["center", "settings.pill_center"],
+                    ["right", "settings.pill_right"],
+                  ] as const
+                ).map(([value, key]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    role="radio"
+                    aria-checked={pillAlign === value}
+                    aria-label={t(key)}
+                    title={t(key)}
+                    onClick={() => void setPillAlign(value)}
+                    className={
+                      "flex h-7 items-center rounded-pill px-3 text-[12px] transition-colors duration-[160ms] " +
+                      (pillAlign === value
+                        ? "bg-white/[.14] text-tprimary"
+                        : "text-tsecondary hover:text-tprimary")
+                    }
+                  >
+                    {t(key)}
+                  </button>
+                ))}
+              </div>
             </div>
             <div className="flex items-center justify-between border-t border-hairline py-4">
               <span className="flex flex-col gap-0.5">

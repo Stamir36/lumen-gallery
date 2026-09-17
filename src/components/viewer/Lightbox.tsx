@@ -55,6 +55,12 @@ export function Lightbox({ row }: { row: MediaRow }) {
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
   const [zoom, setZoom] = useState(1);
+  /** the wheel handler reads THIS, never a value captured by a render */
+  const zoomRef = useRef(1);
+  const commitZoom = useCallback((z: number) => {
+    zoomRef.current = z;
+    setZoom(z);
+  }, []);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [rotate, setRotate] = useState(0);
   const [dragging, setDragging] = useState(false);
@@ -63,6 +69,7 @@ export function Lightbox({ row }: { row: MediaRow }) {
   const [swipeDx, setSwipeDx] = useState(0);
   const swipeStart = useRef<{ x: number; y: number } | null>(null);
   const swipeNavigate = useAppSettings((s) => s.swipeNavigate);
+  const pillAlign = useAppSettings((s) => s.pillAlign);
 
   const infoOpen = useViewer((s) => s.infoOpen);
   const stripOpen = useViewer((s) => s.stripOpen);
@@ -97,13 +104,13 @@ export function Lightbox({ row }: { row: MediaRow }) {
 
   // every item starts contained, unrotated
   useEffect(() => {
-    setZoom(1);
+    commitZoom(1);
     setPan({ x: 0, y: 0 });
     setRotate(0);
     setLoaded(false);
     setFailed(false);
     setNatural({ w: 0, h: 0 });
-  }, [row.id]);
+  }, [row.id, commitZoom]);
 
   const clampPan = useCallback(
     (x: number, y: number, z: number) => {
@@ -120,17 +127,18 @@ export function Lightbox({ row }: { row: MediaRow }) {
   const applyZoom = useCallback(
     (next: number, cursor?: { x: number; y: number }) => {
       const z = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, next));
-      setZoom(z);
+      const prev = zoomRef.current;
+      commitZoom(z);
       setPan((p) => {
         if (!cursor) return clampPan(p.x, p.y, z);
         // keep the point under the cursor fixed while the image scales
-        const k = z / zoom;
+        const k = z / prev;
         const x = cursor.x - k * (cursor.x - p.x);
         const y = cursor.y - k * (cursor.y - p.y);
         return clampPan(x, y, z);
       });
     },
-    [clampPan, zoom],
+    [clampPan, commitZoom],
   );
 
   const oneToOne = fit.scale > 0 ? 1 / fit.scale : 1;
@@ -142,19 +150,37 @@ export function Lightbox({ row }: { row: MediaRow }) {
   useEffect(() => {
     const el = stageRef.current;
     if (!el) return;
+    let pending = 0;
+    let cursor: { x: number; y: number } | undefined;
+    let raf = 0;
+    // Coalesce the gesture to ONE zoom step per frame. A trackpad emits dozens
+    // of wheel events per swipe; applying each of them re-rendered the whole
+    // viewer and re-rasterised a large image several times per frame, which is
+    // how a smooth scroll turned into a frozen UI.
+    const flush = () => {
+      raf = 0;
+      if (!pending) return;
+      const steps = pending / 100;
+      pending = 0;
+      applyZoom(zoomRef.current * Math.pow(1.14, -steps), cursor);
+    };
     const onWheel = (e: WheelEvent) => {
       if (failed || !loaded) return;
       e.preventDefault();
       const rect = el.getBoundingClientRect();
-      const cursor = {
+      cursor = {
         x: e.clientX - rect.left - rect.width / 2,
         y: e.clientY - rect.top - rect.height / 2,
       };
-      applyZoom(zoom * (e.deltaY < 0 ? 1.14 : 1 / 1.14), cursor);
+      pending += e.deltaY;
+      if (!raf) raf = requestAnimationFrame(flush);
     };
     el.addEventListener("wheel", onWheel, { passive: false });
-    return () => el.removeEventListener("wheel", onWheel);
-  }, [applyZoom, zoom, failed, loaded]);
+    return () => {
+      el.removeEventListener("wheel", onWheel);
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, [applyZoom, failed, loaded]);
 
   const onPointerDown = (e: React.PointerEvent) => {
     if (failed) return;
@@ -214,16 +240,16 @@ export function Lightbox({ row }: { row: MediaRow }) {
       } else if (e.key === "i" || e.key === "I") {
         v.toggleInfo();
       } else if (e.key === "0") {
-        setZoom(1);
+        commitZoom(1);
         setPan({ x: 0, y: 0 });
       } else if (e.key === "1") {
-        setZoom(oneToOne);
+        commitZoom(oneToOne);
         setPan((p) => clampPan(p.x, p.y, oneToOne));
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [row, oneToOne, clampPan]);
+  }, [row, oneToOne, clampPan, commitZoom]);
 
   const name = baseName(row.path);
   const fav = favoriteOf(row);
@@ -244,10 +270,10 @@ export function Lightbox({ row }: { row: MediaRow }) {
         onDoubleClick={() => {
           if (reduced) return;
           if (zoom > MIN_ZOOM + 0.01) {
-            setZoom(1);
+            commitZoom(1);
             setPan({ x: 0, y: 0 });
           } else {
-            setZoom(oneToOne);
+            commitZoom(oneToOne);
           }
         }}
         className={cn(
@@ -437,7 +463,13 @@ export function Lightbox({ row }: { row: MediaRow }) {
       {/* the strip is part of the layout, so the pill lifts ABOVE it — the old
           fixed bottom-5 sat right on top of the filmstrip */}
       <div
-        className="pointer-events-none absolute left-1/2 z-40 -translate-x-1/2 transition-[bottom] duration-[180ms] ease-out"
+        className={cn(
+          "pointer-events-none absolute z-40 transition-[bottom] duration-[180ms] ease-out",
+          // Settings › Appearance: the pill can sit centre, left or right
+          pillAlign === "left" && "left-6",
+          pillAlign === "right" && "right-6",
+          pillAlign === "center" && "left-1/2 -translate-x-1/2",
+        )}
         style={{ bottom: stripOpen ? STRIP_H + 16 : 20 }}
       >
         <motion.div
@@ -452,7 +484,7 @@ export function Lightbox({ row }: { row: MediaRow }) {
             label={t("viewer.fit")}
             active={Math.abs(zoom - 1) < 0.01}
             onClick={() => {
-              setZoom(1);
+              commitZoom(1);
               setPan({ x: 0, y: 0 });
             }}
           >
@@ -462,7 +494,7 @@ export function Lightbox({ row }: { row: MediaRow }) {
             label={t("viewer.actual")}
             active={Math.abs(zoom - oneToOne) < 0.01 && oneToOne > 1}
             onClick={() => {
-              setZoom(oneToOne);
+              commitZoom(oneToOne);
               setPan((p) => clampPan(p.x, p.y, oneToOne));
             }}
           >

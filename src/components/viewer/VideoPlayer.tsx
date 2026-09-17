@@ -26,6 +26,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { fileSrc, tauriAvailable } from "@/lib/assets";
 import { thumbSrc } from "@/lib/thumbs";
 import { formatBytes, type MediaRow } from "@/lib/api";
+import { useAppSettings } from "@/lib/settings";
 import { useViewer } from "@/state/viewer";
 import { Filmstrip } from "./Filmstrip";
 
@@ -82,6 +83,37 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
   const [volumeOpen, setVolumeOpen] = useState(false);
   const [barHover, setBarHover] = useState(false);
   const [scrub, setScrub] = useState<{ x: number; time: number } | null>(null);
+  /** bubble preview element: shows the REAL frame at the hovered position */
+  const bubble = useRef<HTMLVideoElement | null>(null);
+  /** scrub updates are coalesced to one state change per frame */
+  const scrubRef = useRef<{ x: number; time: number } | null>(null);
+  const scrubRaf = useRef(0);
+  const pushScrub = useCallback((next: { x: number; time: number } | null) => {
+    scrubRef.current = next;
+    if (scrubRaf.current) return;
+    scrubRaf.current = requestAnimationFrame(() => {
+      scrubRaf.current = 0;
+      setScrub(scrubRef.current);
+    });
+  }, []);
+
+  // Seek the bubble to the hovered position — at most once per frame, and never
+  // a re-seek for a movement the user cannot see (60 seeks/s on a 4K file would
+  // stall the decoder the playback itself depends on).
+  useEffect(() => {
+    const el = bubble.current;
+    if (!el || !scrub) return;
+    const id = requestAnimationFrame(() => {
+      try {
+        if (Math.abs(el.currentTime - scrub.time) > 0.05) {
+          el.currentTime = Math.max(0, scrub.time);
+        }
+      } catch {
+        /* metadata not ready yet — the next move retries */
+      }
+    });
+    return () => cancelAnimationFrame(id);
+  }, [scrub]);
   const [error, setError] = useState<string | null>(null);
   const [resume, setResume] = useState<Progress | null>(null);
   const hideAt = useRef<number>(0);
@@ -95,6 +127,7 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
   const toggleStrip = useViewer((s) => s.toggleStrip);
   const favoriteOf = useViewer((s) => s.favoriteOf);
   const toggleFavorite = useViewer((s) => s.toggleFavorite);
+  const pillAlign = useAppSettings((s) => s.pillAlign);
 
   const src = tauriAvailable() ? fileSrc(row.path) : "";
   const ambience = useMemo(
@@ -508,15 +541,18 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
         onPointerEnter={() => setBarHover(true)}
         onPointerLeave={() => {
           setBarHover(false);
-          setScrub(null);
+          pushScrub(null);
         }}
       >
         {barHover && scrub && (
           <div
-            className="glass pointer-events-none absolute -top-16 w-[120px] -translate-x-1/2 rounded-viewer p-1"
+            className="glass pointer-events-none absolute -top-20 w-[136px] -translate-x-1/2 rounded-viewer p-1"
             style={{ left: scrub.x }}
           >
-            <div className="h-[60px] w-full overflow-hidden rounded-[10px] bg-black">
+            <div className="relative h-[68px] w-full overflow-hidden rounded-[10px] bg-black">
+              {/* the cached thumbnail sits underneath; the real frame is seeked
+                  on top of it — a bubble that always shows the first frame tells
+                  you nothing about where you are about to jump */}
               {row.thumbPath && (
                 // every thumb path goes through thumbSrc (convertFileSrc): a raw
                 // DB path here floods DevTools with "Not allowed to load local
@@ -524,9 +560,17 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
                 <img
                   src={thumbSrc(row.thumbPath)}
                   alt=""
-                  className="h-full w-full object-cover opacity-80"
+                  className="absolute inset-0 h-full w-full object-cover opacity-60"
                 />
               )}
+              <video
+                ref={bubble}
+                src={src}
+                muted
+                playsInline
+                preload="metadata"
+                className="absolute inset-0 h-full w-full object-cover"
+              />
             </div>
             <p className="mt-1 text-center font-mono text-[10px] text-tsecondary">
               {clock(scrub.time)}
@@ -556,7 +600,7 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
           onPointerMove={(e) => {
             const rect = e.currentTarget.getBoundingClientRect();
             const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-            setScrub({ x: e.clientX - rect.left, time: ratio * duration });
+            pushScrub({ x: e.clientX - rect.left, time: ratio * duration });
             if (scrubbing.current && video.current && duration) {
               video.current.currentTime = ratio * duration;
             }
@@ -600,7 +644,13 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
             animate={{ opacity: 1, y: 0 }}
             exit={reduced ? { opacity: 0, y: 16 } : { opacity: 0, y: 16 }}
             transition={{ type: "spring", stiffness: 260, damping: 26 }}
-            className="absolute bottom-6 left-1/2 z-40 -translate-x-1/2"
+            className={cn(
+              "absolute bottom-6 z-40",
+              // Settings › Appearance: centre (default), left or right
+              pillAlign === "left" && "left-6",
+              pillAlign === "right" && "right-6",
+              pillAlign === "center" && "left-1/2 -translate-x-1/2",
+            )}
             role="toolbar"
             aria-label={t("viewer.controls")}
           >
