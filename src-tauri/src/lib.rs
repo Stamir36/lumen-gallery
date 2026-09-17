@@ -90,6 +90,12 @@ pub fn run() {
       sql: db::MIGRATION_V7,
       kind: MigrationKind::Up,
     },
+    Migration {
+      version: 8,
+      description: "lumen_v8_folder_exclusions",
+      sql: db::MIGRATION_V8,
+      kind: MigrationKind::Up,
+    },
   ];
 
   tauri::Builder::default()
@@ -117,6 +123,9 @@ pub fn run() {
       commands::backend_ready,
       commands::watch_progress,
       commands::save_progress,
+      commands::list_excluded,
+      commands::exclude_folder,
+      commands::restore_folder,
       commands::save_snapshot,
       commands::open_external,
       cache::thumbnail_cache_size,

@@ -50,6 +50,9 @@ pub struct MediaRow {
     pub thumb_error: bool,
     /// root was unreachable last scan: rows kept, tile renders offline
     pub offline: bool,
+    /// folder was excluded by the user (FIX 5): hidden from every query unless
+    /// Settings asks to show excluded media
+    pub excluded: bool,
 }
 
 fn mtime_secs(meta: &std::fs::Metadata) -> i64 {
@@ -238,9 +241,30 @@ pub async fn scan_root(
 
     let allowed = whitelist(pool).await;
 
+    // Excluded folders (FIX 5) are never entered at all: `filter_entry` prunes the
+    // descent itself, so an excluded archive tree costs zero syscalls on every
+    // rescan instead of being walked and then filtered row by row.
+    let excluded: Vec<String> =
+        sqlx::query_scalar("SELECT path FROM excluded_folders WHERE root_id = ?1")
+            .bind(root_id)
+            .fetch_all(pool)
+            .await
+            .unwrap_or_default();
+    let is_excluded = |p: &Path| -> bool {
+        let s = p.to_string_lossy();
+        excluded.iter().any(|ex| {
+            s == ex.as_str()
+                || (s.starts_with(ex.as_str())
+                    && matches!(s.as_bytes().get(ex.len()), Some(b'\\') | Some(b'/')))
+        })
+    };
+
     // Pass 1: collect candidates WITH metadata (one fs round-trip per file).
     let mut candidates: Vec<Candidate> = Vec::new();
-    let walker = WalkDir::new(root_path).follow_links(false).into_iter();
+    let walker = WalkDir::new(root_path)
+        .follow_links(false)
+        .into_iter()
+        .filter_entry(|e| !(e.file_type().is_dir() && is_excluded(e.path())));
 
     for entry in walker.filter_map(|e| e.ok()) {
         if entry.depth() == 0 {

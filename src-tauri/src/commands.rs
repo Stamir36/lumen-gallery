@@ -474,6 +474,7 @@ fn media_from_row(r: &sqlx::sqlite::SqliteRow) -> MediaRow {
         dominant_color: r.try_get("dominant_color").unwrap_or(None),
         thumb_error: r.try_get::<i64, _>("thumb_error").unwrap_or(0) == 1,
         offline: r.try_get::<i64, _>("offline").unwrap_or(0) == 1,
+        excluded: r.try_get::<i64, _>("excluded").unwrap_or(0) == 1,
     }
 }
 
@@ -498,6 +499,7 @@ pub async fn list_media(
     q: Option<String>,
     sort: Option<String>,
     desc: Option<bool>,
+    include_excluded: Option<bool>,
 ) -> Result<Vec<MediaRow>, String> {
     let pool = pool_for(&app).await?;
     let limit = limit.unwrap_or(500).clamp(1, 200_000);
@@ -512,6 +514,11 @@ pub async fn list_media(
         Some("videos") => sql.push_str(" AND kind = 'video'"),
         Some("favorites") => sql.push_str(" AND favorite = 1"),
         _ => {}
+    }
+    // excluded folders are invisible unless the user explicitly asks to see
+    // them (Settings › Appearance → "show excluded", FIX 5)
+    if !include_excluded.unwrap_or(false) {
+        sql.push_str(" AND excluded = 0");
     }
     if root_id.is_some() {
         sql.push_str(" AND root_id = ?");
@@ -590,7 +597,7 @@ pub async fn list_folders(
     let rows = sqlx::query(
         // thumb_error IS NULL filters undecodable files out of the cover pick:
         // a corrupt first file must not make the whole folder card coverless
-        "SELECT id, path, thumb_path, dominant_color, thumb_error FROM media WHERE root_id = ?1 AND trashed = 0 ORDER BY mtime DESC",
+        "SELECT id, path, thumb_path, dominant_color, thumb_error FROM media WHERE root_id = ?1 AND trashed = 0 AND excluded = 0 ORDER BY mtime DESC",
     )
     .bind(root_id)
     .fetch_all(&pool)
@@ -687,15 +694,93 @@ pub async fn list_folders(
 #[tauri::command]
 pub async fn library_stats(app: AppHandle) -> Result<(i64, i64), String> {
     let pool = pool_for(&app).await?;
-    let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM media WHERE trashed = 0")
-        .fetch_one(&pool)
-        .await
-        .map_err(|e| e.to_string())?;
-    let bytes: i64 = sqlx::query_scalar("SELECT COALESCE(SUM(size), 0) FROM media WHERE trashed = 0")
-        .fetch_one(&pool)
-        .await
-        .map_err(|e| e.to_string())?;
+    let total: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM media WHERE trashed = 0 AND excluded = 0")
+            .fetch_one(&pool)
+            .await
+            .map_err(|e| e.to_string())?;
+    let bytes: i64 = sqlx::query_scalar(
+        "SELECT COALESCE(SUM(size), 0) FROM media WHERE trashed = 0 AND excluded = 0",
+    )
+    .fetch_one(&pool)
+    .await
+    .map_err(|e| e.to_string())?;
     Ok((total, bytes))
+}
+
+/// One row of the "excluded folders" list (Settings › Libraries).
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExcludedFolderRow {
+    pub id: i64,
+    pub root_id: i64,
+    pub root_path: String,
+    pub path: String,
+    pub name: String,
+    /// how many media rows this exclusion is currently hiding
+    pub hidden: i64,
+}
+
+/// Folders the user hid, with the number of files hidden by each.
+#[tauri::command]
+pub async fn list_excluded(app: AppHandle) -> Result<Vec<ExcludedFolderRow>, String> {
+    let pool = pool_for(&app).await?;
+    let rows = sqlx::query(
+        "SELECT e.id, e.root_id, e.path, r.path AS root_path,
+                (SELECT COUNT(*) FROM media m
+                  WHERE m.root_id = e.root_id AND m.excluded = 1
+                    AND (m.path = e.path
+                         OR substr(m.path, 1, length(e.path) + 1)
+                            IN (e.path || '\\', e.path || '/'))) AS hidden
+           FROM excluded_folders e
+           JOIN roots r ON r.id = e.root_id
+          ORDER BY r.path, e.path",
+    )
+    .fetch_all(&pool)
+    .await
+    .map_err(|e| e.to_string())?;
+    Ok(rows
+        .iter()
+        .map(|r| {
+            let path: String = r.get("path");
+            ExcludedFolderRow {
+                id: r.get("id"),
+                root_id: r.get("root_id"),
+                root_path: r.get("root_path"),
+                name: path
+                    .rsplit(['\\', '/'])
+                    .next()
+                    .unwrap_or(path.as_str())
+                    .to_string(),
+                hidden: r.get("hidden"),
+                path,
+            }
+        })
+        .collect())
+}
+
+/// Hides a folder and everything under it from the library and from the next
+/// scan. Written through the single writer, like every other write (S1.12).
+#[tauri::command]
+pub async fn exclude_folder(app: AppHandle, root_id: i64, path: String) -> Result<(), String> {
+    app.state::<crate::writer::DbWriter>()
+        .folder_exclusion(root_id, trim_dir(&path), true)
+        .await;
+    Ok(())
+}
+
+/// The restore path: the folder is scanned and shown again.
+#[tauri::command]
+pub async fn restore_folder(app: AppHandle, root_id: i64, path: String) -> Result<(), String> {
+    app.state::<crate::writer::DbWriter>()
+        .folder_exclusion(root_id, trim_dir(&path), false)
+        .await;
+    Ok(())
+}
+
+/// Trailing separators would make the prefix predicate match nothing.
+fn trim_dir(path: &str) -> String {
+    path.trim_end_matches(['\\', '/']).to_string()
 }
 
 /// Sidebar/status counters in one round trip (replaces per-counter queries).
@@ -720,7 +805,7 @@ pub async fn library_summary(app: AppHandle) -> Result<LibrarySummary, String> {
                   COALESCE(SUM(CASE WHEN kind = 'video' THEN 1 ELSE 0 END), 0) AS videos,
                   COALESCE(SUM(CASE WHEN favorite = 1 THEN 1 ELSE 0 END), 0) AS favorites,
                   COALESCE(SUM(CASE WHEN offline = 1 THEN 1 ELSE 0 END), 0) AS offline
-           FROM media WHERE trashed = 0"#,
+           FROM media WHERE trashed = 0 AND excluded = 0"#,
     )
     .fetch_one(&pool)
     .await

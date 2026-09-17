@@ -81,6 +81,13 @@ pub enum Write {
         position_ms: i64,
         duration_ms: Option<i64>,
     },
+    /// Folder exclusion (FIX 5): hide a subtree from every query, and let the
+    /// next scan skip it entirely. `exclude = false` is the restore path.
+    FolderExclusion {
+        root_id: i64,
+        path: String,
+        exclude: bool,
+    },
 }
 
 /// Handle clones cheaply; every clone feeds the same writer task.
@@ -121,6 +128,18 @@ impl DbWriter {
                 media_id,
                 position_ms,
                 duration_ms,
+            })
+            .await;
+    }
+
+    /// Folder exclusion / restore (FIX 5). Fire-and-forget: the UI refetches.
+    pub async fn folder_exclusion(&self, root_id: i64, path: String, exclude: bool) {
+        let _ = self
+            .tx
+            .send(Write::FolderExclusion {
+                root_id,
+                path,
+                exclude,
             })
             .await;
     }
@@ -220,6 +239,60 @@ async fn writer_loop(
                 .await
                 {
                     log::warn!("watch progress save failed for media {media_id}: {e}");
+                }
+            }
+            Write::FolderExclusion {
+                root_id,
+                path,
+                exclude,
+            } => {
+                // ONE transaction: the exclusion row and the media flags must not
+                // disagree — an exclusion that hides nothing, or flags with no
+                // restore path, is worse than a failed write.
+                // substr() (not LIKE/GLOB) so a folder name containing wildcards
+                // can never turn into a pattern.
+                let res = async {
+                    let mut tx = pool.begin().await?;
+                    if exclude {
+                        sqlx::query(
+                            "INSERT OR IGNORE INTO excluded_folders (root_id, path) VALUES (?1, ?2)",
+                        )
+                        .bind(root_id)
+                        .bind(&path)
+                        .execute(&mut *tx)
+                        .await?;
+                    } else {
+                        sqlx::query("DELETE FROM excluded_folders WHERE root_id = ?1 AND path = ?2")
+                            .bind(root_id)
+                            .bind(&path)
+                            .execute(&mut *tx)
+                            .await?;
+                    }
+                    let flag: i64 = if exclude { 1 } else { 0 };
+                    // placeholders ascend (1,2,3): several drivers bind by the
+                    // order the placeholders appear, so ?3-before-?1 is a trap
+                    let updated = sqlx::query(
+                        "UPDATE media SET excluded = ?1
+                          WHERE root_id = ?2
+                            AND (path = ?3
+                                 OR substr(path, 1, length(?3) + 1) IN (?3 || '\\', ?3 || '/'))",
+                    )
+                    .bind(flag)
+                    .bind(root_id)
+                    .bind(&path)
+                    .execute(&mut *tx)
+                    .await?
+                    .rows_affected();
+                    tx.commit().await?;
+                    Ok::<u64, sqlx::Error>(updated)
+                }
+                .await;
+                match res {
+                    Ok(n) => log::info!(
+                        "folder {}: {path} ({n} media rows)",
+                        if exclude { "excluded" } else { "restored" }
+                    ),
+                    Err(e) => log::warn!("folder exclusion failed for {path}: {e}"),
                 }
             }
             Write::ResetThumbs { done } => {

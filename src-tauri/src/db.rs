@@ -111,6 +111,25 @@ CREATE TABLE IF NOT EXISTS watch_progress (
 );
 "#;
 
+/// v8: folder exclusions (FIX 5).
+///
+/// `excluded_folders` is the user's decision (root + absolute path), while
+/// `media.excluded` is the same decision denormalised onto the rows so every
+/// query can hide them with one indexed predicate instead of a path prefix scan.
+/// The scan skips excluded subtrees outright, so an excluded archive folder costs
+/// zero syscalls on every rescan.
+pub const MIGRATION_V8: &str = r#"
+ALTER TABLE media ADD COLUMN excluded BOOLEAN NOT NULL DEFAULT 0;
+CREATE INDEX IF NOT EXISTS idx_media_excluded ON media(excluded);
+CREATE TABLE IF NOT EXISTS excluded_folders (
+  id       INTEGER PRIMARY KEY AUTOINCREMENT,
+  root_id  INTEGER NOT NULL REFERENCES roots(id) ON DELETE CASCADE,
+  path     TEXT    NOT NULL,
+  added_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  UNIQUE (root_id, path)
+);
+"#;
+
 /// v7: watch_progress rebuilt in MILLISECONDS.
 ///
 /// v6 declared the table with `CREATE TABLE IF NOT EXISTS`, but v1 had already
