@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { formatBytes, formatCount } from "@/lib/api";
 import { formatAgo } from "@/lib/format";
+import { useAppSettings } from "@/lib/settings";
+import { usePerf } from "@/lib/perf";
 import type { LibrarySummary } from "@/lib/api";
 
 /**
@@ -29,6 +31,12 @@ export function StatusLine({
   }, []);
 
   const offline = summary?.offline ?? 0;
+  // measured, never guessed: frames come from real rAF deltas (Settings ›
+  // Appearance turns the chip on), worst = the longest frame in the window
+  const showFps = useAppSettings((s) => s.showFps);
+  const fps = usePerf((s) => s.fps);
+  const worstMs = usePerf((s) => s.worstMs);
+  const longTasks = usePerf((s) => s.longTasks);
 
   return (
     <div className="flex h-9 shrink-0 items-center gap-3 border-t border-hairline bg-surface-1 px-9 font-mono text-[11px] tracking-[0.04em] text-ttertiary">
@@ -43,7 +51,18 @@ export function StatusLine({
       {offline > 0 && (
         <span className="text-warning">· {t("status.offline", { count: offline })}</span>
       )}
-      <span className="ml-auto">{formatCount(summary?.images ?? 0)} / {formatCount(summary?.videos ?? 0)}</span>
+      {showFps && fps > 0 && (
+        <span
+          className="text-ttertiary"
+          title={t("status.fps_hint", { worst: worstMs })}
+        >
+          · {t("status.fps", { fps })}
+          {longTasks > 0 ? ` · ${t("status.fps_hitches", { count: longTasks })}` : ""}
+        </span>
+      )}
+      <span className="ml-auto">
+        {formatCount(summary?.images ?? 0)} / {formatCount(summary?.videos ?? 0)}
+      </span>
     </div>
   );
 }

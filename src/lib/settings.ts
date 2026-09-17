@@ -17,6 +17,8 @@ export const PILL_ALIGN_KEY = "viewer_pill_align";
 
 export type PillAlign = "center" | "left" | "right";
 export const DEFAULT_PILL_ALIGN: PillAlign = "center";
+/** Live frame-rate chip in the status line (Settings › Appearance), default OFF. */
+export const SHOW_FPS_KEY = "perf_show_fps";
 
 /** Hover scrub speed presets. 6× (the original) felt like a fast-forward. */
 export const SCRUB_RATES = [1.5, 3, 6, 9] as const;
@@ -33,12 +35,15 @@ interface AppSettingsState {
   swipeNavigate: boolean;
   /** where the viewer control pill floats (Settings › Appearance) */
   pillAlign: PillAlign;
+  /** mono FPS / worst-frame chip in the status line */
+  showFps: boolean;
   loaded: boolean;
   load: () => Promise<void>;
   setVideoScrubRate: (rate: number) => Promise<void>;
   setHoverCaptions: (on: boolean) => Promise<void>;
   setSwipeNavigate: (on: boolean) => Promise<void>;
   setPillAlign: (align: PillAlign) => Promise<void>;
+  setShowFps: (on: boolean) => Promise<void>;
 }
 
 export const useAppSettings = create<AppSettingsState>((set) => ({
@@ -46,13 +51,14 @@ export const useAppSettings = create<AppSettingsState>((set) => ({
   hoverCaptions: true,
   swipeNavigate: true,
   pillAlign: DEFAULT_PILL_ALIGN,
+  showFps: false,
   loaded: false,
 
   load: async () => {
     try {
       const db = await getDb();
       const rows = await db.select<{ key: string; value: string }[]>(
-        "SELECT key, value FROM settings WHERE key IN ('video_scrub_rate', 'hover_captions', 'viewer_swipe', 'viewer_pill_align')",
+        "SELECT key, value FROM settings WHERE key IN ('video_scrub_rate', 'hover_captions', 'viewer_swipe', 'viewer_pill_align', 'perf_show_fps')",
       );
       const byKey = new Map(rows.map((r) => [r.key, r.value]));
       const raw = Number(byKey.get(SCRUB_RATE_KEY));
@@ -63,6 +69,7 @@ export const useAppSettings = create<AppSettingsState>((set) => ({
         hoverCaptions: byKey.get(HOVER_CAPTIONS_KEY) !== "false",
         swipeNavigate: byKey.get(SWIPE_NAVIGATE_KEY) !== "false",
         pillAlign: readPillAlign(byKey.get(PILL_ALIGN_KEY)),
+        showFps: byKey.get(SHOW_FPS_KEY) === "true",
         loaded: true,
       });
     } catch (e) {
@@ -109,6 +116,16 @@ export const useAppSettings = create<AppSettingsState>((set) => ({
       await writeSetting(PILL_ALIGN_KEY, pillAlign);
     } catch (e) {
       console.error("pill align save failed", e);
+      toast.error(i18n.t("errors.action_failed"));
+    }
+  },
+
+  setShowFps: async (showFps) => {
+    set({ showFps });
+    try {
+      await writeSetting(SHOW_FPS_KEY, String(showFps));
+    } catch (e) {
+      console.error("fps setting save failed", e);
       toast.error(i18n.t("errors.action_failed"));
     }
   },

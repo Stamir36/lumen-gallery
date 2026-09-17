@@ -99,6 +99,9 @@
     "selected_other": "{{count}} selected"
   },
   "status": {
+    "fps": "{{fps}} fps",
+    "fps_hint": "longest frame {{worst}} ms",
+    "fps_hitches": "{{count}}× long tasks",
     "scanned_ago": "scanned {{ago}}",
     "offline_one": "{{count}} offline",
     "offline_other": "{{count}} offline"
@@ -213,6 +216,8 @@
     "close": "Close (Alt+F4)"
   },
   "settings": {
+    "show_fps": "FPS meter",
+    "show_fps_hint": "Frame rate and the longest frame in the status line",
     "pill_align": "Control bar position",
     "pill_align_hint": "Where the floating control pill sits in the viewers",
     "pill_left": "Left",

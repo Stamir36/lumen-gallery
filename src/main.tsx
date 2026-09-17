@@ -12,7 +12,11 @@ import GridDemo from "./pages/GridDemo";
 import { initI18n, readSavedLang, applyCursorPreference } from "./i18n";
 import { initScanListener, initOfflineListener } from "./state/library";
 import { queryClient } from "./lib/queryClient";
+import { startPerfWatchdog } from "./lib/perf";
 import "./index.css";
+
+// frame-rate + long-task watchdog: an "it froze" report should come with numbers
+startPerfWatchdog();
 
 // subscribe to Rust scan-progress / root-offline events for the whole session
 // (a plain browser preview has no IPC — surface it, never leave it unhandled)

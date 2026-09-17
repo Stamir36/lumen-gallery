@@ -88,6 +88,8 @@ export function SettingsContent() {
   const setSwipeNavigate = useAppSettings((s) => s.setSwipeNavigate);
   const pillAlign = useAppSettings((s) => s.pillAlign);
   const setPillAlign = useAppSettings((s) => s.setPillAlign);
+  const showFps = useAppSettings((s) => s.showFps);
+  const setShowFps = useAppSettings((s) => s.setShowFps);
 
   useEffect(() => {
     void readSetting(CURSOR_KEY).then((v) =>
@@ -281,6 +283,29 @@ export function SettingsContent() {
                   className={
                     "absolute top-0.5 h-5 w-5 rounded-pill bg-white transition-all duration-[160ms] ease-out " +
                     (cursorPointer ? "left-[22px]" : "left-0.5")
+                  }
+                />
+              </button>
+            </div>
+            <div className="flex items-center justify-between border-t border-hairline py-4">
+              <span className="flex flex-col gap-0.5">
+                <span className="text-sm text-tprimary">{t("settings.show_fps")}</span>
+                <span className="text-[12px] text-ttertiary">{t("settings.show_fps_hint")}</span>
+              </span>
+              <button
+                role="switch"
+                aria-checked={showFps}
+                aria-label={t("settings.show_fps")}
+                onClick={() => void setShowFps(!showFps)}
+                className={
+                  "relative h-6 w-11 shrink-0 rounded-pill transition-colors duration-[160ms] ease-out " +
+                  (showFps ? "bg-accent" : "bg-surface-3")
+                }
+              >
+                <span
+                  className={
+                    "absolute top-0.5 h-5 w-5 rounded-pill bg-white transition-all duration-[160ms] ease-out " +
+                    (showFps ? "left-[22px]" : "left-0.5")
                   }
                 />
               </button>
