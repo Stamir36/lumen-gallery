@@ -139,7 +139,8 @@
     "library_summary": "{{roots}} indexed · {{count}} media items."
   },
   "errors": {
-    "action_failed": "Action failed — see console (F12)"
+    "action_failed": "Action failed — see console (F12)",
+    "action_nothing": "Nothing changed — the list was stale, refresh it"
   },
   "titlebar": {
     "minimize": "Minimize",
