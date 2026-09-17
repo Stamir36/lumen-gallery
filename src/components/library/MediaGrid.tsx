@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
-import { Heart, Trash2, X } from "lucide-react";
+import { Heart, LayoutGrid, Trash2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatBytes, formatCount, type MediaRow } from "@/lib/api";
 import { MonoChip } from "@/components/ui/Chip";
@@ -17,6 +17,7 @@ import { Masonry } from "./Masonry";
 import { ThumbTile } from "./ThumbTile";
 import { SkeletonGrid } from "./Skeletons";
 import { EmptyState } from "./EmptyState";
+import { CollageOverlay } from "./CollageOverlay";
 
 const CARD_RADIUS = 12;
 const GUTTER = 36;
@@ -68,6 +69,18 @@ export function MediaGrid({
   );
 
   const selectedSet = useMemo(() => new Set(selected), [selected]);
+  /** collage multi-viewer: 2–6 selected items, tallest-first order kept */
+  const collageRows = useMemo(
+    () => rows.filter((r) => selectedSet.has(r.id)),
+    [rows, selectedSet],
+  );
+  const [collageOpen, setCollageOpen] = useState(false);
+  /** presets exist for 2–6 tiles (FIX 4); outside that range the action is off */
+  const collageReady = selected.length >= 2 && selected.length <= 6;
+
+  useEffect(() => {
+    if (collageOpen && collageRows.length < 2) setCollageOpen(false);
+  }, [collageOpen, collageRows.length]);
 
   // ---------- sticky date header ----------
   const [rangeStart, setRangeStart] = useState(0);
@@ -305,6 +318,13 @@ export function MediaGrid({
               {t("counts.selected", { count: selected.length })}
             </span>
             <BarAction
+              label={collageReady ? t("collage.open") : t("collage.range")}
+              title={t("collage.open")}
+              icon={<LayoutGrid size={16} />}
+              disabled={!collageReady}
+              onClick={() => setCollageOpen(true)}
+            />
+            <BarAction
               label={t("actions.favorite")}
               icon={<Heart size={16} />}
               onClick={() => void setFavorite(selected, true)}
@@ -326,30 +346,42 @@ export function MediaGrid({
           </motion.div>
         )}
       </AnimatePresence>
+
+      <AnimatePresence>
+        {collageOpen && collageRows.length >= 2 && (
+          <CollageOverlay rows={collageRows} onClose={() => setCollageOpen(false)} />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
 
 function BarAction({
   label,
+  title,
   icon,
   onClick,
   danger,
+  disabled,
 }: {
   label: string;
+  title?: string;
   icon: React.ReactNode;
   onClick: () => void;
   danger?: boolean;
+  disabled?: boolean;
 }) {
   return (
     <button
       type="button"
       aria-label={label}
-      title={label}
+      title={title ?? label}
+      disabled={disabled}
       onClick={onClick}
       className={cn(
         "flex h-10 w-10 items-center justify-center rounded-pill text-tsecondary transition-colors duration-[160ms] hover:bg-white/[.10] hover:text-tprimary active:scale-[.97]",
         danger && "hover:text-danger",
+        disabled && "opacity-35 hover:bg-transparent hover:text-tsecondary active:scale-100",
       )}
     >
       {icon}
