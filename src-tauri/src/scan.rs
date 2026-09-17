@@ -46,6 +46,8 @@ pub struct MediaRow {
     pub thumb_path: Option<String>,
     /// dominant color placeholder "#RRGGBB" (instant tile fill before the thumb)
     pub dominant_color: Option<String>,
+    /// decode failed permanently for this mtime: tile renders "no preview"
+    pub thumb_error: bool,
     /// root was unreachable last scan: rows kept, tile renders offline
     pub offline: bool,
 }

@@ -11,6 +11,8 @@ export interface ThumbState {
   path?: string;
   color?: string; // dominant color "#RRGGBB"
   error?: string;
+  /** permanent decode failure (bad content) — do not retry, render "no preview" */
+  noPreview?: boolean;
 }
 
 interface ThumbResultRow {
@@ -18,6 +20,7 @@ interface ThumbResultRow {
   thumbPath: string | null;
   dominantColor: string | null;
   ok: boolean;
+  thumbError: boolean;
   error: string | null;
 }
 
@@ -35,7 +38,11 @@ export const useThumbStore = create<ThumbStore>((set) => ({
       const next = { ...st.thumbs };
       for (const r of rows) {
         if (!r.ok) {
-          next[r.mediaId] = { status: "error", error: r.error ?? "failed" };
+          next[r.mediaId] = {
+            status: "error",
+            error: r.error ?? "failed",
+            noPreview: r.thumbError,
+          };
           continue;
         }
         const prev = next[r.mediaId];
@@ -114,13 +121,18 @@ export async function makeVideoThumb(row: MediaRow): Promise<void> {
   if (!tauriAvailable()) return;
   if (vidThumbsInFlight.has(row.id)) return;
   const known = useThumbStore.getState().thumbs[row.id];
-  if (known?.status === "ok") return;
+  if (known) return; // ok or failed earlier in this session — never loop
   vidThumbsInFlight.add(row.id);
   useThumbStore.getState().set(row.id, { status: "pending" });
 
   const video = document.createElement("video");
   video.preload = "auto";
   video.muted = true;
+  // The asset protocol answers every response with `Access-Control-Allow-Origin:
+  // <window origin>` (tauri src/protocol/asset.rs), so an anonymous CORS request
+  // is accepted and the canvas stays UNTAINTED — without this, drawImage/toBlob
+  // throws SecurityError and no video ever gets a static frame.
+  video.crossOrigin = "anonymous";
   video.src = fileSrc(row.path);
 
   try {
@@ -166,7 +178,14 @@ export async function makeVideoThumb(row: MediaRow): Promise<void> {
     );
     const ctx = canvas.getContext("2d");
     if (!ctx) throw new Error("no 2d context");
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    try {
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    } catch (e) {
+      throw new Error(
+        `canvas capture blocked (${e instanceof Error ? e.name : String(e)}) —
+         the asset response is missing CORS headers`,
+      );
+    }
 
     const blob = await new Promise<Blob | null>((resolve) =>
       canvas.toBlob((b) => resolve(b), "image/jpeg", 0.82),
@@ -232,8 +251,11 @@ export function enqueueRows(rows: MediaRow[]) {
   if (!tauriAvailable()) return;
   const imageIds: number[] = [];
   for (const r of rows) {
+    // rows already marked as undecodable in the DB are never retried
+    if (r.thumbError) continue;
     const known = useThumbStore.getState().thumbs[r.id];
-    if (known && known.status !== "error") continue;
+    // "never retry in this session": a failure here is logged once, not per scroll
+    if (known) continue;
     if (r.kind === "image") imageIds.push(r.id);
     else void makeVideoThumb(r);
   }

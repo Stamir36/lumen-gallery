@@ -274,6 +274,7 @@ fn media_from_row(r: &sqlx::sqlite::SqliteRow) -> MediaRow {
         added_at: r.get("added_at"),
         thumb_path: r.try_get("thumb_path").unwrap_or(None),
         dominant_color: r.try_get("dominant_color").unwrap_or(None),
+        thumb_error: r.try_get::<i64, _>("thumb_error").unwrap_or(0) == 1,
         offline: r.try_get::<i64, _>("offline").unwrap_or(0) == 1,
     }
 }

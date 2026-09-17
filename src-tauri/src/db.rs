@@ -89,3 +89,12 @@ ALTER TABLE media ADD COLUMN thumb_mtime INTEGER;
 ALTER TABLE media ADD COLUMN dominant_color TEXT;
 CREATE INDEX IF NOT EXISTS idx_media_thumb_path ON media(thumb_path);
 "#;
+
+/// v4: permanent thumbnail failure flag.
+/// Corrupt/mislabeled files (e.g. a `.png` that is not a PNG) must not be
+/// retried on every restart — one warn per file, then a "no preview" tile.
+/// `thumb_mtime` records the mtime that failed, so a changed file retries.
+pub const MIGRATION_V4: &str = r#"
+ALTER TABLE media ADD COLUMN thumb_error BOOLEAN NOT NULL DEFAULT 0;
+CREATE INDEX IF NOT EXISTS idx_media_thumb_error ON media(thumb_error);
+"#;

@@ -112,6 +112,9 @@
     "offline_many": "{{count}} вне доступа",
     "offline_other": "{{count}} вне доступа"
   },
+  "thumbs": {
+    "noPreview": "нет превью"
+  },
   "offline": {
     "chip": "OFFLINE",
     "toast": "{{label}} недоступен — файлы помечены как offline и вернутся после повторного сканирования"

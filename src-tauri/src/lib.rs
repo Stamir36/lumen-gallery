@@ -31,6 +31,12 @@ pub fn run() {
       sql: db::MIGRATION_V3,
       kind: MigrationKind::Up,
     },
+    Migration {
+      version: 4,
+      description: "lumen_v4_thumb_error",
+      sql: db::MIGRATION_V4,
+      kind: MigrationKind::Up,
+    },
   ];
 
   tauri::Builder::default()

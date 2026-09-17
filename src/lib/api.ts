@@ -40,6 +40,11 @@ export interface MediaRow {
   dominantColor: string | null;
   /** root was unreachable during the last scan — tile renders offline */
   offline: boolean;
+  /**
+   * decode failed permanently for this file (corrupt / mislabeled content):
+   * the tile renders a "no preview" state instead of retrying on every scroll.
+   */
+  thumbError: boolean;
 }
 
 /** One folder card in root/folder navigation (STEP 3B). */

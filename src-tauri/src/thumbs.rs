@@ -21,7 +21,32 @@ pub struct ThumbResult {
     pub width: Option<i64>,
     pub height: Option<i64>,
     pub ok: bool,
+    /// decode failed for good (bad content at this mtime) — render "no preview"
+    pub thumb_error: bool,
     pub error: Option<String>,
+}
+
+/// Why a render failed, and whether retrying it can ever help.
+#[derive(Debug)]
+struct RenderFail {
+    permanent: bool,
+    message: String,
+}
+
+impl RenderFail {
+    fn permanent(message: String) -> Self {
+        Self {
+            permanent: true,
+            message,
+        }
+    }
+
+    fn transient(message: String) -> Self {
+        Self {
+            permanent: false,
+            message,
+        }
+    }
 }
 
 fn thumbs_dir(app: &AppHandle) -> Result<PathBuf, String> {
@@ -39,8 +64,17 @@ fn to_hex(r: u8, g: u8, b: u8) -> String {
 }
 
 /// Blocking CPU/IO work: decode → resize → jpeg → dominant color.
-fn render(src: &Path, out: &Path) -> Result<(u32, u32, String), String> {
-    let img = image::open(src).map_err(|e| format!("decode: {e}"))?;
+fn render(src: &Path, out: &Path) -> Result<(u32, u32, String), RenderFail> {
+    // Decode BY CONTENT, never by extension: this library contains mislabeled
+    // files (the `Invalid PNG signature` error came from a `.png` that was a
+    // JPEG/HEIF payload), and `image::open` trusts the extension.
+    let file = std::fs::File::open(src).map_err(|e| RenderFail::transient(format!("open: {e}")))?;
+    let reader = image::ImageReader::new(std::io::BufReader::new(file))
+        .with_guessed_format()
+        .map_err(|e| RenderFail::transient(format!("probe: {e}")))?;
+    let img = reader
+        .decode()
+        .map_err(|e| RenderFail::permanent(format!("decode: {e}")))?;
     let (w, h) = (img.width(), img.height());
 
     let target_h =
@@ -68,32 +102,38 @@ fn render(src: &Path, out: &Path) -> Result<(u32, u32, String), String> {
         (acc[2] / count) as u8,
     );
 
-    let mut file = std::fs::File::create(out).map_err(|e| format!("create: {e}"))?;
+    let mut file = std::fs::File::create(out).map_err(|e| RenderFail::transient(format!("create: {e}")))?;
     let mut encoder =
         image::codecs::jpeg::JpegEncoder::new_with_quality(&mut file, JPEG_QUALITY);
     encoder
         .encode_image(&resized.to_rgb8())
-        .map_err(|e| format!("encode: {e}"))?;
+        .map_err(|e| RenderFail::transient(format!("encode: {e}")))?;
 
     Ok((w, h, dominant))
 }
 
-/// Returns (thumb_path, thumb_mtime, mtime) for freshness checks.
-async fn cached(
-    pool: &SqlitePool,
-    media_id: i64,
-) -> Option<(Option<String>, Option<i64>, i64)> {
-    let row = sqlx::query("SELECT thumb_path, thumb_mtime, mtime FROM media WHERE id = ?1")
-        .bind(media_id)
-        .fetch_optional(pool)
-        .await
-        .ok()
-        .flatten()?;
-    Some((
-        row.try_get("thumb_path").ok().flatten(),
-        row.try_get("thumb_mtime").ok().flatten(),
-        row.try_get("mtime").unwrap_or(0),
-    ))
+/// What we already know about one row: cached thumb + previous failure.
+struct Cached {
+    thumb_path: Option<String>,
+    thumb_mtime: Option<i64>,
+    mtime: i64,
+    thumb_error: bool,
+}
+
+async fn cached(pool: &SqlitePool, media_id: i64) -> Option<Cached> {
+    let row =
+        sqlx::query("SELECT thumb_path, thumb_mtime, mtime, thumb_error FROM media WHERE id = ?1")
+            .bind(media_id)
+            .fetch_optional(pool)
+            .await
+            .ok()
+            .flatten()?;
+    Some(Cached {
+        thumb_path: row.try_get("thumb_path").ok().flatten(),
+        thumb_mtime: row.try_get("thumb_mtime").ok().flatten(),
+        mtime: row.try_get("mtime").unwrap_or(0),
+        thumb_error: row.try_get::<i64, _>("thumb_error").unwrap_or(0) == 1,
+    })
 }
 
 /// Generates (or reuses) the thumbnail for one media row.
@@ -110,6 +150,7 @@ pub async fn generate_one(
         width: None,
         height: None,
         ok: false,
+        thumb_error: false,
         error: Some(error),
     };
 
@@ -123,17 +164,34 @@ pub async fn generate_one(
         Err(e) => return fail(e.to_string()),
     };
 
-    if let Some((Some(thumb), Some(thumb_mtime), mtime)) = cached(pool, media_id).await {
-        if thumb_mtime == mtime && Path::new(&thumb).exists() {
+    if let Some(c) = cached(pool, media_id).await {
+        // Known-bad file at an unchanged mtime: never decode it twice and never
+        // warn twice. A rescan that touches the file (mtime moves) retries.
+        if c.thumb_error && c.thumb_mtime == Some(c.mtime) {
             return ThumbResult {
                 media_id,
-                thumb_path: Some(thumb),
+                thumb_path: None,
                 dominant_color: None,
                 width: None,
                 height: None,
-                ok: true,
-                error: None,
+                ok: false,
+                thumb_error: true,
+                error: Some("decode failed earlier (file unchanged)".into()),
             };
+        }
+        if let (Some(thumb), Some(thumb_mtime)) = (c.thumb_path.clone(), c.thumb_mtime) {
+            if thumb_mtime == c.mtime && Path::new(&thumb).exists() {
+                return ThumbResult {
+                    media_id,
+                    thumb_path: Some(thumb),
+                    dominant_color: None,
+                    width: None,
+                    height: None,
+                    ok: true,
+                    thumb_error: false,
+                    error: None,
+                };
+            }
         }
     }
 
@@ -152,14 +210,14 @@ pub async fn generate_one(
     let rendered =
         tauri::async_runtime::spawn_blocking(move || render(Path::new(&src_clone), &out_clone))
             .await
-            .unwrap_or_else(|e| Err(format!("worker join: {e}")));
+            .unwrap_or_else(|e| Err(RenderFail::transient(format!("worker join: {e}"))));
 
     match rendered {
         Ok((w, h, dominant)) => {
             let thumb = out.to_string_lossy().to_string();
             let _ = sqlx::query(
                 "UPDATE media SET thumb_path = ?1, thumb_mtime = mtime,
-                 dominant_color = ?2,
+                 dominant_color = ?2, thumb_error = 0,
                  width = COALESCE(width, ?3), height = COALESCE(height, ?4)
                  WHERE id = ?5",
             )
@@ -178,13 +236,79 @@ pub async fn generate_one(
                 width: Some(w as i64),
                 height: Some(h as i64),
                 ok: true,
+                thumb_error: false,
                 error: None,
             }
         }
-        Err(e) => {
-            log::warn!("thumb failed for media {media_id}: {e}");
-            fail(e)
+        Err(f) => {
+            // exactly one WARN per (file, mtime): the flag below silences the
+            // next attempts, so a corrupt file cannot flood the log.
+            log::warn!("thumb failed for media {media_id}: {}", f.message);
+            if f.permanent {
+                let _ = sqlx::query(
+                    "UPDATE media SET thumb_error = 1, thumb_mtime = mtime WHERE id = ?1",
+                )
+                .bind(media_id)
+                .execute(pool)
+                .await;
+            }
+            ThumbResult {
+                media_id,
+                thumb_path: None,
+                dominant_color: None,
+                width: None,
+                height: None,
+                ok: false,
+                thumb_error: f.permanent,
+                error: Some(f.message),
+            }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn scratch(name: &str) -> PathBuf {
+        let dir = std::env::temp_dir().join("lumen-thumb-tests");
+        std::fs::create_dir_all(&dir).unwrap();
+        dir.join(name)
+    }
+
+    fn write_jpeg(path: &Path) {
+        let img = image::RgbImage::from_fn(64, 48, |x, y| {
+            image::Rgb([(x * 4) as u8, (y * 5) as u8, 0x80])
+        });
+        let mut file = std::fs::File::create(path).unwrap();
+        image::DynamicImage::ImageRgb8(img)
+            .write_to(&mut file, image::ImageFormat::Jpeg)
+            .unwrap();
+    }
+
+    /// The real bug: `image::open` trusted the extension and bailed out with
+    /// "Invalid PNG signature" on a file that was actually a JPEG.
+    #[test]
+    fn decodes_by_content_not_extension() {
+        let src = scratch("lie.png");
+        let out = scratch("lie.jpg");
+        write_jpeg(&src);
+        let (w, h, color) = render(&src, &out).unwrap();
+        assert_eq!((w, h), (64, 48));
+        assert!(color.starts_with('#') && color.len() == 7);
+        assert!(out.exists());
+        let _ = std::fs::remove_file(&src);
+        let _ = std::fs::remove_file(&out);
+    }
+
+    #[test]
+    fn rejects_non_image_content_as_permanent() {
+        let src = scratch("broken.png");
+        let out = scratch("broken.jpg");
+        std::fs::write(&src, b"this is not an image at all").unwrap();
+        let err = render(&src, &out).unwrap_err();
+        assert!(err.permanent, "garbage content must not be retried");
+        let _ = std::fs::remove_file(&src);
     }
 }
 

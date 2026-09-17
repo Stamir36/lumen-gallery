@@ -102,6 +102,9 @@
     "offline_one": "{{count}} offline",
     "offline_other": "{{count}} offline"
   },
+  "thumbs": {
+    "noPreview": "no preview"
+  },
   "offline": {
     "chip": "OFFLINE",
     "toast": "{{label}} is unreachable — files are flagged offline and return after a rescan"
