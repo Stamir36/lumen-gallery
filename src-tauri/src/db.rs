@@ -98,3 +98,11 @@ pub const MIGRATION_V4: &str = r#"
 ALTER TABLE media ADD COLUMN thumb_error BOOLEAN NOT NULL DEFAULT 0;
 CREATE INDEX IF NOT EXISTS idx_media_thumb_error ON media(thumb_error);
 "#;
+
+/// v5: versioned thumbnail cache (S1.4). `thumb_mtime` alone was not enough — a
+/// file replaced with an identical mtime kept serving a stale thumbnail, and a
+/// previously failed row was only retried when the mtime moved. Validity is now
+/// keyed by the (mtime, size) pair that the thumbnail was rendered from.
+pub const MIGRATION_V5: &str = r#"
+ALTER TABLE media ADD COLUMN thumb_size INTEGER;
+"#;

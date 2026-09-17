@@ -1,17 +1,32 @@
 //! Lazy image thumbnails (Rust side): 480w JPEG q82 + dominant color.
-//! Generation runs on a bounded blocking pool (4 workers) and is triggered only
-//! for media ids in the grid's visible range — never for a whole root.
+//!
+//! Generation is triggered only for media ids in the grid's visible range —
+//! never for a whole root. The worker pool is APP-WIDE (S1.2): one semaphore per
+//! process, sized by the `thumb_workers` setting (default 4), so ten overlapping
+//! requests can no longer start ten decoder storms. Requests are split into
+//! sub-batches and every finished row is pushed to the UI immediately
+//! (`thumb-result`), so the first cold tiles appear long before the last one.
+//!
+//! Cache validity is keyed by FILE VERSION (S1.4): `(mtime, size)`. A file that
+//! was replaced under the same mtime, or a row that previously failed to decode,
+//! is re-rendered instead of serving a stale/negative entry forever.
+use std::collections::HashSet;
 use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
 
 use serde::Serialize;
 use sqlx::{Row, SqlitePool};
-use tauri::{AppHandle, Manager};
-use crate::writer::DbWriter;
+use tauri::{AppHandle, Emitter, Manager};
 use tokio::sync::Semaphore;
 
+use crate::writer::{DbWriter, ThumbOkItem};
+
 const THUMB_WIDTH: u32 = 480;
-const WORKERS: usize = 4;
+const DEFAULT_WORKERS: usize = 4;
+const MAX_WORKERS: usize = 16;
 const JPEG_QUALITY: u8 = 82;
+/// One request is processed in sub-batches of this size so results stream.
+const SUB_BATCH: usize = 24;
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -22,9 +37,71 @@ pub struct ThumbResult {
     pub width: Option<i64>,
     pub height: Option<i64>,
     pub ok: bool,
-    /// decode failed for good (bad content at this mtime) — render "no preview"
+    /// decode failed for good (bad content at this version) — render "no preview"
     pub thumb_error: bool,
     pub error: Option<String>,
+}
+
+/// App-wide thumbnail engine (managed state).
+///
+/// `workers` holds the current permit count + semaphore; `inflight` dedupes ids
+/// so the same row queued twice (two mounted cards, two calls) is decoded once.
+#[derive(Clone, Default)]
+pub struct ThumbEngine {
+    inner: Arc<EngineInner>,
+}
+
+struct EngineInner {
+    workers: Mutex<(usize, Arc<Semaphore>)>,
+    inflight: Mutex<HashSet<i64>>,
+}
+
+impl Default for EngineInner {
+    fn default() -> Self {
+        // `Semaphore` has no Default: start at the default worker count so the
+        // first request does not needlessly rebuild the pool.
+        Self {
+            workers: Mutex::new((
+                DEFAULT_WORKERS,
+                Arc::new(Semaphore::new(DEFAULT_WORKERS)),
+            )),
+            inflight: Mutex::new(HashSet::new()),
+        }
+    }
+}
+
+impl ThumbEngine {
+    /// The shared semaphore, rebuilt only when the setting changes.
+    async fn semaphore(&self, pool: &SqlitePool) -> Arc<Semaphore> {
+        let want = workers_setting(pool).await;
+        let mut guard = self.inner.workers.lock().unwrap();
+        if guard.0 != want {
+            *guard = (want, Arc::new(Semaphore::new(want)));
+        }
+        guard.1.clone()
+    }
+
+    /// false when this media id is already being decoded somewhere.
+    fn claim(&self, id: i64) -> bool {
+        self.inner.inflight.lock().unwrap().insert(id)
+    }
+
+    fn release(&self, id: i64) {
+        self.inner.inflight.lock().unwrap().remove(&id);
+    }
+}
+
+/// `thumb_workers` (Settings › Performance) — clamped, default 4.
+async fn workers_setting(pool: &SqlitePool) -> usize {
+    let raw: Option<String> =
+        sqlx::query_scalar("SELECT value FROM settings WHERE key = 'thumb_workers'")
+            .fetch_optional(pool)
+            .await
+            .ok()
+            .flatten();
+    raw.and_then(|v| v.trim().parse::<usize>().ok())
+        .map(|v| v.clamp(1, MAX_WORKERS))
+        .unwrap_or(DEFAULT_WORKERS)
 }
 
 /// Why a render failed, and whether retrying it can ever help.
@@ -103,7 +180,8 @@ fn render(src: &Path, out: &Path) -> Result<(u32, u32, String), RenderFail> {
         (acc[2] / count) as u8,
     );
 
-    let mut file = std::fs::File::create(out).map_err(|e| RenderFail::transient(format!("create: {e}")))?;
+    let mut file =
+        std::fs::File::create(out).map_err(|e| RenderFail::transient(format!("create: {e}")))?;
     let mut encoder =
         image::codecs::jpeg::JpegEncoder::new_with_quality(&mut file, JPEG_QUALITY);
     encoder
@@ -113,26 +191,39 @@ fn render(src: &Path, out: &Path) -> Result<(u32, u32, String), RenderFail> {
     Ok((w, h, dominant))
 }
 
-/// What we already know about one row: cached thumb + previous failure.
+/// What we already know about one row: cached thumb + the version it belongs to.
 struct Cached {
     thumb_path: Option<String>,
     thumb_mtime: Option<i64>,
+    thumb_size: Option<i64>,
     mtime: i64,
+    size: i64,
     thumb_error: bool,
 }
 
+impl Cached {
+    /// The cached entry belongs to the file we are looking at right now.
+    fn version_matches(&self) -> bool {
+        self.thumb_mtime == Some(self.mtime) && self.thumb_size == Some(self.size)
+    }
+}
+
 async fn cached(pool: &SqlitePool, media_id: i64) -> Option<Cached> {
-    let row =
-        sqlx::query("SELECT thumb_path, thumb_mtime, mtime, thumb_error FROM media WHERE id = ?1")
-            .bind(media_id)
-            .fetch_optional(pool)
-            .await
-            .ok()
-            .flatten()?;
+    let row = sqlx::query(
+        "SELECT thumb_path, thumb_mtime, thumb_size, mtime, size, thumb_error
+         FROM media WHERE id = ?1",
+    )
+    .bind(media_id)
+    .fetch_optional(pool)
+    .await
+    .ok()
+    .flatten()?;
     Some(Cached {
         thumb_path: row.try_get("thumb_path").ok().flatten(),
         thumb_mtime: row.try_get("thumb_mtime").ok().flatten(),
+        thumb_size: row.try_get("thumb_size").ok().flatten(),
         mtime: row.try_get("mtime").unwrap_or(0),
+        size: row.try_get("size").unwrap_or(0),
         thumb_error: row.try_get::<i64, _>("thumb_error").unwrap_or(0) == 1,
     })
 }
@@ -168,9 +259,10 @@ pub async fn generate_one(
 
     let cached_row = cached(pool, media_id).await;
     if let Some(c) = &cached_row {
-        // Known-bad file at an unchanged mtime: never decode it twice and never
-        // warn twice. A rescan that touches the file (mtime moves) retries.
-        if c.thumb_error && c.thumb_mtime == Some(c.mtime) {
+        // Known-bad file at an UNCHANGED version: never decode it twice and never
+        // warn twice. A rescan that touches the file (mtime or size moves)
+        // retries it — the flag is versioned, not permanent.
+        if c.thumb_error && c.version_matches() {
             return ThumbResult {
                 media_id,
                 thumb_path: None,
@@ -182,8 +274,8 @@ pub async fn generate_one(
                 error: Some("decode failed earlier (file unchanged)".into()),
             };
         }
-        if let (Some(thumb), Some(thumb_mtime)) = (c.thumb_path.clone(), c.thumb_mtime) {
-            if thumb_mtime == c.mtime && Path::new(&thumb).exists() {
+        if let Some(thumb) = c.thumb_path.clone() {
+            if c.version_matches() && Path::new(&thumb).exists() {
                 return ThumbResult {
                     media_id,
                     thumb_path: Some(thumb),
@@ -194,6 +286,11 @@ pub async fn generate_one(
                     thumb_error: false,
                     error: None,
                 };
+            }
+            // stale (file changed, or the cache was wiped): drop the old file so
+            // the cache cannot grow orphans, then re-render below
+            if !c.version_matches() {
+                let _ = std::fs::remove_file(&thumb);
             }
         }
     }
@@ -221,7 +318,14 @@ pub async fn generate_one(
             // batched by the writer task (one transaction per 200ms / 64 items):
             // a scroll session no longer fires hundreds of single-row writes
             writer
-                .thumb_ok(media_id, thumb.clone(), dominant.clone(), w as i64, h as i64)
+                .thumb_ok(ThumbOkItem {
+                    media_id,
+                    thumb_path: thumb.clone(),
+                    dominant_color: dominant.clone(),
+                    width: w as i64,
+                    height: h as i64,
+                    duration_ms: None,
+                })
                 .await;
 
             ThumbResult {
@@ -236,13 +340,11 @@ pub async fn generate_one(
             }
         }
         Err(f) => {
-            // exactly one WARN per (file, mtime): the flag below silences the
+            // exactly one WARN per (file, version): the flag below silences the
             // next attempts, so a corrupt file cannot flood the log.
             log::warn!("thumb failed for media {media_id}: {}", f.message);
             if f.permanent {
-                writer
-                    .thumb_err(media_id, cached_row.as_ref().map(|c| c.mtime).unwrap_or(0))
-                    .await;
+                writer.thumb_err(media_id).await;
             }
             ThumbResult {
                 media_id,
@@ -302,33 +404,73 @@ mod tests {
         assert!(err.permanent, "garbage content must not be retried");
         let _ = std::fs::remove_file(&src);
     }
+
+    /// Version keying: a thumbnail rendered from a file with the same mtime but
+    /// a different size is stale and must NOT be reused.
+    #[test]
+    fn cache_version_needs_mtime_and_size() {
+        let current = Cached {
+            thumb_path: Some("t.jpg".into()),
+            thumb_mtime: Some(1_000),
+            thumb_size: Some(5_000),
+            mtime: 1_000,
+            size: 5_000,
+            thumb_error: false,
+        };
+        assert!(current.version_matches());
+
+        let replaced = Cached {
+            size: 9_000,
+            ..current
+        };
+        assert!(!replaced.version_matches(), "same mtime + new size = stale");
+    }
 }
 
 /// Command: generate thumbnails for the given (visible-range) media ids.
+///
+/// Results are ALSO pushed one-by-one as `thumb-result` events, so a tile paints
+/// as soon as its row is done instead of waiting for the whole request (S1.2).
 #[tauri::command]
-pub async fn generate_thumbs(app: AppHandle, ids: Vec<i64>) -> Result<Vec<ThumbResult>, String> {
+pub async fn generate_thumbs(
+    app: AppHandle,
+    engine: tauri::State<'_, ThumbEngine>,
+    ids: Vec<i64>,
+) -> Result<Vec<ThumbResult>, String> {
     if ids.is_empty() {
         return Ok(Vec::new());
     }
     let pool = crate::commands::pool_for(&app).await?;
-    let writer = app.state::<crate::writer::DbWriter>().inner().clone();
-    let sem = std::sync::Arc::new(Semaphore::new(WORKERS));
+    let writer = app.state::<DbWriter>().inner().clone();
+    let sem = engine.semaphore(&pool).await;
+    let engine = engine.inner().clone();
 
-    let mut handles = Vec::with_capacity(ids.len());
-    for id in ids {
-        let app = app.clone();
-        let pool = pool.clone();
-        let sem = sem.clone();
-        let writer = writer.clone();
-        handles.push(tauri::async_runtime::spawn(async move {
-            generate_one(&app, &pool, &sem, id, &writer).await
-        }));
-    }
-
-    let mut out = Vec::with_capacity(handles.len());
-    for h in handles {
-        if let Ok(r) = h.await {
-            out.push(r);
+    let mut out = Vec::with_capacity(ids.len());
+    for chunk in ids.chunks(SUB_BATCH) {
+        let mut handles = Vec::with_capacity(chunk.len());
+        for id in chunk {
+            // the same row queued twice (two mounted cards, two calls) is
+            // decoded once — the engine owns the in-flight set
+            if !engine.claim(*id) {
+                continue;
+            }
+            let app = app.clone();
+            let pool = pool.clone();
+            let sem = sem.clone();
+            let writer = writer.clone();
+            let engine = engine.clone();
+            let id = *id;
+            handles.push(tauri::async_runtime::spawn(async move {
+                let res = generate_one(&app, &pool, &sem, id, &writer).await;
+                engine.release(id);
+                let _ = app.emit("thumb-result", res.clone());
+                res
+            }));
+        }
+        for h in handles {
+            if let Ok(r) = h.await {
+                out.push(r);
+            }
         }
     }
     Ok(out)
