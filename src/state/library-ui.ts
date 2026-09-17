@@ -29,6 +29,25 @@ export interface RootRoute {
 
 export type Route = SmartRoute | RootRoute;
 
+/** What each browse mode remembers independently (FIX 3: no cross-mode resets). */
+interface ModeSnapshot {
+  route: Route;
+  q: string;
+  chip: MediaFilter;
+  sort: SortKey;
+  desc: boolean;
+  foldersView: boolean;
+}
+
+const EMPTY_SNAPSHOT: ModeSnapshot = {
+  route: { kind: "smart", id: "all" },
+  q: "",
+  chip: "all",
+  sort: "date",
+  desc: true,
+  foldersView: true,
+};
+
 /** Filter implied by a smart view (the route drives the query, not the chips). */
 export function filterForRoute(route: Route, chip: MediaFilter): MediaFilter {
   if (route.kind === "root") return chip === "all" ? "all" : chip;
@@ -45,6 +64,8 @@ interface LibraryUiState {
   route: Route;
   view: ViewMode;
   browse: BrowseMode;
+  /** per-mode snapshots: toggling modes restores exactly where you were */
+  snapshots: Record<BrowseMode, ModeSnapshot>;
   sort: SortKey;
   desc: boolean;
   q: string;
@@ -60,6 +81,9 @@ interface LibraryUiState {
   goUp: (rootPath?: string) => void;
   setView: (view: ViewMode) => void;
   setBrowse: (browse: BrowseMode) => void;
+  /** scroll offsets per browse mode (restored by the grid) */
+  scrollOffsets: Record<BrowseMode, number>;
+  saveScroll: (offset: number) => void;
   setSort: (sort: SortKey) => void;
   setDesc: (desc: boolean) => void;
   setQ: (q: string) => void;
@@ -92,6 +116,11 @@ export const useLibraryUi = create<LibraryUiState>((set, get) => ({
   route: { kind: "smart", id: "all" },
   view: persistedView(),
   browse: persistedBrowse(),
+  snapshots: {
+    gallery: { ...EMPTY_SNAPSHOT },
+    explorer: { ...EMPTY_SNAPSHOT, sort: "name", desc: false },
+  },
+  scrollOffsets: { gallery: 0, explorer: 0 },
   sort: "date",
   desc: true,
   q: "",
@@ -144,23 +173,46 @@ export const useLibraryUi = create<LibraryUiState>((set, get) => ({
     set({ view });
   },
 
-  setBrowse: (browse) => {
-    try {
-      localStorage.setItem(BROWSE_KEY, browse);
-    } catch {
-      /* private mode — mode just isn't persisted */
-    }
-    // the explorer is always folder-scoped and name-ordered: date headers in a
-    // file manager are noise, and the folder listing must read like a disk
+  setBrowse: (browse) =>
+    set((s) => {
+      if (s.browse === browse) return {};
+      try {
+        localStorage.setItem(BROWSE_KEY, browse);
+      } catch {
+        /* private mode — mode just isn't persisted */
+      }
+      // snapshot the CURRENT mode (route/query/sort/scroll all stick), then
+      // restore the OTHER mode's last state; nothing is reset, ever
+      const snapshots: Record<BrowseMode, ModeSnapshot> = {
+        ...s.snapshots,
+        [s.browse]: {
+          route: s.route,
+          q: s.q,
+          chip: s.chip,
+          sort: s.sort,
+          desc: s.desc,
+          foldersView: s.foldersView,
+        },
+      };
+      const next = snapshots[browse];
+      return {
+        browse,
+        snapshots,
+        route: next.route,
+        q: next.q,
+        chip: next.chip,
+        sort: next.sort,
+        desc: next.desc,
+        foldersView: next.foldersView,
+        selectionMode: false,
+        selected: [],
+      };
+    }),
+
+  saveScroll: (offset) =>
     set((s) => ({
-      browse,
-      foldersView: true,
-      sort: browse === "explorer" ? "name" : s.sort,
-      desc: browse === "explorer" ? false : s.desc,
-      selectionMode: false,
-      selected: [],
-    }));
-  },
+      scrollOffsets: { ...s.scrollOffsets, [s.browse]: offset },
+    })),
 
   setSort: (sort) => set({ sort, desc: sort !== "name" }),
   setDesc: (desc) => set({ desc }),

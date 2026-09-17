@@ -110,6 +110,21 @@ export function MediaGrid({
 
   useEffect(() => setFocusPos(null), [built]);
 
+  // per-mode scroll restoration (FIX 3): saving is rAF-cheap, restoring runs
+  // once per browse-mode mount
+  const browse = useLibraryUi((s) => s.browse);
+  const saveScroll = useLibraryUi((s) => s.saveScroll);
+  const savedOffset = useLibraryUi((s) => s.scrollOffsets[browse]);
+  const restored = useRef(false);
+  useEffect(() => {
+    restored.current = false;
+  }, [browse]);
+  const restoreSoon = useCallback(() => {
+    if (restored.current || savedOffset <= 0) return;
+    restored.current = true;
+    virtuoso.current?.scrollToIndex({ index: 0, offset: savedOffset, behavior: "auto" });
+  }, [savedOffset]);
+
   const focusId =
     focusPos !== null && focusOrder[focusPos] ? focusOrder[focusPos].id : null;
 
@@ -229,7 +244,20 @@ export function MediaGrid({
         computeItemKey={(index) => built.items[index].key}
         defaultItemHeight={view === "list" ? HEADER_HEIGHT : 240}
         increaseViewportBy={{ top: 700, bottom: 1200 }}
-        rangeChanged={(range) => setRangeStart(range.startIndex)}
+        rangeChanged={(range) => {
+          setRangeStart(range.startIndex);
+          restoreSoon();
+        }}
+        scrollerRef={(el) => {
+          // scroll-offset persistence (FIX 3): attach one passive listener
+          const scroller = el instanceof HTMLElement ? el : null;
+          if (!scroller) return;
+          const onScroll = () => {
+            if (scroller.scrollTop > 0) saveScroll(scroller.scrollTop);
+          };
+          scroller.addEventListener("scroll", onScroll, { passive: true });
+          return () => scroller.removeEventListener("scroll", onScroll);
+        }}
         components={{ Footer: () => <div style={{ height: 104 }} /> }}
         itemContent={(index) => (
           <GridRow
