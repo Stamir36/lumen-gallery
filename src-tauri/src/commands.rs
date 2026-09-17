@@ -1,6 +1,7 @@
 //! Tauri commands: roots, rescan, volumes, media listing.
 
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use serde::Serialize;
 use sqlx::{Row, SqlitePool};
@@ -14,6 +15,48 @@ use crate::scan::{self, MediaRow};
 #[tauri::command]
 pub fn cancel_scan(root_id: i64) {
     scan::request_cancel(root_id);
+}
+
+/// Set once the writer task and the asset scope are live (S1.10). The frontend
+/// awaits this before its first library query, which is what removes the
+/// first-open flicker (queries used to race migrations + scope extension).
+#[derive(Default)]
+pub struct BackendState {
+    pub ready: AtomicBool,
+}
+
+/// Probe for the `backend-ready` event: it may have fired before the window
+/// attached its listener, so the frontend checks this instead of waiting blind.
+#[tauri::command]
+pub fn backend_ready(state: State<'_, BackendState>) -> bool {
+    state.ready.load(Ordering::SeqCst)
+}
+
+/// Records a thumbnail produced in the webview (video frame capture, or the
+/// browser-decoder fallback) through the SINGLE WRITER. These writes used to go
+/// straight to the sql plugin / pool, which is exactly where the 1.3-1.7s
+/// single-row slow statements in the user's log came from.
+#[tauri::command]
+pub async fn thumb_record(
+    app: AppHandle,
+    id: i64,
+    thumb_path: String,
+    dominant_color: String,
+    duration_ms: Option<i64>,
+    width: Option<i64>,
+    height: Option<i64>,
+) -> Result<(), String> {
+    app.state::<crate::writer::DbWriter>()
+        .thumb_ok(crate::writer::ThumbOkItem {
+            media_id: id,
+            thumb_path,
+            dominant_color,
+            duration_ms,
+            width: width.unwrap_or(0),
+            height: height.unwrap_or(0),
+        })
+        .await;
+    Ok(())
 }
 
 /// UI-critical single-statement writes go through the single-writer task with a
@@ -42,10 +85,11 @@ pub async fn db_exec(
     }
 
     use tauri::Manager;
-    let writer_sql: &'static str = Box::leak(sql.into_boxed_str());
+    // Owned statement text: the previous `Box::leak` leaked one string per UI
+    // write (every heart click) for the whole session.
     app.state::<crate::writer::DbWriter>()
         .inner()
-        .exec(writer_sql, params)
+        .exec(sql, params)
         .await
 }
 use crate::volumes::{self, VolumeInfo};

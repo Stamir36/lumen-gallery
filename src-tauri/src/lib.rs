@@ -9,8 +9,41 @@ mod volumes;
 mod watch;
 mod writer;
 
-use tauri::Manager;
+use tauri::{Emitter, Manager};
 use tauri_plugin_sql::{Migration, MigrationKind};
+
+/// Re-registers the debounced rescan watcher for every stored root (S1.11).
+/// Only `add_root` used to do this, so after a restart nothing was watched and
+/// new files stayed invisible until a manual rescan.
+async fn restore_watchers(handle: &tauri::AppHandle, pool: &sqlx::SqlitePool) {
+  let roots: Vec<(i64, String)> = match sqlx::query_as::<_, (i64, String)>(
+    "SELECT id, path FROM roots",
+  )
+  .fetch_all(pool)
+  .await
+  {
+    Ok(rows) => rows,
+    Err(e) => {
+      log::warn!("could not list roots for watcher restore: {e}");
+      return;
+    }
+  };
+  let registry = handle.state::<watch::WatcherRegistry>();
+  let mut restored = 0usize;
+  for (id, path) in roots {
+    let p = std::path::PathBuf::from(&path);
+    if !p.is_dir() {
+      // ejected drive / missing folder: keep the rows, skip the watcher
+      log::warn!("root {id} unreachable at boot, watcher skipped: {path}");
+      continue;
+    }
+    // the scope must know about the root before the first thumbnail request
+    assets::allow_dir(handle, &p);
+    watch::spawn_watcher(handle.clone(), pool.clone(), &registry, id, p);
+    restored += 1;
+  }
+  log::info!("fs watchers restored: {restored}");
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -39,6 +72,12 @@ pub fn run() {
       sql: db::MIGRATION_V4,
       kind: MigrationKind::Up,
     },
+    Migration {
+      version: 5,
+      description: "lumen_v5_thumb_size",
+      sql: db::MIGRATION_V5,
+      kind: MigrationKind::Up,
+    },
   ];
 
   tauri::Builder::default()
@@ -62,11 +101,15 @@ pub fn run() {
       commands::library_summary,
       commands::cancel_scan,
       commands::db_exec,
+      commands::thumb_record,
+      commands::backend_ready,
       cache::thumbnail_cache_size,
       cache::clear_thumbnail_cache,
       thumbs::generate_thumbs,
     ])
     .manage(watch::WatcherRegistry::default())
+    .manage(thumbs::ThumbEngine::default())
+    .manage(commands::BackendState::default())
     .setup(|app| {
       if cfg!(debug_assertions) {
         app.handle().plugin(
@@ -97,7 +140,7 @@ pub fn run() {
             // shutdown — that was the "writer task stopped" bug); the managed
             // handle is also Clone + Send, so a broken channel surfaces as a
             // db_exec error and the frontend surfaces a toast, not a hang.
-            let w = writer::spawn(pool.clone());
+            let w = writer::spawn(handle.clone(), pool.clone());
             handle.manage(w);
             log::info!("single-writer db task started (batch 64 / 200ms)");
             let fk: i64 =
@@ -112,6 +155,17 @@ pub fn run() {
             }
             // asset protocol: allow serving files from every stored root
             assets::allow_stored_roots(handle.clone()).await;
+
+            restore_watchers(&handle, &pool).await;
+
+            // The frontend gates its first library query on this (S1.10):
+            // migrations, writer, asset scope and watchers are all live now.
+            handle
+              .state::<commands::BackendState>()
+              .ready
+              .store(true, std::sync::atomic::Ordering::SeqCst);
+            let _ = handle.emit("backend-ready", ());
+            log::info!("backend ready: writer + asset scope + watchers");
             break;
           }
         }

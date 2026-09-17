@@ -54,14 +54,15 @@ pub async fn clear_thumbnail_cache(app: AppHandle) -> Result<u64, String> {
     let bytes = thumbnails(&app, true)?;
     // The rows must forget the thumbnails as well: otherwise the grid keeps
     // pointing at files that no longer exist (and keeps showing a stale, e.g.
-    // black, video frame) and never regenerates them.
-    if let Ok(pool) = crate::commands::pool_for(&app).await {
-        let _ = sqlx::query(
-            "UPDATE media SET thumb_path = NULL, thumb_mtime = NULL,
-             dominant_color = NULL, thumb_error = 0",
-        )
-        .execute(&pool)
-        .await;
+    // black, video frame) and never regenerates them. Through the SINGLE WRITER
+    // (S1.12): a direct pool write here used to contend with the very thumbnail
+    // batch this call is cancelling.
+    use tauri::Manager;
+    if let Some(writer) = app.try_state::<crate::writer::DbWriter>() {
+        match writer.inner().reset_thumbs().await {
+            Ok(rows) => log::info!("thumbnail cache wiped: {rows} rows reset"),
+            Err(e) => log::error!("thumbnail cache row reset failed: {e}"),
+        }
     }
     Ok(bytes)
 }
