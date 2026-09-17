@@ -61,7 +61,8 @@ const inFlight = new Set<number>();
 const queued = new Set<number>();
 let flushTimer: number | null = null;
 const FLUSH_MS = 120;
-const MAX_BATCH = 96;
+/** Smaller first burst: 96 decodes at once made the first paint stutter. */
+const MAX_BATCH = 48;
 
 async function flush() {
   flushTimer = null;
@@ -110,14 +111,134 @@ export function thumbSrc(path: string) {
   return fileSrc(path);
 }
 
+/** Seeks, but always resolves — a stuck seek must not block the queue. */
+function seekVideo(video: HTMLVideoElement, t: number) {
+  return new Promise<void>((resolve) => {
+    const to = window.setTimeout(resolve, 4_000);
+    video.onseeked = () => {
+      window.clearTimeout(to);
+      resolve();
+    };
+    video.currentTime = t;
+  });
+}
+
+/**
+ * `seeked` fires BEFORE the frame is painted, so capturing right then is exactly
+ * how a thumbnail comes out black. requestVideoFrameCallback reports a frame
+ * that is actually ready to draw (WebView2/Chromium has it; rAF is the fallback).
+ */
+function nextPaintedFrame(video: HTMLVideoElement) {
+  return new Promise<void>((resolve) => {
+    const withRvfc = video as HTMLVideoElement & {
+      requestVideoFrameCallback?: (cb: () => void) => number;
+    };
+    const to = window.setTimeout(() => resolve(), FRAME_WAIT_MS);
+    const done = () => {
+      window.clearTimeout(to);
+      resolve();
+    };
+    if (typeof withRvfc.requestVideoFrameCallback === "function") {
+      withRvfc.requestVideoFrameCallback(() => done());
+    } else {
+      window.requestAnimationFrame(() => done());
+    }
+  });
+}
+
+function drawFrame(
+  ctx: CanvasRenderingContext2D,
+  video: HTMLVideoElement,
+  canvas: HTMLCanvasElement,
+) {
+  try {
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  } catch (e) {
+    throw new Error(
+      `canvas capture blocked (${e instanceof Error ? e.name : String(e)}) — ` +
+        "the asset response is missing CORS headers",
+    );
+  }
+}
+
+/** 4×4 average: dominant color + luma (luma drives the offset retry). */
+function sampleCanvas(canvas: HTMLCanvasElement): { color: string; luma: number } {
+  const small = document.createElement("canvas");
+  small.width = 4;
+  small.height = 4;
+  const ctx = small.getContext("2d");
+  if (!ctx) return { color: "#101012", luma: 0 };
+  ctx.drawImage(canvas, 0, 0, 4, 4);
+  const d = ctx.getImageData(0, 0, 4, 4).data;
+  let r = 0;
+  let g = 0;
+  let b = 0;
+  const n = d.length / 4;
+  for (let i = 0; i < d.length; i += 4) {
+    r += d[i];
+    g += d[i + 1];
+    b += d[i + 2];
+  }
+  const hex = (v: number) =>
+    Math.round(v / n)
+      .toString(16)
+      .padStart(2, "0")
+      .toUpperCase();
+  const rr = r / n;
+  const gg = g / n;
+  const bb = b / n;
+  return {
+    color: `#${hex(r)}${hex(g)}${hex(b)}`,
+    luma: 0.2126 * rr + 0.7152 * gg + 0.0722 * bb,
+  };
+}
+
+/**
+ * Video capture is SERIALIZED. A folder with 20 videos used to start 20 hidden
+ * decoders at once (preload="auto" downloading whole files), which is what made
+ * the app hitch on open and starved some captures into black frames.
+ */
+const videoQueue: MediaRow[] = [];
 const vidThumbsInFlight = new Set<number>();
+let videoPumping = false;
+
+/** Frame offsets tried in order: duration/3 alone lands on dark scenes often. */
+const SEEK_FRACTIONS = [0.1, 0.3, 0.55];
+/** Below this average luma a frame is treated as "not painted yet / too dark". */
+const MIN_LUMA = 16;
+const FRAME_WAIT_MS = 600;
+
+/** Queue one video frame capture (grid order wins); never a decoder storm. */
+export function enqueueVideoThumb(row: MediaRow) {
+  if (!tauriAvailable()) return;
+  if (vidThumbsInFlight.has(row.id)) return;
+  if (videoQueue.some((r) => r.id === row.id)) return;
+  if (useThumbStore.getState().thumbs[row.id]) return;
+  videoQueue.push(row);
+  void pumpVideoQueue();
+}
+
+async function pumpVideoQueue() {
+  if (videoPumping) return;
+  videoPumping = true;
+  try {
+    while (videoQueue.length > 0) {
+      const row = videoQueue.shift();
+      if (!row) break;
+      // one at a time: the next capture starts only when this one is done
+      await processVideoThumb(row);
+    }
+  } finally {
+    videoPumping = false;
+  }
+}
 
 /**
  * Video thumbnails are rendered in the webview (hidden <video> + canvas) —
  * decoding video in Rust would require an ffmpeg sidecar (v2 option).
  * Writes a 480w JPEG through the fs plugin (scope: $APPCACHE/thumbs/**).
  */
-export async function makeVideoThumb(row: MediaRow): Promise<void> {
+async function processVideoThumb(row: MediaRow): Promise<void> {
   if (!tauriAvailable()) return;
   if (vidThumbsInFlight.has(row.id)) return;
   const known = useThumbStore.getState().thumbs[row.id];
@@ -126,7 +247,7 @@ export async function makeVideoThumb(row: MediaRow): Promise<void> {
   useThumbStore.getState().set(row.id, { status: "pending" });
 
   const video = document.createElement("video");
-  video.preload = "auto";
+  video.preload = "metadata"; // one frame needs metadata + a range, not the file
   video.muted = true;
   // The asset protocol answers every response with `Access-Control-Allow-Origin:
   // <window origin>` (tauri src/protocol/asset.rs), so an anonymous CORS request
@@ -157,18 +278,6 @@ export async function makeVideoThumb(row: MediaRow): Promise<void> {
       },
     );
 
-    const seekTo = Math.min(1, meta.duration > 0 ? meta.duration / 3 : 1);
-    if (seekTo > 0) {
-      await new Promise<void>((resolve) => {
-        const to = window.setTimeout(() => resolve(), 3000);
-        video.onseeked = () => {
-          window.clearTimeout(to);
-          resolve();
-        };
-        video.currentTime = seekTo;
-      });
-    }
-
     const targetW = 480;
     const canvas = document.createElement("canvas");
     canvas.width = targetW;
@@ -178,45 +287,26 @@ export async function makeVideoThumb(row: MediaRow): Promise<void> {
     );
     const ctx = canvas.getContext("2d");
     if (!ctx) throw new Error("no 2d context");
-    try {
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    } catch (e) {
-      throw new Error(
-        `canvas capture blocked (${e instanceof Error ? e.name : String(e)}) —
-         the asset response is missing CORS headers`,
-      );
+
+    // Probe frame offsets until one actually looks like a picture: black tiles
+    // came from (a) fade-ins at duration/3 and (b) drawing before the decoder
+    // painted the seeked frame.
+    let probe: { color: string; luma: number } | null = null;
+    for (const frac of SEEK_FRACTIONS) {
+      const t = meta.duration > 0 ? Math.max(0.1, meta.duration * frac) : 0.1;
+      await seekVideo(video, t);
+      await nextPaintedFrame(video);
+      drawFrame(ctx, video, canvas);
+      const sample = sampleCanvas(canvas);
+      if (!probe || sample.luma > probe.luma) probe = sample;
+      if (probe.luma >= MIN_LUMA) break;
     }
+    const color = probe?.color;
 
     const blob = await new Promise<Blob | null>((resolve) =>
       canvas.toBlob((b) => resolve(b), "image/jpeg", 0.82),
     );
     if (!blob) throw new Error("toBlob failed");
-
-    // dominant color from a 4x4 downscale
-    const small = document.createElement("canvas");
-    small.width = 4;
-    small.height = 4;
-    const sctx = small.getContext("2d");
-    let color: string | undefined;
-    if (sctx) {
-      sctx.drawImage(canvas, 0, 0, 4, 4);
-      const d = sctx.getImageData(0, 0, 4, 4).data;
-      let r = 0;
-      let g = 0;
-      let b = 0;
-      const n = d.length / 4;
-      for (let i = 0; i < d.length; i += 4) {
-        r += d[i];
-        g += d[i + 1];
-        b += d[i + 2];
-      }
-      const hex = (v: number) =>
-        Math.round(v / n)
-          .toString(16)
-          .padStart(2, "0")
-          .toUpperCase();
-      color = `#${hex(r)}${hex(g)}${hex(b)}`;
-    }
 
     const dir = await join(await appCacheDir(), "thumbs");
     if (!(await exists(dir))) await mkdir(dir, { recursive: true });
@@ -257,7 +347,7 @@ export function enqueueRows(rows: MediaRow[]) {
     // "never retry in this session": a failure here is logged once, not per scroll
     if (known) continue;
     if (r.kind === "image") imageIds.push(r.id);
-    else void makeVideoThumb(r);
+    else enqueueVideoThumb(r);
   }
   enqueueThumbs(imageIds);
 }
