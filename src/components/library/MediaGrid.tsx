@@ -295,9 +295,13 @@ export function MediaGrid({
             animate={{ opacity: 1, y: 0 }}
             exit={reduced ? { opacity: 0 } : { opacity: 0, y: 12 }}
             transition={{ type: "spring", stiffness: 260, damping: 26 }}
-            className="glass absolute bottom-5 left-1/2 z-40 flex -translate-x-1/2 items-center gap-1.5 p-1.5 pl-4"
+            role="toolbar"
+            aria-label={t("counts.selected", { count: selected.length })}
+            /* frosted glass pill (v2.1 recipe, whitelisted floating pill):
+               h56, radius 999, 40px icons, mono counter */
+            className="glass absolute bottom-6 left-1/2 z-40 flex h-14 -translate-x-1/2 items-center gap-1 rounded-pill p-2"
           >
-            <span className="mr-2 font-mono text-[12px] text-tprimary">
+            <span className="mx-1 flex h-9 items-center rounded-pill bg-white/[.07] px-3 font-mono text-[12px] tabular-nums text-tprimary">
               {t("counts.selected", { count: selected.length })}
             </span>
             <BarAction
