@@ -23,7 +23,8 @@ import { IconButton } from "@/components/ui/IconButton";
 import { Onboarding } from "@/pages/Onboarding";
 import { LibraryTopBar } from "@/components/library/LibraryTopBar";
 import { MediaGrid } from "@/components/library/MediaGrid";
-import { FolderShelf } from "@/components/library/FolderCards";
+import { FolderGrid } from "@/components/library/FolderCards";
+import { ExplorerLayoutSwitch } from "@/components/library/ExplorerLayoutSwitch";
 import { StatusLine } from "@/components/library/StatusLine";
 import { ViewModeSwitch } from "@/components/library/ViewModeSwitch";
 import { BrowseModeSwitch } from "@/components/library/BrowseModeSwitch";
@@ -79,6 +80,7 @@ export default function App() {
   const desc = useLibraryUi((s) => s.desc);
   const foldersView = useLibraryUi((s) => s.foldersView);
   const browse = useLibraryUi((s) => s.browse);
+  const explorerLayout = useLibraryUi((s) => s.explorerLayout);
   /** explorer = file manager: folder tree + only the open folder's contents */
   const explorer = browse === "explorer";
 
@@ -329,9 +331,14 @@ export default function App() {
             <Onboarding onDone={onboarding.close} />
           ) : (
             <>
-              <LibraryTopBar title={title} count={rows.length} />
+              <LibraryTopBar
+                title={title}
+                count={rows.length}
+                // explorer's own header control: tree vs wrapping folder cards
+                extra={explorer ? <ExplorerLayoutSwitch /> : undefined}
+              />
               <div className="relative flex min-h-0 flex-1">
-                {explorer && route.kind === "root" && root && (
+                {explorer && explorerLayout === "tree" && route.kind === "root" && root && (
                   <FolderTree
                     rootId={root.id}
                     rootPath={root.path}
@@ -348,12 +355,14 @@ export default function App() {
                     emptyKind={emptyKind}
                     onRetry={() => void media.refetch()}
                     onAddLibrary={onboarding.open}
-                    /* gallery = PURE flat date-grouped feed: the folder shelf was
-                       removed (it duplicated the explorer); explorer keeps its
-                       tree + the folder-cards row on top of the contents */
+                    /* gallery = PURE flat date-grouped feed (no folder cards —
+                       the explorer owns folders). In the explorer the two
+                       sub-layouts are mutually exclusive (S1.9): TREE renders
+                       the tree on the left and nothing above the contents,
+                       GRID renders wrapping folder cards and no tree. */
                     folderZone={
-                      explorer && route.kind === "root" && root ? (
-                        <FolderShelf
+                      explorer && explorerLayout === "grid" && route.kind === "root" && root ? (
+                        <FolderGrid
                           rootId={root.id}
                           dir={route.dir}
                           enabled={route.dir !== null || root.path.length > 0}

@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import type { MediaRow } from "@/lib/api";
 import { MediaGrid } from "@/components/library/MediaGrid";
-import { FolderShelf } from "@/components/library/FolderCards";
+import { FolderGrid } from "@/components/library/FolderCards";
 import { Segmented } from "@/components/ui/Segmented";
 import { useLibraryUi } from "@/state/library-ui";
 import { LibraryTopBar } from "@/components/library/LibraryTopBar";
@@ -113,7 +113,7 @@ export default function GridDemo() {
           emptyKind="media"
           onRetry={() => undefined}
           onAddLibrary={() => undefined}
-          folderZone={<FolderShelf rootId={1} dir={null} enabled={false} />}
+          folderZone={<FolderGrid rootId={1} dir={null} enabled={false} />}
         />
       </div>
       <StatusLine

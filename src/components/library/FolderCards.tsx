@@ -8,10 +8,16 @@ import { useFolders } from "@/lib/queries";
 import { useLibraryUi } from "@/state/library-ui";
 
 /**
- * Root/folder navigation (STEP 3B): a horizontally scrolling shelf of folder
- * cards — cover = first cached thumb, else dominant color, else a tonal tile.
+ * Explorer › GRID layout (S1.9): the subfolders of the open folder as WRAPPING
+ * cards above its contents — cover = first cached thumb, else dominant color,
+ * else a tonal tile. No tree is rendered in this layout: either the tree or the
+ * cards, never both.
+ *
+ * The strip scrolls on its own (capped height) so a folder with 60 subfolders
+ * cannot push the media grid out of the window, and it uses the v2.2 gutter
+ * (px-9 = 36px) so the card grid lines up with the media grid below it.
  */
-export function FolderShelf({
+export function FolderGrid({
   rootId,
   dir,
   enabled,
@@ -31,8 +37,8 @@ export function FolderShelf({
   if (!data || data.length === 0) return null;
 
   return (
-    <div className="shrink-0 border-b border-hairline">
-      <div className="flex gap-3 overflow-x-auto overflow-y-hidden px-9 py-4">
+    <div className="max-h-[38vh] shrink-0 overflow-y-auto border-b border-hairline">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(190px,1fr))] gap-4 px-9 py-4">
         {data.map((folder) => (
           <FolderCard
             key={folder.path}
@@ -61,7 +67,7 @@ function FolderCard({
       onClick={onOpen}
       aria-label={folder.name}
       className={cn(
-        "hover-lift group w-[196px] shrink-0 rounded-card bg-surface-1 p-2.5 text-left",
+        "hover-lift group w-full min-w-0 rounded-card bg-surface-1 p-2.5 text-left",
       )}
     >
       <div className="relative aspect-[16/10] w-full overflow-hidden rounded-[14px]">

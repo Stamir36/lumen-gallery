@@ -122,6 +122,9 @@
     "gallery": "Галерея"
   },
   "explorer": {
+    "layout": "Раскладка проводника",
+    "layout_tree": "Дерево папок",
+    "layout_grid": "Плитки папок",
     "expand": "Развернуть",
     "collapse": "Свернуть",
     "no_subfolders": "нет подпапок"

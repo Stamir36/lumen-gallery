@@ -33,7 +33,16 @@ const SORTS: { key: SortKey; labelKey: string }[] = [
  * views already cover All/Photos/Videos/Favorites; the gallery/explorer switch
  * lives in the titlebar (FIX 5), next to the view icons.
  */
-export function LibraryTopBar({ title, count }: { title: string; count: number }) {
+export function LibraryTopBar({
+  title,
+  count,
+  extra,
+}: {
+  title: string;
+  count: number;
+  /** mode-specific controls (explorer tree|grid) — rendered in the bar itself */
+  extra?: React.ReactNode;
+}) {
   const { t } = useTranslation();
   const roots = useRootsStore((s) => s.roots);
   const route = useLibraryUi((s) => s.route);
@@ -84,6 +93,8 @@ export function LibraryTopBar({ title, count }: { title: string; count: number }
               </span>
             </div>
           )}
+
+          {extra}
 
           {q.trim() && (
             <span className="ml-1 shrink-0 font-mono text-[11px] whitespace-nowrap text-ttertiary">

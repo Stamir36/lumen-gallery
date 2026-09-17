@@ -112,6 +112,9 @@
     "gallery": "Gallery"
   },
   "explorer": {
+    "layout": "Explorer layout",
+    "layout_tree": "Folder tree",
+    "layout_grid": "Folder tiles",
     "expand": "Expand",
     "collapse": "Collapse",
     "no_subfolders": "no subfolders"

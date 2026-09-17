@@ -4,6 +4,12 @@ import type { MediaFilter } from "@/lib/api";
 export type ViewMode = "justified" | "masonry" | "square" | "list";
 /** gallery = the library as one stream · explorer = the library as a disk tree */
 export type BrowseMode = "gallery" | "explorer";
+/**
+ * Explorer sub-layout (S1.9): `tree` = folder tree on the left + the open
+ * folder's contents; `grid` = no tree, subfolder cards above the contents.
+ * Exactly one at a time — the directories used to be listed twice.
+ */
+export type ExplorerLayout = "tree" | "grid";
 export type SortKey = "date" | "name" | "size" | "duration" | "added";
 
 export type SmartView =
@@ -81,6 +87,9 @@ interface LibraryUiState {
   goUp: (rootPath?: string) => void;
   setView: (view: ViewMode) => void;
   setBrowse: (browse: BrowseMode) => void;
+  /** explorer only: folder tree vs wrapping subfolder cards */
+  explorerLayout: ExplorerLayout;
+  setExplorerLayout: (layout: ExplorerLayout) => void;
   /** scroll offsets per browse mode (restored by the grid) */
   scrollOffsets: Record<BrowseMode, number>;
   saveScroll: (offset: number) => void;
@@ -99,6 +108,13 @@ interface LibraryUiState {
 
 const VIEW_KEY = "ui.view_mode";
 const BROWSE_KEY = "ui.browse_mode";
+const EXPLORER_LAYOUT_KEY = "ui.explorer_layout";
+
+function persistedExplorerLayout(): ExplorerLayout {
+  const v =
+    typeof localStorage !== "undefined" ? localStorage.getItem(EXPLORER_LAYOUT_KEY) : null;
+  return v === "grid" ? "grid" : "tree";
+}
 
 function persistedBrowse(): BrowseMode {
   const v = typeof localStorage !== "undefined" ? localStorage.getItem(BROWSE_KEY) : null;
@@ -116,6 +132,7 @@ export const useLibraryUi = create<LibraryUiState>((set, get) => ({
   route: { kind: "smart", id: "all" },
   view: persistedView(),
   browse: persistedBrowse(),
+  explorerLayout: persistedExplorerLayout(),
   snapshots: {
     gallery: { ...EMPTY_SNAPSHOT },
     explorer: { ...EMPTY_SNAPSHOT, sort: "name", desc: false },
@@ -208,6 +225,15 @@ export const useLibraryUi = create<LibraryUiState>((set, get) => ({
         selected: [],
       };
     }),
+
+  setExplorerLayout: (explorerLayout) => {
+    try {
+      localStorage.setItem(EXPLORER_LAYOUT_KEY, explorerLayout);
+    } catch {
+      /* private mode — the layout just isn't persisted */
+    }
+    set({ explorerLayout });
+  },
 
   saveScroll: (offset) =>
     set((s) => ({
