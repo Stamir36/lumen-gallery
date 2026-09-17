@@ -8,6 +8,13 @@
 - [x] FIX 5 folders: explicit "Папки" sidebar entry + home button in the breadcrumbs (alt+← kept); justified mode renamed "Лента" (ru) to free the word "Коллаж" for the new selection collage viewer.
 - [x] FIX 4b collage multi-viewer: fullscreen overlay with per-count presets (2 side-by-side/stack, 3 big+2, 4 2x2, 5-6 mixed rows), glass layout-cycle chip, Esc, per-tile video play/pause + mute; tile click is the Phase 4 viewer hook.
 - [ ] FIX 6 folder exclusions (NOT STARTED): `excluded_folders(root_id, path)` table, scan skips excluded subtrees, list_media/list_folders hide excluded rows, Settings > Libraries lists + restores exclusions, auto-rescan after change, "show excluded" toggle (default off).
+### Round 2 — user feedback after the first real run (2026-09-17)
+- [x] Video previews were serialized (`preload="metadata"`, one decoder at a time) and frames are taken from `requestVideoFrameCallback` with up to 3 offsets until the sampled frame is not near-black — the hitch on open and the 2-3 black tiles out of 20 had the same cause: a decoder storm plus capturing before the seeked frame was painted.
+- [x] Explorer mode: title-bar switch between Галерея and Проводник; explorer shows a lazily expanded folder tree of the active root + the open folder's contents only (dir-scoped query, name order, no date headers). Thumbnails for one folder no longer compete with the whole library.
+- [x] Hover preview speed is a setting (Settings › Playback: 1.5× / 3× / 6× / 9×, default 3×) persisted in `settings.video_scrub_rate`.
+- [x] Dev-only boot timings printed in the console (`[perf] boot: db … roots …`) so the next "it feels slow" report comes with numbers.
+- [ ] Still unmeasured: 60fps scroll at 9.4k, cold start < 1.5s, scan 10k < 5s — needs the user's run.
+
 - [ ] FIX 7 perf pass (NOT MEASURED): honest fps numbers (rAF frame deltas over a 3s scroll at 9.4k), visible-first thumb queue priority, SQL-side filter verification; lift the masonry cap only with >=55fps measured.
 
 ## Deferred hardening (from fix batch, 2026-09-17)

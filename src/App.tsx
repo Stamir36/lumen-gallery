@@ -33,6 +33,7 @@ import { useLibrarySummary, useMediaRows } from "@/lib/queries";
 import { useRootsStore, useScanStore } from "@/state/library";
 import { filterForRoute, useLibraryUi, type SmartView } from "@/state/library-ui";
 import { getDb } from "@/lib/db";
+import { useAppSettings } from "@/lib/settings";
 
 /** Every "Add library" entry point resets the onboarding state machine. */
 function useOpenOnboarding() {
@@ -81,13 +82,26 @@ export default function App() {
 
   useEffect(() => {
     (async () => {
+      const t0 = performance.now();
       try {
         await getDb(); // runs migrations
       } catch (e) {
         console.error("db load failed", e);
       }
+      const t1 = performance.now();
       await load();
+      const t2 = performance.now();
+      // hover scrub speed etc. — read once, before the grid can hover anything
+      void useAppSettings.getState().load();
       setReady(true);
+      // dev-only numbers: "the app hangs on open" needs data, not guesses
+      if (import.meta.env.DEV) {
+        console.info(
+          `[perf] boot: db ${Math.round(t1 - t0)}ms · roots ${Math.round(
+            t2 - t1,
+          )}ms · total ${Math.round(t2 - t0)}ms`,
+        );
+      }
     })();
   }, [load]);
 

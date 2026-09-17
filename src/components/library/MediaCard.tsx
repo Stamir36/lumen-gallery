@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import type { MediaRow } from "@/lib/api";
 import { fileSrc } from "@/lib/assets";
 import { enqueueRows } from "@/lib/thumbs";
+import { useAppSettings } from "@/lib/settings";
 import { baseName, formatDuration, formatResolution } from "@/lib/format";
 import { MonoChip } from "@/components/ui/Chip";
 import { ThumbTile } from "./ThumbTile";
@@ -38,6 +39,7 @@ export const MediaCard = memo(function MediaCard({
 }: MediaCardProps) {
   const { t } = useTranslation();
   const reduced = useReducedMotion();
+  const scrubRate = useAppSettings((s) => s.videoScrubRate);
   const isVideo = media.kind === "video";
   const [preview, setPreview] = useState(false);
   const [scrubFailed, setScrubFailed] = useState(false);
@@ -161,7 +163,8 @@ export const MediaCard = memo(function MediaCard({
               autoPlay
               className="absolute inset-0 h-full w-full object-cover"
               onLoadedData={(e) => {
-                e.currentTarget.playbackRate = 6;
+                // user setting (Settings › Playback): 6× felt like fast-forward
+                e.currentTarget.playbackRate = scrubRate;
                 void e.currentTarget.play().catch(() => undefined);
               }}
               onError={() => {

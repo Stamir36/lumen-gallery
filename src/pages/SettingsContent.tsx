@@ -10,7 +10,10 @@ import {
   Trash2,
   Gauge,
   Cpu,
+  Play,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { SCRUB_RATES, useAppSettings } from "@/lib/settings";
 import { LanguageDropdown } from "@/components/LanguageSwitcher";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { PillButton } from "@/components/ui/PillButton";
@@ -75,6 +78,8 @@ export function SettingsContent() {
   const [failed, setFailed] = useState(false);
   const [active, setActive] = useState<string>("libraries");
   const [cursorPointer, setCursorPointer] = useState(false);
+  const scrubRate = useAppSettings((s) => s.videoScrubRate);
+  const setScrubRate = useAppSettings((s) => s.setVideoScrubRate);
 
   useEffect(() => {
     void readSetting(CURSOR_KEY).then((v) =>
@@ -143,6 +148,7 @@ export function SettingsContent() {
   const navItems = [
     { id: "libraries", icon: <FolderOpen size={18} />, label: t("settings.nav_libraries") },
     { id: "appearance", icon: <Palette size={18} />, label: t("settings.nav_appearance") },
+    { id: "playback", icon: <Play size={18} />, label: t("settings.nav_playback") },
     { id: "cache", icon: <Gauge size={18} />, label: t("settings.nav_cache") },
     { id: "system", icon: <Cpu size={18} />, label: t("settings.nav_system") },
   ];
@@ -276,8 +282,37 @@ export function SettingsContent() {
           </GlassCard>
         </Section>
 
-        {/* 03 Cache & Performance */}
-        <Section index="03" id="cache" title={t("settings.nav_cache")}>
+        {/* 03 Playback */}
+        <Section index="03" id="playback" title={t("settings.nav_playback")}>
+          <GlassCard>
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <span className="text-sm text-tprimary">{t("settings.scrub_speed")}</span>
+              <div className="flex items-center gap-1.5">
+                {SCRUB_RATES.map((rate) => (
+                  <button
+                    key={rate}
+                    type="button"
+                    aria-pressed={scrubRate === rate}
+                    aria-label={t("settings.scrub_rate", { rate })}
+                    onClick={() => void setScrubRate(rate)}
+                    className={cn(
+                      "inline-flex h-9 items-center rounded-pill px-3.5 font-mono text-[12px] transition-colors duration-[160ms] ease-out active:scale-[.97]",
+                      scrubRate === rate
+                        ? "bg-accent text-[#0A0A0C]"
+                        : "bg-surface-2 text-tsecondary hover:text-tprimary",
+                    )}
+                  >
+                    {rate}×
+                  </button>
+                ))}
+              </div>
+            </div>
+            <p className="mt-3 text-sm text-tsecondary">{t("settings.scrub_hint")}</p>
+          </GlassCard>
+        </Section>
+
+        {/* 04 Cache & Performance */}
+        <Section index="04" id="cache" title={t("settings.nav_cache")}>
           <GlassCard>
             <div className="flex flex-wrap items-center justify-between gap-4">
               <span className="text-sm text-tprimary">{t("settings.cache")}</span>
@@ -303,8 +338,8 @@ export function SettingsContent() {
           </GlassCard>
         </Section>
 
-        {/* 04 System */}
-        <Section index="04" id="system" title={t("settings.nav_system")}>
+        {/* 05 System */}
+        <Section index="05" id="system" title={t("settings.nav_system")}>
           <GlassCard>
             <form
               onSubmit={(e) => {
