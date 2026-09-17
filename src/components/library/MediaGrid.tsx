@@ -85,7 +85,29 @@ export function MediaGrid({
 
   // ---------- sticky date header ----------
   const openViewer = useViewer((s) => s.openAt);
+  const revealId = useViewer((s) => s.revealId);
+  const clearReveal = useViewer((s) => s.clearReveal);
   const [rangeStart, setRangeStart] = useState(0);
+
+  // ---------- return to the grid (STEP 3) ----------
+  // Closing the viewer drops the id we were looking at into the store; the grid
+  // scrolls back to its row and clears the flag, so leaving the viewer never
+  // lands you in a different place than you left. The grid itself is never
+  // re-rendered while the viewer is open (portal), so its state is intact.
+  useEffect(() => {
+    if (revealId === null) return;
+    const itemIndex = built.items.findIndex((item) =>
+      item.kind === "cells"
+        ? item.cells.some((c) => c.media.id === revealId)
+        : item.kind === "listrow"
+          ? item.media.id === revealId
+          : false,
+    );
+    if (itemIndex >= 0) {
+      virtuoso.current?.scrollIntoView({ index: itemIndex, behavior: "auto" });
+    }
+    clearReveal();
+  }, [revealId, built, clearReveal]);
   const startItem = built.items[rangeStart];
   const activeGroup =
     !pending && startItem && startItem.kind !== "header" && built.groups.length > 1
@@ -165,10 +187,20 @@ export function MediaGrid({
       if (!keys.includes(e.key)) return;
       e.preventDefault();
 
-      if (e.key === "Enter" || e.key === " ") {
+      // Space marks, Enter opens: the viewer is the primary action on a card
+      if (e.key === " ") {
         if (focusPos !== null && focusOrder[focusPos]) {
           toggleSelected(focusOrder[focusPos].id);
         }
+        return;
+      }
+
+      // STEP 3: Enter opens the viewer at the focused card's place in the
+      // current view order — the same queue the arrows and the filmstrip walk
+      if (e.key === "Enter") {
+        const hit = focusPos === null ? focusOrder[0] : focusOrder[focusPos];
+        const at = rows.findIndex((r) => r.id === hit.id);
+        openViewer(rows, at < 0 ? 0 : at);
         return;
       }
 
@@ -212,7 +244,7 @@ export function MediaGrid({
         i += down ? 1 : -1;
       }
     },
-    [focusOrder, focusPos, toggleSelected],
+    [focusOrder, focusPos, openViewer, rows, toggleSelected],
   );
 
   // ---------- states ----------
