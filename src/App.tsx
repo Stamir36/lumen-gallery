@@ -89,7 +89,13 @@ export default function App() {
     const onKey = (e: KeyboardEvent) => {
       if (e.altKey && e.key === "ArrowLeft") {
         e.preventDefault();
-        useLibraryUi.getState().goUp();
+        const ui = useLibraryUi.getState();
+        const r = ui.route;
+        const path =
+          r.kind === "root"
+            ? useRootsStore.getState().roots.find((x) => x.id === r.rootId)?.path
+            : undefined;
+        ui.goUp(path);
       }
     };
     window.addEventListener("keydown", onKey);

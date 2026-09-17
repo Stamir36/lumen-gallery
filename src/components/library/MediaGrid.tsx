@@ -5,6 +5,7 @@ import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
 import { Heart, Trash2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatBytes, formatCount, type MediaRow } from "@/lib/api";
+import { MonoChip } from "@/components/ui/Chip";
 import { buildGrid, HEADER_HEIGHT, type GridItem } from "@/lib/gridItems";
 import { GRID_GAP } from "@/lib/justified";
 import { useElementWidth } from "@/lib/hooks";
@@ -159,6 +160,8 @@ export function MediaGrid({
   // ---------- states ----------
   const isEmpty = rows.length === 0;
   const displayPending = pending && isEmpty;
+  /** Mode/state key: view switches and skeleton→grid crossfade through it. */
+  const bodyKey = `${view}-${displayPending ? "skeleton" : error ? "error" : isEmpty ? "empty" : "grid"}`;
 
   let body: React.ReactNode;
   if (displayPending) {
@@ -214,6 +217,7 @@ export function MediaGrid({
         defaultItemHeight={view === "list" ? HEADER_HEIGHT : 240}
         increaseViewportBy={{ top: 700, bottom: 1200 }}
         rangeChanged={(range) => setRangeStart(range.startIndex)}
+        components={{ Footer: () => <div style={{ height: 104 }} /> }}
         itemContent={(index) => (
           <GridRow
             item={built.items[index]}
@@ -243,7 +247,21 @@ export function MediaGrid({
     >
       <div className="flex h-full min-h-0 flex-col">
         {folderZone}
-        <div className="min-h-0 flex-1">{body}</div>
+        <div className="min-h-0 flex-1">
+          {/* view-mode switch + skeleton→grid crossfade (180ms, §8) */}
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={bodyKey}
+              initial={reduced ? false : { opacity: 0, scale: 0.995 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={reduced ? { opacity: 0 } : { opacity: 0, scale: 0.995 }}
+              transition={{ duration: reduced ? 0 : 0.18, ease: "easeOut" }}
+              className="h-full"
+            >
+              {body}
+            </motion.div>
+          </AnimatePresence>
+        </div>
       </div>
 
       {/* sticky date header — solid tonal, NEVER glass (v2.2) */}
@@ -367,6 +385,7 @@ function GridRow({
   }
 
   if (item.kind === "listrow") {
+    const { t } = useTranslation();
     const media = item.media;
     const isSelected = selected.has(media.id);
     const meta =
@@ -384,6 +403,7 @@ function GridRow({
           className={cn(
             "group flex h-14 w-full items-center gap-4 rounded-control px-2 text-left transition-colors duration-[160ms] hover:bg-white/[.05]",
             isSelected && "bg-accent/[.10]",
+            media.offline && "opacity-60",
             focusId === media.id && "ring-2 ring-accent/40",
           )}
         >
@@ -391,7 +411,10 @@ function GridRow({
             <ThumbTile media={media} shimmer={false} />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="truncate text-sm text-tprimary">{baseName(media.path)}</div>
+            <div className="flex items-center gap-2">
+              <span className="truncate text-sm text-tprimary">{baseName(media.path)}</span>
+              {media.offline && <MonoChip tone="tonal">{t("offline.chip")}</MonoChip>}
+            </div>
             <div className="truncate font-mono text-[11px] text-ttertiary">
               {media.path.slice(0, media.path.length - baseName(media.path).length - 1)}
             </div>

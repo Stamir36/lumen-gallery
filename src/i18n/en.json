@@ -151,6 +151,9 @@
   },
   "actions": {
     "favorite": "Favorite",
+    "unfavorite": "Remove from favorites",
+    "select": "Select",
+    "deselect": "Deselect",
     "add_to_album": "Add to album",
     "collage": "Collage",
     "open_folder": "Open containing folder",

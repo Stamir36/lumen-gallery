@@ -10,6 +10,28 @@ export interface ChipProps extends HTMLAttributes<HTMLSpanElement> {
   accent?: boolean;
 }
 
+/**
+ * Mono chip for metadata printed OVER media (grid cards, list rows, offline
+ * tiles). Same recipe everywhere = "mono chips unified" (§6/§10): dark tonal
+ * fill, no blur — blur stays on the floating pills whitelist only.
+ */
+export function MonoChip({
+  className,
+  tone = "media",
+  ...props
+}: HTMLAttributes<HTMLSpanElement> & { tone?: "media" | "tonal" }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex h-6 items-center rounded-pill px-2 font-mono text-[11px] tracking-[0.04em]",
+        tone === "media" ? "bg-black/55 text-white/90" : "bg-white/[.06] text-tsecondary",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
 export function Chip({ className, mono, accent, ...props }: ChipProps) {
   return (
     <span

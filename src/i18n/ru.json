@@ -161,6 +161,9 @@
   },
   "actions": {
     "favorite": "В избранное",
+    "unfavorite": "Убрать из избранного",
+    "select": "Выбрать",
+    "deselect": "Снять выбор",
     "add_to_album": "В альбом",
     "collage": "Коллаж",
     "open_folder": "Открыть содержащую папку",

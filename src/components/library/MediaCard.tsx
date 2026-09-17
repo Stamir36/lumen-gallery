@@ -1,11 +1,13 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { Check, Heart, Play, Unplug } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { MediaRow } from "@/lib/api";
 import { fileSrc } from "@/lib/assets";
 import { enqueueRows } from "@/lib/thumbs";
-import { formatDuration, formatResolution } from "@/lib/format";
+import { baseName, formatDuration, formatResolution } from "@/lib/format";
+import { MonoChip } from "@/components/ui/Chip";
 import { ThumbTile } from "./ThumbTile";
 
 /** Card hover contract (SPEC §4): inner scale 1.03, gradient, mono chips,
@@ -34,6 +36,7 @@ export const MediaCard = memo(function MediaCard({
   onToggleSelect,
   onActivate,
 }: MediaCardProps) {
+  const { t } = useTranslation();
   const reduced = useReducedMotion();
   const isVideo = media.kind === "video";
   const [preview, setPreview] = useState(false);
@@ -64,6 +67,7 @@ export const MediaCard = memo(function MediaCard({
   );
 
   const onEnter = () => {
+    // prefers-reduced-motion: no auto-playing motion inside the grid
     if (!isVideo || scrubFailed || reduced || timer.current !== null) return;
     timer.current = window.setTimeout(() => {
       timer.current = null;
@@ -75,19 +79,17 @@ export const MediaCard = memo(function MediaCard({
 
   const duration = isVideo ? formatDuration(media.durationMs) : null;
   const resolution = isVideo ? null : formatResolution(media.width, media.height);
+  const name = baseName(media.path);
 
   return (
     <div
-      className={cn(
-        "group relative h-full w-full select-none",
-        media.offline && "opacity-70",
-      )}
+      className={cn("group relative h-full w-full select-none", media.offline && "opacity-80")}
       onPointerEnter={onEnter}
       onPointerLeave={stopPreview}
     >
       <button
         type="button"
-        aria-label={media.path}
+        aria-label={media.offline ? `${name} — ${t("offline.chip")}` : name}
         onClick={() => (selectionMode ? onToggleSelect(media.id) : onActivate?.(media))}
         className={cn(
           "absolute inset-0 overflow-hidden transition-[transform,box-shadow] duration-[160ms] ease-out",
@@ -100,8 +102,12 @@ export const MediaCard = memo(function MediaCard({
         style={{ borderRadius: radius }}
       >
         {media.offline ? (
-          <div className="flex h-full w-full items-center justify-center bg-surface-2 text-ttertiary">
+          /* ejected root: gray tile + mono offline chip, never a broken image */
+          <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-surface-2 px-3 text-ttertiary">
             <Unplug size={20} />
+            <span className="max-w-full truncate font-mono text-[10px] tracking-[0.06em]">
+              {name}
+            </span>
           </div>
         ) : (
           <div className="absolute inset-0 transition-transform duration-[160ms] ease-out group-hover:scale-[1.03]">
@@ -111,16 +117,12 @@ export const MediaCard = memo(function MediaCard({
 
         {/* bottom gradient + mono metadata chips (hover only, per v2.2) */}
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/75 via-black/25 to-transparent opacity-0 transition-opacity duration-[160ms] ease-out group-hover:opacity-100" />
-        <div className="pointer-events-none absolute inset-x-2 bottom-2 z-10 flex translate-y-1 items-center gap-1.5 opacity-0 transition-all duration-[160ms] ease-out group-hover:translate-y-0 group-hover:opacity-100">
-          {media.offline ? (
-            <ChipMono>OFFLINE</ChipMono>
-          ) : (
-            <>
-              {duration && <ChipMono>{duration}</ChipMono>}
-              {resolution && <ChipMono>{resolution}</ChipMono>}
-            </>
-          )}
-        </div>
+        {!media.offline && (duration || resolution) && (
+          <div className="pointer-events-none absolute inset-x-2 bottom-2 z-10 flex translate-y-1 items-center gap-1.5 opacity-0 transition-all duration-[160ms] ease-out group-hover:translate-y-0 group-hover:opacity-100">
+            {duration && <MonoChip>{duration}</MonoChip>}
+            {resolution && <MonoChip>{resolution}</MonoChip>}
+          </div>
+        )}
 
         {isVideo && !media.offline && (
           <span
@@ -170,7 +172,14 @@ export const MediaCard = memo(function MediaCard({
         </AnimatePresence>
       </button>
 
-      {/* heart + selection: hover reveals, selection mode pins */}
+      {/* offline marker stays visible without hover (contract from scan.rs) */}
+      {media.offline && (
+        <span className="pointer-events-none absolute bottom-2 left-2 z-10">
+          <MonoChip>{t("offline.chip")}</MonoChip>
+        </span>
+      )}
+
+      {/* heart + selection: hover reveals, favorite/selection pin */}
       <div
         className={cn(
           "absolute right-2 top-2 z-20 flex items-center gap-1.5 transition-opacity duration-[160ms]",
@@ -178,14 +187,9 @@ export const MediaCard = memo(function MediaCard({
           media.favorite && "opacity-100",
         )}
       >
-        {media.favorite && (
-          <span className="flex h-8 w-8 items-center justify-center rounded-pill bg-black/45 text-tprimary">
-            <Heart size={15} fill="currentColor" strokeWidth={0} />
-          </span>
-        )}
         <button
           type="button"
-          aria-label={media.favorite ? "unfavorite" : "favorite"}
+          aria-label={media.favorite ? t("actions.unfavorite") : t("actions.favorite")}
           aria-pressed={media.favorite}
           className="flex h-8 w-8 items-center justify-center rounded-pill bg-black/45 text-tsecondary transition-colors duration-[160ms] hover:bg-black/70 hover:text-tprimary"
           onClick={(e) => {
@@ -193,13 +197,17 @@ export const MediaCard = memo(function MediaCard({
             void import("@/lib/mediaActions").then((m) => m.toggleFavorite(media.id));
           }}
         >
-          <Heart size={15} className={media.favorite ? "opacity-0" : undefined} />
+          <Heart
+            size={15}
+            fill={media.favorite ? "currentColor" : "none"}
+            className={media.favorite ? "text-tprimary" : undefined}
+          />
         </button>
       </div>
 
       <button
         type="button"
-        aria-label={selected ? "deselect" : "select"}
+        aria-label={selected ? t("actions.deselect") : t("actions.select")}
         aria-pressed={selected}
         onClick={(e) => {
           e.stopPropagation();
@@ -218,11 +226,3 @@ export const MediaCard = memo(function MediaCard({
     </div>
   );
 });
-
-function ChipMono({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="inline-flex h-6 items-center rounded-pill bg-black/55 px-2 font-mono text-[11px] tracking-[0.04em] text-white/90">
-      {children}
-    </span>
-  );
-}

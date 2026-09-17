@@ -39,7 +39,7 @@ export function Breadcrumbs({
   return (
     <div className="flex min-w-0 items-center gap-1.5">
       {dir && (
-        <IconButton label={t("actions.up")} onClick={goUp} className="mr-1">
+        <IconButton label={t("actions.up")} onClick={() => goUp(rootPath)} className="mr-1">
           <CornerLeftUp size={16} />
         </IconButton>
       )}

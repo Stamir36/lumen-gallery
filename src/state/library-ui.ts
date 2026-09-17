@@ -53,7 +53,8 @@ interface LibraryUiState {
   setRoute: (route: Route) => void;
   openRoot: (rootId: number) => void;
   openFolder: (dir: string | null) => void;
-  goUp: () => void;
+  /** `rootPath` bounds the walk: the root level is as far up as we go. */
+  goUp: (rootPath?: string) => void;
   setView: (view: ViewMode) => void;
   setSort: (sort: SortKey) => void;
   setDesc: (desc: boolean) => void;
@@ -107,15 +108,17 @@ export const useLibraryUi = create<LibraryUiState>((set, get) => ({
     set({ route: { ...route, dir }, selectionMode: false, selected: [] });
   },
 
-  goUp: () => {
+  goUp: (rootPath) => {
     const route = get().route;
     if (route.kind !== "root" || !route.dir) return;
     const sep = route.dir.includes("\\") ? "\\" : "/";
     const trimmed = route.dir.replace(/[\\/]+$/, "");
     const parent = trimmed.slice(0, Math.max(0, trimmed.lastIndexOf(sep)));
-    const stillInside = parent.length > 0 && trimmed.includes(sep);
+    const rootTrim = (rootPath ?? "").replace(/[\\/]+$/, "");
+    // never climb above the library root (the parent of "C:\\Photos" is "C:")
+    const inside = parent.length > 0 && (rootTrim.length === 0 || parent.length >= rootTrim.length);
     set({
-      route: { ...route, dir: stillInside ? parent : null },
+      route: { ...route, dir: inside ? parent : null },
       selectionMode: false,
       selected: [],
     });
