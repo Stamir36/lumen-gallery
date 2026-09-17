@@ -13,9 +13,12 @@ const btnBase =
 export function WindowTitleBar({
   title = "LUMEN",
   leftAction,
+  right,
 }: {
   title?: string;
   leftAction?: ReactNode;
+  /** slot rendered before the window controls (e.g. the view-mode switcher) */
+  right?: ReactNode;
 }) {
   const { t } = useTranslation();
   const [maximized, setMaximized] = useState(false);
@@ -64,6 +67,13 @@ export function WindowTitleBar({
         onMouseDown={startDrag}
         onDoubleClick={toggleMaximize}
       />
+
+      {/* app-level actions: kept out of the drag region */}
+      {right && (
+        <div className="flex h-full shrink-0 items-center gap-2 pr-2" onMouseDown={stop}>
+          {right}
+        </div>
+      )}
 
       {/* right cluster: window controls */}
       <div className="flex h-full items-center gap-0.5 pr-2">
