@@ -65,6 +65,10 @@ export function Lightbox({ row }: { row: MediaRow }) {
   const [rotate, setRotate] = useState(0);
   const [dragging, setDragging] = useState(false);
   const drag = useRef<{ x: number; y: number; px: number; py: number } | null>(null);
+  /** deep-zoom drag: a pointermove storm forces re-raster of the huge scaled
+      layer — coalesce to ONE setState per frame (the wheel path already does) */
+  const panRaf = useRef(0);
+  const panTarget = useRef<{ x: number; y: number } | null>(null);
   /** offset of the in-flight swipe (px) — feedback while the finger moves */
   const [swipeDx, setSwipeDx] = useState(0);
   const swipeStart = useRef<{ x: number; y: number } | null>(null);
@@ -182,6 +186,13 @@ export function Lightbox({ row }: { row: MediaRow }) {
     };
   }, [applyZoom, failed, loaded]);
 
+  useEffect(
+    () => () => {
+      if (panRaf.current) cancelAnimationFrame(panRaf.current);
+    },
+    [],
+  );
+
   const onPointerDown = (e: React.PointerEvent) => {
     if (failed) return;
     if (zoom > MIN_ZOOM) {
@@ -198,7 +209,17 @@ export function Lightbox({ row }: { row: MediaRow }) {
   const onPointerMove = (e: React.PointerEvent) => {
     const d = drag.current;
     if (d) {
-      setPan(clampPan(d.px + (e.clientX - d.x), d.py + (e.clientY - d.y), zoom));
+      panTarget.current = {
+        x: d.px + (e.clientX - d.x),
+        y: d.py + (e.clientY - d.y),
+      };
+      if (!panRaf.current) {
+        panRaf.current = requestAnimationFrame(() => {
+          panRaf.current = 0;
+          const t = panTarget.current;
+          if (t) setPan(clampPan(t.x, t.y, zoomRef.current));
+        });
+      }
       return;
     }
     const s = swipeStart.current;
@@ -328,6 +349,7 @@ export function Lightbox({ row }: { row: MediaRow }) {
                 style={{
                   width: fit.w || undefined,
                   height: fit.h || undefined,
+                  willChange: "transform",
                   transform: `translate3d(${pan.x + swipeDx}px, ${pan.y}px, 0) scale(${zoom}) rotate(${rotate}deg)`,
                   opacity: swipeDx ? Math.max(0.3, 1 - Math.abs(swipeDx) / 520) : 1,
                   transition:
