@@ -26,13 +26,24 @@ interface ThumbResultRow {
 
 interface ThumbStore {
   thumbs: Record<number, ThumbState>;
+  /** per-id retry budget: a tile must never loop forever */
+  attempts: Record<number, number>;
   set: (id: number, s: ThumbState) => void;
+  /** drop one entry so the next enqueue may regenerate it */
+  forget: (id: number) => void;
   ingest: (rows: ThumbResultRow[]) => void;
 }
 
 export const useThumbStore = create<ThumbStore>((set) => ({
   thumbs: {},
+  attempts: {},
   set: (id, s) => set((st) => ({ thumbs: { ...st.thumbs, [id]: s } })),
+  forget: (id) =>
+    set((st) => {
+      const thumbs = { ...st.thumbs };
+      delete thumbs[id];
+      return { thumbs, attempts: { ...st.attempts, [id]: (st.attempts[id] ?? 0) + 1 } };
+    }),
   ingest: (rows) =>
     set((st) => {
       const next = { ...st.thumbs };
@@ -104,6 +115,18 @@ export function enqueueThumbs(ids: number[]) {
   if (added && flushTimer === null) {
     flushTimer = window.setTimeout(() => void flush(), FLUSH_MS);
   }
+}
+
+/**
+ * Drops all in-memory thumb state (after the thumbnail cache is wiped): the
+ * rows are refetched with empty thumb fields and the grid regenerates every
+ * visible tile, videos included.
+ */
+export function resetThumbs() {
+  useThumbStore.setState({ thumbs: {}, attempts: {} });
+  inFlight.clear();
+  queued.clear();
+  videoQueue.length = 0;
 }
 
 /** Ready-to-use <img src> for a cached thumbnail file. */

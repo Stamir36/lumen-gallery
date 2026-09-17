@@ -50,6 +50,18 @@ pub fn thumbnail_cache_size(app: AppHandle) -> Result<u64, String> {
 }
 
 #[tauri::command]
-pub fn clear_thumbnail_cache(app: AppHandle) -> Result<u64, String> {
-    thumbnails(&app, true)
+pub async fn clear_thumbnail_cache(app: AppHandle) -> Result<u64, String> {
+    let bytes = thumbnails(&app, true)?;
+    // The rows must forget the thumbnails as well: otherwise the grid keeps
+    // pointing at files that no longer exist (and keeps showing a stale, e.g.
+    // black, video frame) and never regenerates them.
+    if let Ok(pool) = crate::commands::pool_for(&app).await {
+        let _ = sqlx::query(
+            "UPDATE media SET thumb_path = NULL, thumb_mtime = NULL,
+             dominant_color = NULL, thumb_error = 0",
+        )
+        .execute(&pool)
+        .await;
+    }
+    Ok(bytes)
 }

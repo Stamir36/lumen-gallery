@@ -19,6 +19,8 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { PillButton } from "@/components/ui/PillButton";
 import { IconButton } from "@/components/ui/IconButton";
 import { api, formatBytes, type RootRow } from "@/lib/api";
+import { resetThumbs } from "@/lib/thumbs";
+import { queryClient } from "@/lib/queryClient";
 import { getDb } from "@/lib/db";
 import { useRootsStore } from "@/state/library";
 import {
@@ -326,6 +328,10 @@ export function SettingsContent() {
                   onClick={() =>
                     void perform(async () => {
                       await invoke("clear_thumbnail_cache");
+                      // rows + in-memory state must come back empty, otherwise a
+                      // stale (e.g. black) video frame stays on screen forever
+                      resetThumbs();
+                      await queryClient.invalidateQueries({ queryKey: ["media"] });
                       setBytes(await invoke<number>("thumbnail_cache_size"));
                     })
                   }

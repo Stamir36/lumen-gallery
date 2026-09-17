@@ -3,7 +3,7 @@ import { ImageOff } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import type { MediaRow } from "@/lib/api";
-import { thumbSrc, useThumbStore } from "@/lib/thumbs";
+import { enqueueRows, thumbSrc, useThumbStore } from "@/lib/thumbs";
 
 /**
  * Thumbnail tile: dominant-color placeholder underneath, cached thumb fading
@@ -54,11 +54,18 @@ export const ThumbTile = memo(function ThumbTile({
           decoding="async"
           loading="lazy"
           onLoad={() => setLoaded(true)}
-          onError={() =>
-            // the file exists but the webview cannot decode it: same contract as
-            // a Rust decode failure — placeholder + label, no retry loop
-            useThumbStore.getState().set(media.id, { status: "error", noPreview: true })
-          }
+          onError={() => {
+            // A missing thumbnail file (cache wiped / stale path) is NOT a decode
+            // failure: forget the row so it can be regenerated. Decode failures
+            // arrive as thumbError from Rust, so this retries at most twice.
+            const store = useThumbStore.getState();
+            if ((store.attempts[media.id] ?? 0) >= 2) {
+              store.set(media.id, { status: "error", noPreview: true });
+            } else {
+              store.forget(media.id);
+              enqueueRows([media]);
+            }
+          }}
           className={cn(
             "h-full w-full object-cover transition-opacity duration-[180ms] ease-out",
             loaded ? "opacity-100" : "opacity-0",

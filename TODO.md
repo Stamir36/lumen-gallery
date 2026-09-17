@@ -13,6 +13,7 @@
 - [x] Explorer mode: title-bar switch between Галерея and Проводник; explorer shows a lazily expanded folder tree of the active root + the open folder's contents only (dir-scoped query, name order, no date headers). Thumbnails for one folder no longer compete with the whole library.
 - [x] Hover preview speed is a setting (Settings › Playback: 1.5× / 3× / 6× / 9×, default 3×) persisted in `settings.video_scrub_rate`.
 - [x] Dev-only boot timings printed in the console (`[perf] boot: db … roots …`) so the next "it feels slow" report comes with numbers.
+- [x] Clearing the thumbnail cache now also NULLs the thumbnail columns (Rust) and resets the in-memory thumb state (frontend), so a stale black video frame is regenerated instead of staying cached forever; a tile whose <img> 404s forgets itself and retries at most twice instead of showing a permanent "no preview".
 - [ ] Still unmeasured: 60fps scroll at 9.4k, cold start < 1.5s, scan 10k < 5s — needs the user's run.
 
 - [ ] FIX 7 perf pass (NOT MEASURED): honest fps numbers (rAF frame deltas over a 3s scroll at 9.4k), visible-first thumb queue priority, SQL-side filter verification; lift the masonry cap only with >=55fps measured.
