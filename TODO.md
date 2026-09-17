@@ -1,4 +1,16 @@
-# LUMEN — Roadmap (Phases 1–6)## Deferred hardening (from fix batch, 2026-09-17)
+# LUMEN — Roadmap (Phases 1–6)
+
+## Phase 3.5 — user acceptance fixes (2026-09-17)
+- [x] FIX 1 thumbnails: tiles rendered the raw DB path (`C:\...\thumbs\1.jpg`) as the <img> src — never went through convertFileSrc, so NO photo ever showed its thumb and the dominant-color placeholder stayed forever. Rust also decoded by extension (`image::open`), which threw "Invalid PNG signature" on mislabeled files. Now: convertFileSrc via `thumbSrc`, content-based decode (`ImageReader::with_guessed_format`), permanent failures persisted in `thumb_error` (migration v4) → mono "no preview" tile, one WARN per file, no retry loops. Video capture sets crossOrigin="anonymous" (the tauri asset protocol answers with `Access-Control-Allow-Origin: <window origin>`, verified in tauri 2.11.5 src/protocol/asset.rs) so the canvas stays untainted.
+- [x] FIX 2 dates: epoch seconds vs ms mismatch fixed once at the api.ts IPC boundary (raw 1789588545 → 1970-01-21; ×1000 → 2026-09-16).
+- [x] FIX 3 selection bar: `glass` carries no radius, so the pill was a sharp slab — now h56/radius-999 + mono count chip.
+- [x] FIX 4 topbar: view-mode switcher moved into the window title bar (compact, icon-only, library routes only); library bar collapsed from two rows to one.
+- [x] FIX 5 folders: explicit "Папки" sidebar entry + home button in the breadcrumbs (alt+← kept); justified mode renamed "Лента" (ru) to free the word "Коллаж" for the new selection collage viewer.
+- [x] FIX 4b collage multi-viewer: fullscreen overlay with per-count presets (2 side-by-side/stack, 3 big+2, 4 2x2, 5-6 mixed rows), glass layout-cycle chip, Esc, per-tile video play/pause + mute; tile click is the Phase 4 viewer hook.
+- [ ] FIX 6 folder exclusions (NOT STARTED): `excluded_folders(root_id, path)` table, scan skips excluded subtrees, list_media/list_folders hide excluded rows, Settings > Libraries lists + restores exclusions, auto-rescan after change, "show excluded" toggle (default off).
+- [ ] FIX 7 perf pass (NOT MEASURED): honest fps numbers (rAF frame deltas over a 3s scroll at 9.4k), visible-first thumb queue priority, SQL-side filter verification; lift the masonry cap only with >=55fps measured.
+
+## Deferred hardening (from fix batch, 2026-09-17)
 - [ ] Consolidate library stats on @tanstack/react-query (App.tsx currently hand-rolls useEffect + useState for libraryStats)
 - [ ] Restrictive CSP in tauri.conf.json — needs dev/prod split (`devUrl` requires relaxed CSP), do in packaging phase
 - [x] Offline media UI: gray tiles + mono OFFLINE chip per contract in scan.rs (offline flag, migration v2); `root-offline` toast wired
