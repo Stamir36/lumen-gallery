@@ -80,6 +80,8 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
   const [rate, setRate] = useState(1);
   const [loop, setLoop] = useState(false);
   const [chrome, setChrome] = useState(true);
+  /** pointer is over the control pill — idle-hide must hold (FIX 1) */
+  const [pillHover, setPillHover] = useState(false);
   const [volumeOpen, setVolumeOpen] = useState(false);
   const [barHover, setBarHover] = useState(false);
   const [scrub, setScrub] = useState<{ x: number; time: number } | null>(null);
@@ -190,12 +192,24 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
   useEffect(() => {
     const id = window.setInterval(() => {
       const el = video.current;
-      if (!el || el.paused || scrubbing.current || volumeOpen) return;
+      // FIX 1 holds — the chrome never idle-hides while: paused, scrubbing,
+      // pointer over the bar or the pill, volume popover open, or the
+      // codec-error card is up.
+      if (
+        !el ||
+        el.paused ||
+        scrubbing.current ||
+        volumeOpen ||
+        barHover ||
+        pillHover ||
+        error
+      )
+        return;
       setChrome(Date.now() < hideAt.current);
     }, 250);
     poke();
     return () => window.clearInterval(id);
-  }, [poke, volumeOpen]);
+  }, [poke, volumeOpen, barHover, pillHover, error]);
 
   // ---------- playback helpers ----------
   const toggle = useCallback(() => {
@@ -335,6 +349,10 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
     formatBytes(row.size),
     clock(duration),
   ].filter(Boolean) as string[];
+
+  // FIX 1: one visibility condition for the pill AND the progress line —
+  // the chrome-error card keeps both up even past the 2s idle point.
+  const showChrome = chrome || !!error;
 
   return (
     <div
@@ -534,16 +552,24 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
         )}
       </AnimatePresence>
 
-      {/* ---------- progress line + hover scrub bubble ---------- */}
-      <div
-        className="absolute bottom-24 left-0 z-40 transition-[right] duration-[180ms] ease-out"
-        style={{ right: stripOpen ? 152 : 0 }}
-        onPointerEnter={() => setBarHover(true)}
-        onPointerLeave={() => {
-          setBarHover(false);
-          pushScrub(null);
-        }}
-      >
+      {/* ---------- progress line + hover scrub bubble ----------
+          FIX 1: the line is part of the controls cluster — same spring and
+          opacity transition, and the same idle logic, as the pill. */}
+      <AnimatePresence>
+        {showChrome && (
+          <motion.div
+            initial={reduced ? false : { opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={reduced ? { opacity: 0 } : { opacity: 0, y: 16 }}
+            transition={{ type: "spring", stiffness: 260, damping: 26 }}
+            className="absolute bottom-24 left-0 z-40 transition-[right] duration-[180ms] ease-out"
+            style={{ right: stripOpen ? 152 : 0 }}
+            onPointerEnter={() => setBarHover(true)}
+            onPointerLeave={() => {
+              setBarHover(false);
+              pushScrub(null);
+            }}
+          >
         {barHover && scrub && (
           <div
             className="glass pointer-events-none absolute -top-20 w-[136px] -translate-x-1/2 rounded-viewer p-1"
@@ -634,11 +660,13 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
           <span>{clock(current)}</span>
           <span>{clock(duration)}</span>
         </div>
-      </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ---------- ONE floating glass control pill ---------- */}
       <AnimatePresence>
-        {chrome && !error && (
+        {showChrome && (
           <motion.div
             initial={reduced ? false : { opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
@@ -653,6 +681,8 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
             )}
             role="toolbar"
             aria-label={t("viewer.controls")}
+            onPointerEnter={() => setPillHover(true)}
+            onPointerLeave={() => setPillHover(false)}
           >
             <div className="glass flex h-14 items-center gap-1 rounded-pill px-2">
               <IconBtn label={t("player.back10")} onClick={() => seekBy(-10)}>
