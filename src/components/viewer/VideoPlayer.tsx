@@ -406,13 +406,14 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
         style={{ boxShadow: "inset 0 0 220px 60px rgba(0,0,0,.85)" }}
       />
 
-      {/* ---------- letterboxed video ---------- */}
+      {/* ---------- letterboxed video (scales UP to fill the stage too;
+          object-contain letterboxes inside the element) ---------- */}
       <video
         ref={video}
         src={src}
         playsInline
         loop={loop}
-        className="relative z-10 m-auto max-h-full max-w-full"
+        className="relative z-10 h-full w-full object-contain"
         onLoadedMetadata={(e) => {
           setDuration(e.currentTarget.duration || 0);
           e.currentTarget.volume = volume;
