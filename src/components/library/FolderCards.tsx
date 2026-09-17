@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Folder } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { FolderRow } from "@/lib/api";
-import { enqueueThumbs, useThumbStore } from "@/lib/thumbs";
+import { enqueueThumbs, thumbSrc, useThumbStore } from "@/lib/thumbs";
 import { useFolders } from "@/lib/queries";
 import { useLibraryUi } from "@/state/library-ui";
 
@@ -81,7 +81,10 @@ function FolderCard({
 function FolderCover({ folder }: { folder: FolderRow }) {
   // hooks are unconditional: -1 simply never has a cached thumb
   const state = useThumbStore((s) => s.thumbs[folder.coverId ?? -1]);
-  const src = state?.path ?? folder.coverThumb ?? null;
+  // EVERY thumb path goes through thumbSrc (convertFileSrc) — a raw DB path in
+  // src= floods DevTools with "Not allowed to load local resource: file:///..."
+  const rawPath = state?.path ?? folder.coverThumb ?? null;
+  const src = rawPath ? thumbSrc(rawPath) : null;
   const color = state?.color ?? folder.coverColor ?? null;
   /** the cover candidate may itself fail: fall through to a plain surface */
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
