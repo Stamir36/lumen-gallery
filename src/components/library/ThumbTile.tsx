@@ -1,57 +1,33 @@
-import { memo, useEffect, useRef, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import { FileWarning } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import type { MediaRow } from "@/lib/api";
-import { enqueueRows, thumbSrc, useThumbStore } from "@/lib/thumbs";
+import {
+  enqueueRows,
+  ensureBrowserThumb,
+  thumbSrc,
+  useThumbStore,
+} from "@/lib/thumbs";
 
 /**
- * Thumbnail tile: dominant-color placeholder underneath, cached thumb fading
- * in over 180ms on top (no pop-in), shimmer only while the thumb is pending.
+ * Thumbnail tile: a dominant-color placeholder underneath, the cached thumb
+ * fading in over 180ms on top (no pop-in), shimmer only while the thumb is
+ * genuinely pending.
  *
- * Failure contract (FIX 2):
- *  - Rust decode failed (thumb_error) → try the WebView decoder ONCE via
- *    createImageBitmap (it handles formats the Rust image crate does not:
- *    HEIC via platform codecs, exotic WebP/AVIF profiles…);
- *  - that failed too → neutral surface + mono ext chip, NEVER a broken-image
- *    glyph, no retry loops (rare races retry at most once after 5s);
- *  - a missing thumb FILE (cache wiped) forgets the row so it regenerates.
+ * State contract (S1.6): shimmer → thumb → neutral tile + mono ext chip.
+ *
+ * Failure chain:
+ *  - Rust decode failed → the WebView decoder gets ONE PERSISTED try (S1.5,
+ *    `ensureBrowserThumb`) — it handles HEIC/AVIF/exotic WebP profiles the Rust
+ *    image crate does not;
+ *  - that failed too → neutral surface + mono ext chip: images show a subtle
+ *    icon, videos keep their play glyph so a frame-less video still reads as a
+ *    video. NEVER a broken-image glyph, never an error patch on a file that the
+ *    WebView can open;
+ *  - a missing thumb FILE (cache wiped / stale path) forgets the row so it can
+ *    regenerate, instead of sticking as "no preview".
  */
-
-const FALLBACK_KEY = "thumbFallbackTried";
-
-/** Builds a data: URL from the media file bytes through the fs plugin. */
-async function fileDataUrl(path: string): Promise<string | null> {
-  try {
-    // the fs plugin read is capability-scoped to media roots + thumbs cache
-    const { readFile } = await import("@tauri-apps/plugin-fs");
-    const bytes = await readFile(path);
-    // sniff a content type: Rust said "undetermined", guess from magic bytes
-    const type = sniffType(bytes);
-    const blob = new Blob([bytes], { type });
-    return await new Promise((resolve) => {
-      const fr = new FileReader();
-      fr.onload = () => resolve(fr.result as string);
-      fr.onerror = () => resolve(null);
-      fr.readAsDataURL(blob);
-    });
-  } catch {
-    return null;
-  }
-}
-
-function sniffType(b: Uint8Array): string {
-  if (b.length > 11 && b[0] === 0xff && b[1] === 0xd8) return "image/jpeg";
-  if (b.length > 12 && b[8] === 0x66 && b[9] === 0x74 && b[10] === 0x79 && b[11] === 0x70)
-    return "image/avif"; // ISOBMFF ftyp — avif/heif family
-  if (b.length > 12 && b[0] === 0x52 && b[1] === 0x49 && b[8] === 0x57 && b[9] === 0x45)
-    return "image/webp"; // RIFF….WEBP
-  if (b.length > 3 && b[0] === 0x89 && b[1] === 0x50) return "image/png";
-  if (b.length > 2 && b[0] === 0x47 && b[1] === 0x49) return "image/gif";
-  if (b.length > 4 && b[0] === 0x42 && b[1] === 0x4d) return "image/bmp";
-  return "application/octet-stream";
-}
-
 export const ThumbTile = memo(function ThumbTile({
   media,
   className,
@@ -65,51 +41,38 @@ export const ThumbTile = memo(function ThumbTile({
 }) {
   const { t } = useTranslation();
   const state = useThumbStore((s) => s.thumbs[media.id]);
+  // warm rows carry their path in the DB row itself (S1.1) — the store entry
+  // wins once a fresh thumbnail exists for this session
   const rawPath = state?.path ?? media.thumbPath ?? null;
   const src = rawPath ? thumbSrc(rawPath) : null;
   const color = state?.color ?? media.dominantColor ?? null;
   const [loaded, setLoaded] = useState(false);
-  /** WebView-decoded data: URL when Rust could not decode the file */
-  const [fallbackSrc, setFallbackSrc] = useState<string | null>(null);
-  const fallbackBusy = useRef(false);
 
-  const failed = (state?.status === "error" || (!state && media.thumbError)) && !fallbackSrc;
+  const status = state?.status;
+  const isVideo = media.kind === "video";
+  /** every decoder failed for THIS file version — render the neutral tile */
+  const noPreview = state?.noPreview ?? (!state && media.thumbError);
+  const failed = status === "error" && noPreview;
 
-  useEffect(() => setLoaded(false), [src, fallbackSrc]);
+  useEffect(() => setLoaded(false), [src]);
 
-  // Rust-side permanent failure: give the WebView decoder exactly one chance
+  // Rust said "undetermined format": give the WebView decoder one persisted
+  // chance (it can write the frame into the cache, so this never runs twice for
+  // the same file version).
   useEffect(() => {
-    if (!media.thumbError || fallbackSrc || fallbackBusy.current) return;
-    if (media.kind !== "image") return; // videos keep their own rest-state
-    if (localStorage.getItem(`${FALLBACK_KEY}:${media.id}`)) return;
-    fallbackBusy.current = true;
-    void (async () => {
-      const url = await fileDataUrl(media.path);
-      localStorage.setItem(`${FALLBACK_KEY}:${media.id}`, "1"); // once, ever
-      if (url) {
-        const bitmap = await createImageBitmap(await (await fetch(url)).blob()).catch(
-          () => null,
-        );
-        if (bitmap) {
-          setFallbackSrc(url);
-          bitmap.close();
-        }
-      }
-      fallbackBusy.current = false;
-    })();
-  }, [media.thumbError, media.path, media.id, fallbackSrc]);
-
-  const shown = src ?? fallbackSrc;
+    if (!noPreview || isVideo) return;
+    void ensureBrowserThumb(media);
+  }, [noPreview, isVideo, media]);
 
   return (
     <div
       className={cn("relative h-full w-full overflow-hidden bg-surface-2", className)}
       style={color ? { backgroundColor: color } : undefined}
     >
-      {shimmer && !shown && !failed && <div className="shimmer-bg absolute inset-0" />}
-      {shown && !failed ? (
+      {shimmer && !src && !failed && <div className="shimmer-bg absolute inset-0" />}
+      {src && !failed ? (
         <img
-          src={shown}
+          src={src}
           alt=""
           draggable={false}
           decoding="async"
@@ -119,10 +82,6 @@ export const ThumbTile = memo(function ThumbTile({
             // A missing thumbnail FILE (cache wiped / stale path) is NOT a decode
             // failure: forget the row so it can be regenerated. Decode failures
             // arrive as thumbError from Rust, so this retries at most twice.
-            if (shown === fallbackSrc) {
-              useThumbStore.getState().set(media.id, { status: "error", noPreview: true });
-              return;
-            }
             const store = useThumbStore.getState();
             if ((store.attempts[media.id] ?? 0) >= 2) {
               store.set(media.id, { status: "error", noPreview: true });
@@ -137,22 +96,21 @@ export const ThumbTile = memo(function ThumbTile({
             imgClassName,
           )}
         />
-      ) : (
-        failed && (
-          // neutral surface: ext chip + subtle icon — design language, no broken glyph
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 px-2 text-ttertiary">
-            <FileWarning size={18} strokeWidth={1.5} />
-            <span className="flex items-center gap-1.5">
-              <span className="rounded-[6px] border border-white/12 bg-black/35 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-[0.08em]">
-                {media.ext}
-              </span>
-              <span className="font-mono text-[9px] uppercase tracking-[0.08em]">
-                {t("thumbs.noPreview")}
-              </span>
+      ) : failed && !isVideo ? (
+        // neutral surface: mono ext chip + subtle icon — design language, no
+        // broken-image glyph. Videos deliberately keep the play glyph only.
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 px-2 text-ttertiary">
+          <FileWarning size={18} strokeWidth={1.5} />
+          <span className="flex items-center gap-1.5">
+            <span className="rounded-[6px] border border-white/12 bg-black/35 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-[0.08em]">
+              {media.ext}
             </span>
-          </div>
-        )
-      )}
+            <span className="font-mono text-[9px] uppercase tracking-[0.08em]">
+              {t("thumbs.noPreview")}
+            </span>
+          </span>
+        </div>
+      ) : null}
     </div>
   );
 });

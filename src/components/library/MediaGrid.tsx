@@ -11,6 +11,7 @@ import { GRID_GAP } from "@/lib/justified";
 import { useElementWidth } from "@/lib/hooks";
 import { formatDuration, formatResolution, baseName } from "@/lib/format";
 import { setFavorite, trashMedia } from "@/lib/mediaActions";
+import { enqueueRows, seedThumbs, setViewportIds } from "@/lib/thumbs";
 import { useLibraryUi } from "@/state/library-ui";
 import { MediaCard } from "./MediaCard";
 import { Masonry } from "./Masonry";
@@ -106,6 +107,34 @@ export function MediaGrid({
       ),
     [built],
   );
+  // WARM SEED (S1.1): rows that already carry a cached thumbnail render from
+  // the DB value — no request, no placeholder flash
+  useEffect(() => {
+    seedThumbs(rows);
+  }, [rows]);
+
+  /**
+   * Visible-first thumbnail priming (S1.2): the range decides what is generated
+   * next, and its ids are the queue's priority for the next flush. The margin of
+   * two rows keeps a small prefetch window warm without a decoder storm.
+   */
+  const primeThumbs = useCallback(
+    (startIndex: number, endIndex: number) => {
+      const from = Math.max(0, startIndex - 2);
+      const to = Math.min(built.items.length - 1, endIndex + 2);
+      const inRange: MediaRow[] = [];
+      for (let i = from; i <= to; i += 1) {
+        const item = built.items[i];
+        if (!item) continue;
+        if (item.kind === "cells") for (const c of item.cells) inRange.push(c.media);
+        else if (item.kind === "listrow") inRange.push(item.media);
+      }
+      setViewportIds(inRange.map((r) => r.id));
+      enqueueRows(inRange);
+    },
+    [built],
+  );
+
   const [focusPos, setFocusPos] = useState<number | null>(null);
 
   useEffect(() => setFocusPos(null), [built]);
@@ -246,6 +275,7 @@ export function MediaGrid({
         increaseViewportBy={{ top: 700, bottom: 1200 }}
         rangeChanged={(range) => {
           setRangeStart(range.startIndex);
+          primeThumbs(range.startIndex, range.endIndex);
           restoreSoon();
         }}
         scrollerRef={(el) => {

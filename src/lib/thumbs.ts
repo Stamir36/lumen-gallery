@@ -1,17 +1,34 @@
 import { create } from "zustand";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { appCacheDir, join } from "@tauri-apps/api/path";
-import { exists, mkdir, writeFile } from "@tauri-apps/plugin-fs";
-import { getDb } from "@/lib/db";
+import { exists, mkdir, readFile, writeFile } from "@tauri-apps/plugin-fs";
 import { fileSrc, tauriAvailable } from "@/lib/assets";
+import { queryClient } from "@/lib/queryClient";
 import type { MediaRow } from "@/lib/api";
+
+/**
+ * Thumbnail store + queue.
+ *
+ * Contract (S1):
+ *  - WARM: a row that already carries `thumb_path` renders instantly through
+ *    convertFileSrc — no request, no shimmer (S1.1);
+ *  - ONE queue for the whole app in sub-batches of 24, visible-first (S1.2);
+ *    decodes are deduped by (id, mtime, size), so a version is asked once;
+ *  - PUSH: the writer's `thumbs-ready` marks a row durable and patches the query
+ *    cache; `thumb-result` paints a tile the moment its row is done (S1.3);
+ *  - VERSIONED: a changed file (mtime or size) is re-asked, included rows that
+ *    failed to decode before (S1.4);
+ *  - HONEST: shimmer → thumb → neutral tile + mono ext chip. Never a broken
+ *    glyph, never an error marker on a file the WebView can decode (S1.5/S1.6).
+ */
 
 export interface ThumbState {
   status: "pending" | "ok" | "error";
   path?: string;
   color?: string; // dominant color "#RRGGBB"
   error?: string;
-  /** permanent decode failure (bad content) — do not retry, render "no preview" */
+  /** decode failed in every decoder — render the neutral "no preview" tile */
   noPreview?: boolean;
 }
 
@@ -49,10 +66,13 @@ export const useThumbStore = create<ThumbStore>((set) => ({
       const next = { ...st.thumbs };
       for (const r of rows) {
         if (!r.ok) {
+          const prev = next[r.mediaId];
           next[r.mediaId] = {
             status: "error",
             error: r.error ?? "failed",
             noPreview: r.thumbError,
+            // keep the placeholder color: a failed decode still gets a tonal tile
+            color: prev?.color,
           };
           continue;
         }
@@ -67,17 +87,66 @@ export const useThumbStore = create<ThumbStore>((set) => ({
     }),
 }));
 
+/** the file version the thumbnail cache is keyed by (mirrors the Rust side) */
+function versionOf(row: MediaRow) {
+  return `${row.mtime}:${row.size}`;
+}
+
 /** ids in flight or queued — prevents duplicate generation work. */
 const inFlight = new Set<number>();
 const queued = new Set<number>();
+/** (id -> version) already requested in this session (S1.2 dedupe) */
+const asked = new Map<number, string>();
+/** Visible-first priority. NOT a drop list: overscan cards stay mounted, so
+ *  dropping an id could leave that tile shimmering forever — offscreen work is
+ *  deferred to a later flush instead of being cancelled. */
+let viewportIds = new Set<number>();
 let flushTimer: number | null = null;
-const FLUSH_MS = 120;
-/** Smaller first burst: 96 decodes at once made the first paint stutter. */
-const MAX_BATCH = 48;
+const FLUSH_MS = 60;
+/** sub-batch size (S1.2): the first cold tiles must land under ~1 s */
+const MAX_BATCH = 24;
+
+/** The grid publishes its visible range so on-screen tiles are served first. */
+export function setViewportIds(ids: number[]) {
+  viewportIds = new Set(ids);
+}
+
+/**
+ * WARM SEED (S1.1): rows that already have a cached thumbnail render straight
+ * from the DB value — no enqueue, no placeholder flash.
+ */
+export function seedThumbs(rows: MediaRow[]) {
+  const st = useThumbStore.getState();
+  const next = { ...st.thumbs };
+  let touched = false;
+  for (const r of rows) {
+    if (!r.thumbPath) continue;
+    const cur = next[r.id];
+    if (cur?.status === "ok" && cur.path === r.thumbPath) continue;
+    next[r.id] = {
+      status: "ok",
+      path: r.thumbPath,
+      color: r.dominantColor ?? cur?.color,
+    };
+    asked.set(r.id, versionOf(r));
+    touched = true;
+  }
+  if (touched) useThumbStore.setState({ thumbs: next });
+}
 
 async function flush() {
   flushTimer = null;
-  const ids = Array.from(queued).slice(0, MAX_BATCH);
+  if (queued.size === 0) return;
+
+  // visible first; anything offscreen waits for the next flush instead of
+  // competing with what the user is actually looking at
+  const onScreen: number[] = [];
+  const offscreen: number[] = [];
+  for (const id of queued) {
+    if (viewportIds.size === 0 || viewportIds.has(id)) onScreen.push(id);
+    else offscreen.push(id);
+  }
+  const ids = [...onScreen, ...offscreen].slice(0, MAX_BATCH);
   if (ids.length === 0) return;
   for (const id of ids) {
     queued.delete(id);
@@ -108,7 +177,7 @@ export function enqueueThumbs(ids: number[]) {
   for (const id of ids) {
     if (inFlight.has(id) || queued.has(id)) continue;
     const known = useThumbStore.getState().thumbs[id];
-    if (known && known.status !== "error") continue;
+    if (known && known.status === "ok") continue;
     queued.add(id);
     added = true;
   }
@@ -126,12 +195,52 @@ export function resetThumbs() {
   useThumbStore.setState({ thumbs: {}, attempts: {} });
   inFlight.clear();
   queued.clear();
+  asked.clear();
   videoQueue.length = 0;
 }
 
 /** Ready-to-use <img src> for a cached thumbnail file. */
 export function thumbSrc(path: string) {
   return fileSrc(path);
+}
+
+/**
+ * The writer tells us a thumbnail row is DURABLE (S1.3): patch the cached
+ * MediaRow so a later mount renders from data (warm path) instead of waiting
+ * for a refetch.
+ */
+function patchCachedRows(ids: number[]) {
+  const thumbs = useThumbStore.getState().thumbs;
+  const wanted = new Set(ids);
+  queryClient.setQueriesData<MediaRow[]>({ queryKey: ["media"] }, (rows) => {
+    if (!Array.isArray(rows)) return rows;
+    let touched = false;
+    const next = rows.map((r) => {
+      if (!wanted.has(r.id)) return r;
+      const t = thumbs[r.id];
+      if (!t?.path || r.thumbPath === t.path) return r;
+      touched = true;
+      return { ...r, thumbPath: t.path, dominantColor: t.color ?? r.dominantColor };
+    });
+    return touched ? next : rows;
+  });
+}
+
+let bridgeStarted = false;
+/**
+ * ONE subscription for the whole app: `thumb-result` streams per-row results as
+ * they are rendered, `thumbs-ready` (emitted after the writer's transaction
+ * commits) marks them durable.
+ */
+export function startThumbBridge() {
+  if (bridgeStarted || !tauriAvailable()) return;
+  bridgeStarted = true;
+  void listen<ThumbResultRow>("thumb-result", (e) => {
+    useThumbStore.getState().ingest([e.payload]);
+  });
+  void listen<{ ids: number[] }>("thumbs-ready", (e) => {
+    patchCachedRows(e.payload.ids ?? []);
+  });
 }
 
 /** Seeks, but always resolves — a stuck seek must not block the queue. */
@@ -216,6 +325,86 @@ function sampleCanvas(canvas: HTMLCanvasElement): { color: string; luma: number 
   };
 }
 
+/** Content type from magic bytes — Rust said "undetermined", so sniff here. */
+function sniffType(b: Uint8Array): string {
+  if (b.length > 11 && b[0] === 0xff && b[1] === 0xd8) return "image/jpeg";
+  if (b.length > 12 && b[8] === 0x66 && b[9] === 0x74 && b[10] === 0x79 && b[11] === 0x70)
+    return "image/avif"; // ISOBMFF ftyp — avif/heif family
+  if (b.length > 12 && b[0] === 0x52 && b[1] === 0x49 && b[8] === 0x57 && b[9] === 0x45)
+    return "image/webp"; // RIFF….WEBP
+  if (b.length > 3 && b[0] === 0x89 && b[1] === 0x50) return "image/png";
+  if (b.length > 2 && b[0] === 0x47 && b[1] === 0x49) return "image/gif";
+  if (b.length > 4 && b[0] === 0x42 && b[1] === 0x4d) return "image/bmp";
+  return "application/octet-stream";
+}
+
+const BROWSER_THUMB_W = 480;
+
+/**
+ * PERSISTENT BROWSER FALLBACK (S1.5). Rust could not decode the file, but the
+ * WebView often still can (platform HEIC/AVIF/WebP codecs). Decode it once, write
+ * the JPEG into the thumbnail cache and record it through the single writer, so
+ * the success survives a remount, a scroll away and a restart instead of being
+ * re-decoded (or lost) on every mount.
+ *
+ * The negative marker is keyed by FILE VERSION, never by id forever: a replaced
+ * file gets another chance.
+ */
+export async function ensureBrowserThumb(row: MediaRow): Promise<void> {
+  if (!tauriAvailable() || row.kind !== "image") return;
+  const store = useThumbStore.getState();
+  const cur = store.thumbs[row.id];
+  if (cur?.status === "ok" || cur?.status === "pending") return;
+  const key = `thumbNativeFailed:${row.id}:${versionOf(row)}`;
+  try {
+    if (localStorage.getItem(key) === "1") return;
+  } catch {
+    /* private mode: no negative cache, just try */
+  }
+  store.set(row.id, { status: "pending" });
+  try {
+    // the fs plugin read is capability-scoped to media roots + thumbs cache
+    const bytes = await readFile(row.path);
+    const bitmap = await createImageBitmap(new Blob([bytes], { type: sniffType(bytes) }));
+    const w = Math.min(BROWSER_THUMB_W, bitmap.width);
+    const h = Math.max(1, Math.round((w * bitmap.height) / bitmap.width));
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("no 2d context");
+    ctx.drawImage(bitmap, 0, 0, w, h);
+    bitmap.close();
+    const color = sampleCanvas(canvas).color;
+    const jpeg = await new Promise<Blob | null>((res) =>
+      canvas.toBlob((b) => res(b), "image/jpeg", 0.82),
+    );
+    if (!jpeg) throw new Error("toBlob failed");
+
+    const dir = await join(await appCacheDir(), "thumbs");
+    if (!(await exists(dir))) await mkdir(dir, { recursive: true });
+    const file = await join(dir, `${row.id}.jpg`);
+    await writeFile(file, new Uint8Array(await jpeg.arrayBuffer()));
+    await invoke("thumb_record", {
+      id: row.id,
+      thumbPath: file,
+      dominantColor: color,
+      durationMs: null,
+      width: w,
+      height: h,
+    });
+    useThumbStore.getState().set(row.id, { status: "ok", path: file, color });
+  } catch (e) {
+    console.warn("browser thumb fallback failed", row.path, e);
+    try {
+      localStorage.setItem(key, "1");
+    } catch {
+      /* nothing to remember it with */
+    }
+    useThumbStore.getState().set(row.id, { status: "error", noPreview: true });
+  }
+}
+
 /**
  * Video capture is SERIALIZED. A folder with 20 videos used to start 20 hidden
  * decoders at once (preload="auto" downloading whole files), which is what made
@@ -234,6 +423,7 @@ const FRAME_WAIT_MS = 600;
 /** Queue one video frame capture (grid order wins); never a decoder storm. */
 export function enqueueVideoThumb(row: MediaRow) {
   if (!tauriAvailable()) return;
+  if (row.thumbPath) return; // already warm in the DB
   if (vidThumbsInFlight.has(row.id)) return;
   if (videoQueue.some((r) => r.id === row.id)) return;
   if (useThumbStore.getState().thumbs[row.id]) return;
@@ -259,7 +449,9 @@ async function pumpVideoQueue() {
 /**
  * Video thumbnails are rendered in the webview (hidden <video> + canvas) —
  * decoding video in Rust would require an ffmpeg sidecar (v2 option).
- * Writes a 480w JPEG through the fs plugin (scope: $APPCACHE/thumbs/**).
+ * Writes a 480w JPEG through the fs plugin (scope: $APPCACHE/thumbs/**) and
+ * records it through `thumb_record`, i.e. the SINGLE WRITER (S1.12) — the old
+ * direct sql-plugin UPDATE was the 1.3-1.7 s slow statement in the user's log.
  */
 async function processVideoThumb(row: MediaRow): Promise<void> {
   if (!tauriAvailable()) return;
@@ -336,18 +528,14 @@ async function processVideoThumb(row: MediaRow): Promise<void> {
     const file = await join(dir, `${row.id}.jpg`);
     await writeFile(file, new Uint8Array(await blob.arrayBuffer()));
 
-    const db = await getDb();
-    await db.execute(
-      "UPDATE media SET thumb_path = ?1, thumb_mtime = mtime, dominant_color = ?2, duration_ms = COALESCE(duration_ms, ?3), width = COALESCE(width, ?4), height = COALESCE(height, ?5) WHERE id = ?6",
-      [
-        file,
-        color ?? null,
-        Math.round((meta.duration || 0) * 1000),
-        meta.w || null,
-        meta.h || null,
-        row.id,
-      ],
-    );
+    await invoke("thumb_record", {
+      id: row.id,
+      thumbPath: file,
+      dominantColor: color ?? "#101012",
+      durationMs: Math.round((meta.duration || 0) * 1000),
+      width: meta.w || null,
+      height: meta.h || null,
+    });
 
     useThumbStore.getState().set(row.id, { status: "ok", path: file, color });
   } catch (e) {
@@ -359,16 +547,23 @@ async function processVideoThumb(row: MediaRow): Promise<void> {
   }
 }
 
-/** Routes rows to the right generator: images → Rust, videos → webview. */
+/**
+ * Routes rows to the right generator: images → Rust, videos → webview.
+ * Only rows that actually need work are enqueued (S1.1/S1.2): a warm row is
+ * seeded and never asked for, and a given file VERSION is asked at most once —
+ * including rows that failed to decode earlier, so a replaced file recovers
+ * instead of keeping a negative entry forever.
+ */
 export function enqueueRows(rows: MediaRow[]) {
   if (!tauriAvailable()) return;
+  seedThumbs(rows);
   const imageIds: number[] = [];
   for (const r of rows) {
-    // rows already marked as undecodable in the DB are never retried
-    if (r.thumbError) continue;
+    const version = versionOf(r);
+    if (asked.get(r.id) === version) continue;
     const known = useThumbStore.getState().thumbs[r.id];
-    // "never retry in this session": a failure here is logged once, not per scroll
-    if (known) continue;
+    if (known?.status === "ok" || known?.status === "pending") continue;
+    asked.set(r.id, version);
     if (r.kind === "image") imageIds.push(r.id);
     else enqueueVideoThumb(r);
   }

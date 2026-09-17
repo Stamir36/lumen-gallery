@@ -29,6 +29,8 @@ import { ViewModeSwitch } from "@/components/library/ViewModeSwitch";
 import { BrowseModeSwitch } from "@/components/library/BrowseModeSwitch";
 import { FolderTree } from "@/components/library/FolderTree";
 import { formatBytes, formatCount } from "@/lib/api";
+import { waitBackendReady } from "@/lib/backend";
+import { startThumbBridge } from "@/lib/thumbs";
 import { useLibrarySummary, useMediaRows } from "@/lib/queries";
 import { useRootsStore, useScanStore } from "@/state/library";
 import { filterForRoute, useLibraryUi, type SmartView } from "@/state/library-ui";
@@ -83,23 +85,30 @@ export default function App() {
   useEffect(() => {
     (async () => {
       const t0 = performance.now();
+      // writer task + asset scope + watchers must exist before the first query
+      // (S1.10): without this the grid raced migrations and the asset scope,
+      // which is where the first-open flicker came from
+      const backend = await waitBackendReady();
+      const t1 = performance.now();
       try {
         await getDb(); // runs migrations
       } catch (e) {
         console.error("db load failed", e);
       }
-      const t1 = performance.now();
-      await load();
       const t2 = performance.now();
+      await load();
+      const t3 = performance.now();
       // hover scrub speed etc. — read once, before the grid can hover anything
       void useAppSettings.getState().load();
+      // one subscription for thumb results + durability pushes (S1.3)
+      startThumbBridge();
       setReady(true);
       // dev-only numbers: "the app hangs on open" needs data, not guesses
       if (import.meta.env.DEV) {
         console.info(
-          `[perf] boot: db ${Math.round(t1 - t0)}ms · roots ${Math.round(
-            t2 - t1,
-          )}ms · total ${Math.round(t2 - t0)}ms`,
+          `[perf] boot: backend ${backend ? Math.round(t1 - t0) : "timeout " + Math.round(t1 - t0)}ms · ` +
+            `db ${Math.round(t2 - t1)}ms · roots ${Math.round(t3 - t2)}ms · ` +
+            `total ${Math.round(t3 - t0)}ms`,
         );
       }
     })();
