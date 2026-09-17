@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import {
   Clock,
   Film,
+  FolderTree,
   HardDrive,
   Heart,
   Image as ImageIcon,
@@ -24,6 +25,7 @@ import { LibraryTopBar } from "@/components/library/LibraryTopBar";
 import { MediaGrid } from "@/components/library/MediaGrid";
 import { FolderShelf } from "@/components/library/FolderCards";
 import { StatusLine } from "@/components/library/StatusLine";
+import { ViewModeSwitch } from "@/components/library/ViewModeSwitch";
 import { formatBytes, formatCount } from "@/lib/api";
 import { useLibrarySummary, useMediaRows } from "@/lib/queries";
 import { useRootsStore, useScanStore } from "@/state/library";
@@ -159,6 +161,22 @@ export default function App() {
         onClick: () => void rescan(r.id),
       },
     })),
+    // discoverable entry into the folder shelf of the active root (FIX 5):
+    // clicking a drive still opens it, this makes the mode obvious
+    ...(roots.length > 0
+      ? [
+          {
+            id: "folders",
+            label: t("sidebar.folders"),
+            icon: <FolderTree />,
+            active: route.kind === "root" && foldersView,
+            onSelect: () => {
+              const target = route.kind === "root" ? route.rootId : roots[0]?.id;
+              if (target !== undefined) openRoot(target);
+            },
+          } satisfies SidebarItem,
+        ]
+      : []),
     ...SMART_ITEMS.map((s) => {
       const badge =
         s.id === "all"
@@ -203,6 +221,8 @@ export default function App() {
     <div className="flex h-full flex-col">
       <WindowTitleBar
         leftAction={<span className="font-mono text-xs text-ttertiary">v0.1</span>}
+        // only on library routes: the onboarding shell has no grid to switch
+        right={!noRoots && !onboarding.show ? <ViewModeSwitch /> : undefined}
       />
       <div className="flex min-h-0 flex-1">
         {!noRoots && (

@@ -43,7 +43,8 @@
     "rescan": "Пересканировать {{label}}",
     "collapse": "Свернуть панель",
     "expand": "Развернуть панель",
-    "items_summary": "{{count}} элементов · {{size}}"
+    "items_summary": "{{count}} элементов · {{size}}",
+    "folders": "Папки"
   },
   "topbar": {
     "search_placeholder": "Поиск по имени файла…",
@@ -60,7 +61,7 @@
     "sort_duration": "По длительности",
     "ascending": "По возрастанию",
     "descending": "По убыванию",
-    "view_justified": "Коллаж",
+    "view_justified": "Лента",
     "view_masonry": "Мозаика",
     "view_square": "Квадраты",
     "view_list": "Список"
@@ -114,6 +115,18 @@
   },
   "thumbs": {
     "noPreview": "нет превью"
+  },
+  "collage": {
+    "title": "Коллаж",
+    "open": "Открыть коллажем",
+    "range": "Коллаж: выберите от 2 до 6 элементов",
+    "cycle": "Раскладка",
+    "close": "Закрыть",
+    "hint": "Esc — закрыть · клик по видео — играть/пауза",
+    "play": "Играть",
+    "pause": "Пауза",
+    "mute": "Выключить звук",
+    "unmute": "Включить звук"
   },
   "offline": {
     "chip": "OFFLINE",
@@ -173,6 +186,7 @@
     "remove_root": "Удалить корень",
     "rescan_root": "Пересканировать корень",
     "up": "На уровень вверх",
+    "home": "Все папки корня",
     "back": "Назад",
     "trash": "Удалить в корзину",
     "trashed": "{{count}} перемещено в корзину",

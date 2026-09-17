@@ -43,7 +43,8 @@
     "rescan": "Rescan {{label}}",
     "collapse": "Collapse sidebar",
     "expand": "Expand sidebar",
-    "items_summary": "{{count}} items · {{size}}"
+    "items_summary": "{{count}} items · {{size}}",
+    "folders": "Folders"
   },
   "topbar": {
     "search_placeholder": "Search by file name…",
@@ -105,6 +106,18 @@
   "thumbs": {
     "noPreview": "no preview"
   },
+  "collage": {
+    "title": "Collage",
+    "open": "Open as collage",
+    "range": "Collage: select 2 to 6 items",
+    "cycle": "Layout",
+    "close": "Close",
+    "hint": "Esc closes · click a video to play/pause",
+    "play": "Play",
+    "pause": "Pause",
+    "mute": "Mute",
+    "unmute": "Unmute"
+  },
   "offline": {
     "chip": "OFFLINE",
     "toast": "{{label}} is unreachable — files are flagged offline and return after a rescan"
@@ -163,6 +176,7 @@
     "remove_root": "Remove root",
     "rescan_root": "Rescan root",
     "up": "Go up one level",
+    "home": "Root folder shelf",
     "back": "Back",
     "trash": "Move to trash",
     "trashed": "{{count}} moved to trash",

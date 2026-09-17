@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { CornerLeftUp } from "lucide-react";
+import { CornerLeftUp, Home } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatCount } from "@/lib/api";
 import { IconButton } from "@/components/ui/IconButton";
@@ -38,6 +38,14 @@ export function Breadcrumbs({
 
   return (
     <div className="flex min-w-0 items-center gap-1.5">
+      {/* explicit affordance back to the folder shelf (FIX 5) */}
+      <IconButton
+        label={t("actions.home")}
+        onClick={() => openFolder(null)}
+        className="mr-1"
+      >
+        <Home size={16} />
+      </IconButton>
       {dir && (
         <IconButton label={t("actions.up")} onClick={() => goUp(rootPath)} className="mr-1">
           <CornerLeftUp size={16} />
