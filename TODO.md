@@ -98,14 +98,17 @@ Phase 0 (docs) — done: `docs/SPEC.md`, `docs/DESIGN.md`, `.clinerules`, `TODO.
 - [x] States: shimmer skeletons in final grid shape, dashed empty box + CTA, offline tiles, error box with retry
 - [ ] Perf validation on real hardware: cold start < 1.5s (10k cached), 60fps scroll at 9.4k, scan 10k < 5s — needs the user's run
 - [x] `feat: justified virtualized grid` · `feat: grid states + offline tiles` · `style: gallery polish pass`
-- [ ] Keyboard: arrows + Enter (selection) work; Enter must open the viewer once Phase 4 lands
+- [x] Keyboard: arrows navigate, **Enter opens the viewer** on the focused card, Space marks selection; closing the viewer scrolls the grid back to that item (masonry scroller not wired yet — backlog)
 - Dev QA surface: `#/grid-demo` renders the real grid with synthetic rows (no Tauri calls) for layout screenshots
 
 ## Phase 4 — Viewers
-- [ ] Photo viewer: contain-fit, bottom bar (fit/1:1/zoom/rotate/favorite/info/trash), arrows, filmstrip, wheel zoom-to-cursor, drag pan, dbl-click 1:1
-- [ ] Video player: custom controls, ambient mode, auto-hide 2s, progress line + buffered ghost + scrub preview, center cluster, volume popover, speed/loop/snapshot/PiP/fullscreen, up-next filmstrip, resume chip, full keyboard map
-- [ ] Metadata: exifreader + element metadata → info panel mono
-- [ ] QA + screenshot pass; `feat: photo and video viewers`
+- [x] `fix: full-width date headers + hover captions setting` — the tonal band is edge-to-edge, `appearance.hover_captions` (SQLite, default ON) shows the filename caption on hover
+- [x] `feat: photo lightbox` — contain-fit, glass pill (fit/1:1/zoom/rotate/favorite/info/trash), arrows, virtualized filmstrip, wheel zoom-to-cursor, drag pan, dbl-click 1:1, keys `0 1 i F ←→ Esc`
+- [x] `feat: custom video player` — ambient layer, one glass pill, auto-hide 2s, 2px→6px progress with buffered ghost + scrub bubble, volume popover, speed/loop/snapshot (Pictures/Lumen)/PiP/fullscreen, up-next rail, resume `watch_progress` (migration v6), codec error card + external player
+- [x] `feat: viewer queues + entry wiring` — one queue = current view order, portal overlay (grid does not re-render), return-to-item on close
+- [ ] Metadata: exifreader (EXIF-only fields) on top of the element metadata already in the info panel
+- [ ] Return-to-item in **masonry**: its scroller has its own virtual window, so the reveal id is ignored there for now
+- [ ] QA + screenshot pass in the real app (video playback needs a local file; the browser QA route cannot serve the asset protocol)
 
 ## Phase 5 — Organization features
 - [ ] Favorites hearts + smart view; Albums (DB-only) UI; Trash (DB flag) + restore
