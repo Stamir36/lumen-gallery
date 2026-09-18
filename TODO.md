@@ -147,3 +147,13 @@ Phase 0 (docs) — done: `docs/SPEC.md`, `docs/DESIGN.md`, `.clinerules`, `TODO.
   - associations register/unregister round-trip: PENDING (needs a VM / spare profile, see audit backlog)
 - [ ] Associations round-trip on a VM + uninstaller .reg dry-run (user-side checklist)
 - [ ] Doc ffmpeg sidecar as v2 option in docs/SPEC.md
+
+## P7 batch (latest session)
+- [x] P7 F1-F4, C1, C2, C4, C5 — закоммичены ранее в этой сессии (см. git log)
+- [x] P7 F5: мини-плеер в отдельном Tauri-окне вместо браузерного PiP (a1178f9):
+      frameless + always-on-top 460×260 skip-taskbar, маршрут #/miniplayer,
+      передача позиции через open_mini_player (eval + поллинг payload),
+      возврат по кнопке/Esc/X/Alt+F4 через mini_return + mini_note_position
+      (последняя позиция хранится в Rust-состоянии, дублируется каждые 5 с),
+      главное окно сикается на полученную позицию и продолжает play
+- [ ] P7 C3: поповер раскладок коллажа с мини-превью (заменяет циклическую кнопку «Раскладка»)
