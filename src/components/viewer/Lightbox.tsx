@@ -433,7 +433,7 @@ export function Lightbox({ row }: { row: MediaRow }) {
               transition={{ duration: reduced ? 0 : 0.16, ease: "easeOut" }}
               className="absolute right-4 top-16 w-[320px] rounded-viewer bg-surface-2/95 p-4 shadow-[0_16px_48px_rgba(0,0,0,.5)]"
             >
-              <dl className="flex flex-col gap-2 font-mono text-[11px] leading-relaxed">
+              <dl className="flex flex-col gap-2 text-[11px] leading-relaxed">
                 {[
                   [t("viewer.info_path"), row.path],
                   [
@@ -455,7 +455,15 @@ export function Lightbox({ row }: { row: MediaRow }) {
                     <dt className="w-24 shrink-0 uppercase tracking-[0.08em] text-ttertiary">
                       {label}
                     </dt>
-                    <dd className="min-w-0 flex-1 break-all text-tsecondary">{value}</dd>
+                    <dd
+                      className={cn(
+                        "min-w-0 flex-1 break-all text-tsecondary",
+                        // raw file paths stay JetBrains Mono (.timecode, v2.4)
+                        label === t("viewer.info_path") && "timecode",
+                      )}
+                    >
+                      {value}
+                    </dd>
                   </div>
                 ))}
               </dl>

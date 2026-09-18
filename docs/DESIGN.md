@@ -104,13 +104,25 @@ this list).
 - Page gutters: 32–40. Section rhythm: 48–64 vertical between sections.
 - Grain overlay 2% app-wide; vignette only in viewers.
 
-## 6. Typography (editorial contrast)
+## 6. Typography — v2.4 (FIX 5)
 
-- **Display (page titles):** 28–40px / 650, tight leading (1.1).
-- **Section titles:** 18–20px / 600.
-- **Body:** 14–15px / 400, lh 1.55. Inter Variable.
-- **Mono (JetBrains Mono):** ONLY metadata, counters, timecodes, paths, logs.
-- Micro-labels: 11px mono uppercase ls .12em, tertiary — **max 1–2 per screen**.
+Two families plus one narrow exception, all bundled locally via @fontsource:
+
+- **Display (page titles):** 28–40px / 650, tight leading (1.1). **Manrope.**
+- **Section titles:** 18–20px / 600. Manrope.
+- **Body / UI copy:** 14–15px / 400, lh 1.55. **Manrope Variable** — the code
+  font is gone from the interface.
+- **Technical micro-text** (counters, chips, micro-labels, status line, table
+  headers, timecode chips in the grid): **Space Grotesk Variable** with
+  `font-variant-numeric: tabular-nums` + `"tnum" 1`. Applied by the
+  `.font-mono` rule in index.css, so every existing `font-mono` call site
+  inherits it — tabular figures are mandatory for anything that ticks.
+- **`.timecode` (JetBrains Mono Variable):** player timecodes and raw file
+  paths ONLY. Decision recorded: Space Grotesk's tabular digits are
+  metric-consistent, but a fixed-advance monospace still reads better for a
+  running clock and for path strings, so JBM survives in exactly those two
+  places and nowhere else.
+- Micro-labels: 11px uppercase ls .12em, tertiary — **max 1–2 per screen**.
 - Andidea touch: oversized thin accent section numbers ("01", 28–40px,
   weight 300, accent color) next to section titles.
 

@@ -4,7 +4,8 @@
 - Tauri v2 (Rust) + React 18 + Vite + TypeScript **strict**.
 - Tailwind v4 + shadcn/ui; zustand; @tanstack/react-query; framer-motion;
   lucide-react; react-virtuoso; SQLite via tauri-plugin-sql.
-- Inter + JetBrains Mono bundled locally — never CDN.
+- Manrope (UI 400–700) + Space Grotesk (technical 500/600) + JetBrains Mono
+  (timecodes/paths only) bundled locally via @fontsource — never CDN.
 - Rust does ONLY: fs walk, watch, volumes info, db, cache file io, open-external,
   single-instance, associations, bundling.
 - Thumbnails + metadata extracted on the frontend (webp 480w → appCacheDir/thumbs,
@@ -28,7 +29,8 @@
 - Hover: lift -2px + soft shadow + accent glow; pressed scale .97.
 - framer-motion springs 260/26; route cross-fade 180ms; prefers-reduced-motion.
 - Focus-visible 2px accent/40 offset 2. Scrollbars 8px thumb white/12→/20.
-- 2% grain overlay; vignette only in viewers. Inter + JetBrains Mono local only.
+- 2% grain overlay; vignette only in viewers. Manrope + Space Grotesk local;
+  JetBrains Mono only for timecodes/raw paths.
 
 ## Process
 - **Re-read docs/DESIGN.md before ANY UI work.**

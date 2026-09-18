@@ -818,7 +818,7 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
                 className="absolute inset-0 h-full w-full object-cover"
               />
             </div>
-            <p className="mt-1 text-center font-mono text-[10px] text-tsecondary">
+            <p className="timecode mt-1 text-center text-[10px] text-tsecondary">
               {clock(scrub.time)}
             </p>
           </div>
@@ -876,9 +876,9 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
             style={{ left: `${progress * 100}%` }}
           />
         </div>
-        <div className="mx-6 mt-1 flex items-center justify-between font-mono text-[11px] text-ttertiary">
-          <span>{clock(current)}</span>
-          <span>{clock(duration)}</span>
+        <div className="mx-6 mt-1 flex items-center justify-between text-[11px] text-ttertiary">
+          <span className="timecode">{clock(current)}</span>
+          <span className="timecode">{clock(duration)}</span>
         </div>
           </motion.div>
         )}
@@ -1107,7 +1107,15 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
                   <dt className="w-24 shrink-0 uppercase tracking-[0.08em] text-ttertiary">
                     {label}
                   </dt>
-                  <dd className="min-w-0 flex-1 break-all text-tsecondary">{value}</dd>
+                  <dd
+                    className={cn(
+                      "min-w-0 flex-1 break-all text-tsecondary",
+                      // raw file paths stay JetBrains Mono (.timecode, v2.4)
+                      label === t("viewer.info_path") && "timecode",
+                    )}
+                  >
+                    {value}
+                  </dd>
                 </div>
               ))}
             </dl>
