@@ -10,7 +10,6 @@ import {
   EyeOff,
   FlipHorizontal,
   Gauge,
-  Globe,
   Heart,
   Info,
   Maximize2,
@@ -30,8 +29,9 @@ import { cn } from "@/lib/utils";
 import { invoke } from "@tauri-apps/api/core";
 import { fileSrc, tauriAvailable } from "@/lib/assets";
 import { thumbSrc } from "@/lib/thumbs";
-import { formatBytes, type MediaRow } from "@/lib/api";
+import { formatBytes, mediaUrl, type MediaRow } from "@/lib/api";
 import { baseName } from "@/lib/format";
+import { readFile } from "@tauri-apps/plugin-fs";
 import { useAppSettings } from "@/lib/settings";
 import { useViewer } from "@/state/viewer";
 import { NavTooltip } from "@/components/ui/NavTooltip";
@@ -40,6 +40,8 @@ import { VrView } from "./VrView";
 
 const HIDE_AFTER_MS = 2_000;
 const SAVE_EVERY_MS = 5_000;
+/** blob fallback ceiling: beyond this the bytes do not belong in one Blob */
+const VR_BLOB_MAX = 256 * 1024 * 1024;
 /** ambient layer is skipped for huge frames: two 4K decoders is a stutter risk */
 const AMBIENT_MAX_PIXELS = 3_840 * 2_160;
 
@@ -97,6 +99,15 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
   const [vrEye, setVrEye] = useState<0 | 1>(0);
   /** natural size from metadata (row.width/height can be NULL until thumbs) */
   const [nat, setNat] = useState({ w: 0, h: 0 });
+  /**
+   * VR needs a CORS-clean source: the asset protocol taints the canvas, which
+   * is what kept the dome black. Loopback media server first, blob fallback for
+   * files small enough to hold in memory, error card otherwise.
+   */
+  const [vrSrc, setVrSrc] = useState<string | null>(null);
+  const [vrError, setVrError] = useState(false);
+  /** playback position carried across the VR source switch */
+  const vrResumeAt = useRef<number | null>(null);
   const [volumeOpen, setVolumeOpen] = useState(false);
   const [barHover, setBarHover] = useState(false);
   const [scrub, setScrub] = useState<{ x: number; time: number } | null>(null);
@@ -161,6 +172,48 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
   const stereoPair =
     effW > 0 && effH > 0 && Math.abs(effW / effH - 2) <= 0.25;
   const isVrSource = hasVrToken || (hasSbs180 && stereoPair);
+
+  // Resolve the VR source when the mode is toggled on
+  useEffect(() => {
+    if (!vrMode) return;
+    let cancelled = false;
+    let blobUrl: string | null = null;
+    vrResumeAt.current = video.current ? video.current.currentTime : null;
+
+    const resolve = async () => {
+      try {
+        const url = await mediaUrl(row.path);
+        if (!cancelled) {
+          setVrError(false);
+          setVrSrc(url);
+        }
+        return;
+      } catch (e) {
+        console.warn("vr: media server unavailable, trying the blob fallback", e);
+      }
+      if (row.size > VR_BLOB_MAX) {
+        if (!cancelled) setVrError(true);
+        return;
+      }
+      try {
+        const bytes = await readFile(row.path);
+        blobUrl = URL.createObjectURL(new Blob([bytes]));
+        if (!cancelled) {
+          setVrError(false);
+          setVrSrc(blobUrl);
+        }
+      } catch (e) {
+        console.error("vr: blob fallback failed", e);
+        if (!cancelled) setVrError(true);
+      }
+    };
+    void resolve();
+
+    return () => {
+      cancelled = true;
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
+    };
+  }, [vrMode, row.path, row.size]);
   const ambience = useMemo(
     () => !reduced && (row.width ?? 0) * (row.height ?? 0) <= AMBIENT_MAX_PIXELS,
     [reduced, row.width, row.height],
@@ -302,6 +355,11 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
       }
       revealControls();
       if (e.key === "Escape") {
+        // VR first: one Esc leaves the dome, the next closes the viewer
+        if (vrMode) {
+          setVrMode(false);
+          return;
+        }
         // fullscreen first, viewer second
         if (document.fullscreenElement) return;
         v.close();
@@ -342,7 +400,7 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [applyVolume, row, seekBy, toggle, toggleFavorite, toggleInfo, volume, muted, revealControls]);
+  }, [applyVolume, row, seekBy, toggle, toggleFavorite, toggleInfo, volume, muted, revealControls, vrMode]);
 
   // wheel = volume, attached natively so preventDefault is allowed (a passive
   // React handler cannot cancel the gesture)
@@ -437,7 +495,9 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
           object-contain letterboxes inside the element) ---------- */}
       <video
         ref={video}
-        src={src}
+        src={vrMode ? (vrSrc ?? undefined) : src}
+        // only for the loopback URL: a blob is same-origin and needs no CORS
+        crossOrigin={vrMode && vrSrc?.startsWith("http") ? "anonymous" : undefined}
         playsInline
         loop={loop}
         className={
@@ -452,6 +512,12 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
           setDuration(e.currentTarget.duration || 0);
           setNat({ w: e.currentTarget.videoWidth, h: e.currentTarget.videoHeight });
           e.currentTarget.volume = volume;
+          // a VR source switch reloads the element: keep the watch position
+          const at = vrResumeAt.current;
+          if (at && at > 1) {
+            vrResumeAt.current = null;
+            e.currentTarget.currentTime = at;
+          }
           // Settings › Appearance: play at once (the click that opened the
           // viewer is the user activation WebView2 requires for sound)
           if (videoAutoplay) void e.currentTarget.play().catch(() => undefined);
@@ -481,7 +547,35 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
       />
 
       {/* ---------- VR immersion (SBS 180): mono 180° projection ---------- */}
-      {vrMode && <VrView videoRef={video} eye={vrEye} />}
+      {vrMode && (
+        <VrView
+          videoRef={video}
+          eye={vrEye}
+          onFatal={() => {
+            // tainted frame: leave the dome instead of a black canvas
+            setVrError(true);
+            setVrMode(false);
+          }}
+        />
+      )}
+
+      {/* VR source unavailable: mono chip, never a silent black stage */}
+      {vrError && (
+        <div className="absolute inset-x-0 top-20 z-50 flex justify-center">
+          <div className="glass flex items-center gap-3 rounded-pill px-4 py-2">
+            <span className="font-mono text-[11px] text-tprimary">
+              {t("player.vr_unavailable")}
+            </span>
+            <button
+              type="button"
+              onClick={() => setVrError(false)}
+              className="font-mono text-[11px] text-ttertiary transition-colors hover:text-tprimary"
+            >
+              {t("viewer.close")}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ---------- top-left glass chip row ---------- */}
       <AnimatePresence>
@@ -936,15 +1030,25 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
               >
                 <PictureInPicture2 size={18} />
               </IconBtn>
-              {/* VR immersion: only for recognised SBS/VR sources */}
+              {/* VR immersion: compact mono chip, only for recognised SBS/VR
+                  sources; accent tint marks the active state */}
               {isVrSource && (
-                <IconBtn
-                  label={t("player.vr")}
-                  active={vrMode}
-                  onClick={() => setVrMode((v) => !v)}
-                >
-                  <Globe size={18} />
-                </IconBtn>
+                <NavTooltip label={t("player.vr")} side="top" mono>
+                  <button
+                    type="button"
+                    aria-label={t("player.vr")}
+                    aria-pressed={vrMode}
+                    onClick={() => setVrMode((v) => !v)}
+                    className={cn(
+                      "flex h-10 items-center rounded-pill px-3 font-mono text-[11px] tracking-[0.08em] transition-all duration-[160ms] ease-out active:scale-[.97]",
+                      vrMode
+                        ? "bg-accent/[.16] text-accent shadow-[inset_0_1px_0_rgba(255,255,255,.06)]"
+                        : "text-tsecondary hover:bg-white/[.08] hover:text-tprimary",
+                    )}
+                  >
+                    VR
+                  </button>
+                </NavTooltip>
               )}
               {isVrSource && vrMode && (
                 <IconBtn

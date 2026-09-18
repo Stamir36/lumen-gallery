@@ -778,6 +778,24 @@ pub async fn restore_folder(app: AppHandle, root_id: i64, path: String) -> Resul
     Ok(())
 }
 
+/// Loopback URL for the CORS media server (VR dome, FIX 1).
+///
+/// The asset protocol taints the canvas (no CORS headers) which is why the VR
+/// dome stayed black; this returns an `http://127.0.0.1:<port>/stream?path=…`
+/// URL whose response is CORS-clean. Errors when the server is unavailable or
+/// the file is outside the library — the caller then falls back to a blob URL
+/// or shows the "VR unavailable" card.
+#[tauri::command]
+pub async fn media_url(app: AppHandle, path: String) -> Result<String, String> {
+    let server = crate::media_server::server(&app).ok_or("media server unavailable")?;
+    server.refresh(&app).await;
+    let p = std::path::PathBuf::from(&path);
+    if !server.is_allowed(&p) {
+        return Err("file is outside the library roots".into());
+    }
+    Ok(server.url_for(&path))
+}
+
 /// Trailing separators would make the prefix predicate match nothing.
 fn trim_dir(path: &str) -> String {
     path.trim_end_matches(['\\', '/']).to_string()

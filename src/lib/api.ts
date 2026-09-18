@@ -1,5 +1,15 @@
 import { invoke } from "@tauri-apps/api/core";
 
+/**
+ * Loopback URL of the CORS media server (Rust `media_url`). The asset protocol
+ * response has no CORS headers, so a canvas reading frames from it is tainted —
+ * the VR dome stayed black for exactly that reason. Throws when the server is
+ * unavailable or the file sits outside the library roots.
+ */
+export async function mediaUrl(path: string): Promise<string> {
+  return invoke<string>("media_url", { path });
+}
+
 export interface VolumeInfo {
   name: string;
   mountPoint: string;

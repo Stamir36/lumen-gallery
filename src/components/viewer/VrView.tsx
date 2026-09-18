@@ -1,6 +1,7 @@
 import {
   useEffect,
   useRef,
+  type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
   type RefObject,
 } from "react";
@@ -61,10 +62,13 @@ const FOV_MAX = (110 * Math.PI) / 180;
 export function VrView({
   videoRef,
   eye,
+  onFatal,
 }: {
   videoRef: RefObject<HTMLVideoElement | null>;
   /** 0 = left half of the stereo pair, 1 = right half */
   eye: 0 | 1;
+  /** called ONCE when the canvas can no longer take frames (tainted source) */
+  onFatal?: () => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const look = useRef({ yaw: 0, pitch: 0, fov: FOV_START });
@@ -72,6 +76,9 @@ export function VrView({
   /** uniform reads the ref — toggling the eye never rebuilds the GL context */
   const eyeRef = useRef(eye);
   eyeRef.current = eye;
+  /** the draw loop must die on the first SecurityError, not spam every frame */
+  const onFatalRef = useRef(onFatal);
+  onFatalRef.current = onFatal;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -175,7 +182,9 @@ export function VrView({
 
     let raf = 0;
     let lastTime = -1;
+    let dead = false;
     const draw = () => {
+      if (dead) return;
       raf = requestAnimationFrame(draw);
       const vid = videoRef.current;
       if (!vid || vid.readyState < 2 || !vid.videoWidth) return;
@@ -183,39 +192,50 @@ export function VrView({
       // upload a frame only when the playback time moved (seek/loop included)
       if (vid.currentTime !== lastTime) {
         lastTime = vid.currentTime;
-        if (vid.videoWidth > maxSize || vid.videoHeight > maxSize) {
-          // over-limit source: downscale through a 2D canvas first
-          const scale = Math.min(
-            maxSize / vid.videoWidth,
-            maxSize / vid.videoHeight,
-            1,
-          );
-          const w = Math.max(2, Math.round(vid.videoWidth * scale));
-          const h = Math.max(2, Math.round(vid.videoHeight * scale));
-          if (stageCanvas.width !== w || stageCanvas.height !== h) {
-            stageCanvas.width = w;
-            stageCanvas.height = h;
+        try {
+          if (vid.videoWidth > maxSize || vid.videoHeight > maxSize) {
+            // over-limit source: downscale through a 2D canvas first
+            const scale = Math.min(
+              maxSize / vid.videoWidth,
+              maxSize / vid.videoHeight,
+              1,
+            );
+            const w = Math.max(2, Math.round(vid.videoWidth * scale));
+            const h = Math.max(2, Math.round(vid.videoHeight * scale));
+            if (stageCanvas.width !== w || stageCanvas.height !== h) {
+              stageCanvas.width = w;
+              stageCanvas.height = h;
+            }
+            stageCtx?.drawImage(vid, 0, 0, w, h);
+            gl.texImage2D(
+              gl.TEXTURE_2D,
+              0,
+              gl.RGBA,
+              gl.RGBA,
+              gl.UNSIGNED_BYTE,
+              stageCanvas,
+            );
+          } else {
+            gl.texImage2D(
+              gl.TEXTURE_2D,
+              0,
+              gl.RGBA,
+              gl.RGBA,
+              gl.UNSIGNED_BYTE,
+              vid,
+            );
           }
-          stageCtx?.drawImage(vid, 0, 0, w, h);
-          gl.texImage2D(
-            gl.TEXTURE_2D,
-            0,
-            gl.RGBA,
-            gl.RGBA,
-            gl.UNSIGNED_BYTE,
-            stageCanvas,
-          );
-        } else {
-          gl.texImage2D(
-            gl.TEXTURE_2D,
-            0,
-            gl.RGBA,
-            gl.RGBA,
-            gl.UNSIGNED_BYTE,
-            vid,
-          );
+          checkUpload();
+        } catch (err) {
+          // SecurityError = tainted frame (a non-CORS source slipped through).
+          // Stop the loop ONCE and hand control back to the player — never a
+          // console-per-frame storm.
+          dead = true;
+          cancelAnimationFrame(raf);
+          console.error("vr: frame rejected, leaving the dome", err);
+          onFatalRef.current?.();
+          return;
         }
-        checkUpload();
       }
       gl.uniform1f(uYaw, look.current.yaw);
       gl.uniform1f(uPitch, look.current.pitch);
@@ -259,6 +279,13 @@ export function VrView({
   const endDrag = () => {
     last.current = null;
   };
+  /** double-click re-centres the dome (and must NOT toggle fullscreen) */
+  const onDoubleClick = (e: ReactMouseEvent<HTMLCanvasElement>) => {
+    e.stopPropagation();
+    look.current.yaw = 0;
+    look.current.pitch = 0;
+    look.current.fov = FOV_START;
+  };
 
   return (
     <canvas
@@ -268,6 +295,7 @@ export function VrView({
       onPointerMove={onPointerMove}
       onPointerUp={endDrag}
       onPointerCancel={endDrag}
+      onDoubleClick={onDoubleClick}
     />
   );
 }

@@ -30,6 +30,7 @@ tauri-plugin-sql = { version = "2", features = ["sqlite"] }
 sysinfo = "0.33"
 walkdir = "2"
 notify = "6"
+tiny_http = "0.12"
 thiserror = "2"
 sqlx = { version = "0.8", default-features = false, features = ["sqlite", "runtime-tokio", "macros"] }
 tokio = { version = "1.53.1", features = ["sync"] }

@@ -3,6 +3,7 @@ mod cache;
 
 mod commands;
 mod db;
+mod media_server;
 mod scan;
 mod thumbs;
 mod volumes;
@@ -128,6 +129,7 @@ pub fn run() {
       commands::restore_folder,
       commands::save_snapshot,
       commands::open_external,
+      commands::media_url,
       cache::thumbnail_cache_size,
       cache::clear_thumbnail_cache,
       thumbs::generate_thumbs,
@@ -142,6 +144,14 @@ pub fn run() {
             .level(log::LevelFilter::Info)
             .build(),
         )?;
+      }
+
+      // Local CORS media server (VR dome, FIX 1): loopback only, ephemeral
+      // port, independent of the DB — the allow-list is refreshed below, once
+      // the pool exists. Without it VR falls back to blob URLs.
+      let media = media_server::start();
+      if let Some(srv) = media.clone() {
+        app.manage(srv);
       }
 
       // Enforce + verify pragmas once the pool exists. The pool is created
@@ -180,6 +190,11 @@ pub fn run() {
             }
             // asset protocol: allow serving files from every stored root
             assets::allow_stored_roots(handle.clone()).await;
+
+            // same roots feed the CORS media server used by the VR dome
+            if let Some(srv) = media.clone() {
+              srv.refresh(&handle).await;
+            }
 
             restore_watchers(&handle, &pool).await;
 
