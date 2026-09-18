@@ -22,6 +22,12 @@ export default defineConfig(async () => ({
   define: {
     __BUILD_ID__: JSON.stringify(buildId()),
   },
+  // F2 boot file resolution uses a top-level await in main.tsx. LUMEN ships
+  // only to WebView2 (Chromium ≥ 92) where TLA is baseline — the default
+  // vite target (chrome87) predates it and broke `pnpm tauri build`.
+  build: {
+    target: "es2022",
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

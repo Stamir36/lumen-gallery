@@ -228,4 +228,5 @@ html.boot-viewer #root {
   display: none;
 }
 html.boot-viewer #root ~ * {
-  display: revert; /* portals appended after #root stay visible */}
+  display: revert; /* portals appended after #root stay visible */
+}
