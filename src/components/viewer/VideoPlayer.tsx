@@ -15,6 +15,7 @@ import {
   Info,
   Maximize2,
   MoreHorizontal,
+  Palette,
   Pause,
   PanelRight,
   PictureInPicture2,
@@ -96,6 +97,8 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
   const [pillHover, setPillHover] = useState(false);
   /** P7 F3: the "…" overflow popover (snapshot / external / PiP / loop) */
   const [overflowOpen, setOverflowOpen] = useState(false);
+  /** P7 F4: color-correction popover inside the overflow */
+  const [colorOpen, setColorOpen] = useState(false);
   /** FIX 3: manual interface hide (pill button / H) — wins over the idle timer */
   const [manualHide, setManualHide] = useState(false);
   /** VR immersion (SBS 180): mono projection of one stereo half */
@@ -564,7 +567,7 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
           playsInline
           aria-hidden
           className="pointer-events-none absolute inset-0 h-full w-full scale-110 object-cover"
-          style={{ filter: "blur(60px) saturate(1.4)", opacity: 0.35 }}
+          style={{ filter: "blur(60px) saturate(1.4) var(--video-filter, none)", opacity: 0.35 }}
         />
       )}
       <div
@@ -581,6 +584,7 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
         playsInline
         loop={loop}
         className="relative z-10 h-full w-full object-contain"
+        style={{ filter: "var(--video-filter, none)" }}
         onLoadedMetadata={(e) => {
           setDuration(e.currentTarget.duration || 0);
           setNat({ w: e.currentTarget.videoWidth, h: e.currentTarget.videoHeight });
@@ -1198,6 +1202,16 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
                           );
                         }}
                       />
+                      {/* P7 F4: nested color-correction popover */}
+                      <div className="relative">
+                        <OverflowItem
+                          icon={<Palette size={15} />}
+                          label={t("player.color")}
+                          active={colorOpen}
+                          onClick={() => setColorOpen((o) => !o)}
+                        />
+                        {colorOpen && <ColorPopover />}
+                      </div>
                       {/* loop stays open so the check state is visible live */}
                       <OverflowItem
                         icon={<Repeat size={15} />}
@@ -1256,6 +1270,102 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+/**
+ * P7 F4 — color-correction popover: two sliders writing global settings via
+ * the store; the CSS var updates live for every video surface in the app.
+ */
+function ColorPopover() {
+  const { t } = useTranslation();
+  const saturation = useAppSettings((s) => s.videoSaturation);
+  const sharpness = useAppSettings((s) => s.videoSharpness);
+  const setSaturation = useAppSettings((s) => s.setVideoSaturation);
+  const setSharpness = useAppSettings((s) => s.setVideoSharpness);
+  const dirty = saturation !== 1 || sharpness !== 0;
+
+  return (
+    <div
+      role="group"
+      aria-label={t("player.color")}
+      className="glass absolute bottom-11 right-1 z-50 w-[240px] rounded-[16px] p-3.5"
+    >
+      <FilterSlider
+        label={t("player.color_saturation")}
+        value={Math.round(saturation * 100)}
+        min={50}
+        max={200}
+        step={5}
+        suffix="%"
+        onChange={(pct) => void setSaturation(pct / 100)}
+      />
+      <FilterSlider
+        label={t("player.color_sharpness")}
+        value={Math.round(sharpness * 100)}
+        min={0}
+        max={100}
+        step={5}
+        suffix="%"
+        onChange={(pct) => void setSharpness(pct / 100)}
+      />
+      <button
+        type="button"
+        disabled={!dirty}
+        onClick={() => {
+          void setSaturation(1);
+          void setSharpness(0);
+        }}
+        className={cn(
+          "mt-1 flex h-8 w-full items-center justify-center gap-1.5 rounded-[10px] font-mono text-[11px] tracking-[0.06em] transition-colors duration-[120ms]",
+          dirty
+            ? "text-tsecondary hover:bg-white/[.08] hover:text-tprimary"
+            : "cursor-default text-white/25",
+        )}
+      >
+        <RotateCcw size={12} />
+        {t("player.color_reset")}
+      </button>
+    </div>
+  );
+}
+
+function FilterSlider({
+  label,
+  value,
+  min,
+  max,
+  step,
+  suffix,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  suffix: string;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <label className="mb-2 block last:mb-0">
+      <span className="mb-1.5 flex items-center justify-between text-[12px] text-tsecondary">
+        <span>{label}</span>
+        <span className="font-mono text-[11px] text-tprimary">
+          {value}
+          {suffix}
+        </span>
+      </span>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="w-full cursor-pointer accent-[var(--accent)]"
+      />
+    </label>
   );
 }
 

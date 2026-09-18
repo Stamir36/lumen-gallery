@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import i18n, { writeSetting } from "@/i18n";
 import { getDb } from "@/lib/db";
 import { ACCENT_KEY as ACCENT_SETTING_KEY, DEFAULT_ACCENT, applyAccent } from "@/lib/accent";
+import { applyVideoFilter } from "@/lib/colorCorrection";
 
 /**
  * User-facing settings that the UI reacts to live, persisted in the `settings`
@@ -22,6 +23,10 @@ export const DENSITY_KEY = "grid_density";
 
 export type GridDensity = "comfort" | "medium" | "compact";
 export const DEFAULT_DENSITY: GridDensity = "medium";
+
+/** P7 F4 — global video color correction (applies to every video surface). */
+export const VIDEO_SATURATION_KEY = "video_saturation";
+export const VIDEO_SHARPNESS_KEY = "video_sharpness";
 
 /**
  * Density → grid metrics. `targetH` is the justified target row height, `gap`
@@ -75,6 +80,10 @@ interface AppSettingsState {
   accent: string;
   /** grid density preset (FIX 4b) */
   gridDensity: GridDensity;
+  /** global video saturation multiplier (1 = neutral, P7 F4) */
+  videoSaturation: number;
+  /** global video unsharp strength 0..1 (0 = off, P7 F4) */
+  videoSharpness: number;
   loaded: boolean;
   load: () => Promise<void>;
   setVideoScrubRate: (rate: number) => Promise<void>;
@@ -87,6 +96,8 @@ interface AppSettingsState {
   setThumbWorkers: (count: number) => Promise<void>;
   setAccent: (hex: string) => Promise<void>;
   setGridDensity: (density: GridDensity) => Promise<void>;
+  setVideoSaturation: (v: number) => Promise<void>;
+  setVideoSharpness: (v: number) => Promise<void>;
 }
 
 export const useAppSettings = create<AppSettingsState>((set) => ({
@@ -100,13 +111,15 @@ export const useAppSettings = create<AppSettingsState>((set) => ({
   thumbWorkers: DEFAULT_THUMB_WORKERS,
   accent: DEFAULT_ACCENT,
   gridDensity: DEFAULT_DENSITY,
+  videoSaturation: 1,
+  videoSharpness: 0,
   loaded: false,
 
   load: async () => {
     try {
       const db = await getDb();
       const rows = await db.select<{ key: string; value: string }[]>(
-        "SELECT key, value FROM settings WHERE key IN ('video_scrub_rate', 'hover_captions', 'video_autoplay', 'viewer_swipe', 'viewer_pill_align', 'perf_show_fps', 'show_excluded', 'thumb_workers', 'accent', 'grid_density')",
+        "SELECT key, value FROM settings WHERE key IN ('video_scrub_rate', 'hover_captions', 'video_autoplay', 'viewer_swipe', 'viewer_pill_align', 'perf_show_fps', 'show_excluded', 'thumb_workers', 'accent', 'grid_density', 'video_saturation', 'video_sharpness')",
       );
       const byKey = new Map(rows.map((r) => [r.key, r.value]));
       const raw = Number(byKey.get(SCRUB_RATE_KEY));
@@ -123,6 +136,8 @@ export const useAppSettings = create<AppSettingsState>((set) => ({
         thumbWorkers: readWorkers(byKey.get(THUMB_WORKERS_KEY)),
         accent: readAccent(byKey.get(ACCENT_SETTING_KEY)),
         gridDensity: readDensity(byKey.get(DENSITY_KEY)),
+        videoSaturation: readFilterNumber(byKey.get(VIDEO_SATURATION_KEY), 1, 0.5, 2),
+        videoSharpness: readFilterNumber(byKey.get(VIDEO_SHARPNESS_KEY), 0, 0, 1),
         loaded: true,
       });
       // the stored accent wins over the pre-paint cache
@@ -237,6 +252,28 @@ export const useAppSettings = create<AppSettingsState>((set) => ({
       toast.error(i18n.t("errors.action_failed"));
     }
   },
+
+  setVideoSaturation: async (v) => {
+    set({ videoSaturation: v }); // optimistic: the filter updates on input
+    applyVideoFilter(v, useAppSettings.getState().videoSharpness);
+    try {
+      await writeSetting(VIDEO_SATURATION_KEY, String(v));
+    } catch (e) {
+      console.error("video saturation save failed", e);
+      toast.error(i18n.t("errors.action_failed"));
+    }
+  },
+
+  setVideoSharpness: async (v) => {
+    set({ videoSharpness: v }); // optimistic
+    applyVideoFilter(useAppSettings.getState().videoSaturation, v);
+    try {
+      await writeSetting(VIDEO_SHARPNESS_KEY, String(v));
+    } catch (e) {
+      console.error("video sharpness save failed", e);
+      toast.error(i18n.t("errors.action_failed"));
+    }
+  },
 }));
 
 /** Anything unexpected in the stored accent falls back to the default. */
@@ -247,6 +284,12 @@ function readAccent(raw: string | undefined): string {
 /** Unknown density values fall back to the medium preset. */
 function readDensity(raw: string | undefined): GridDensity {
   return raw === "comfort" || raw === "compact" ? raw : DEFAULT_DENSITY;
+}
+
+/** P7 F4: clamp + parse a persisted filter value; unexpected → fallback. */
+function readFilterNumber(raw: string | undefined, fallback: number, min: number, max: number): number {
+  const n = Number(raw);
+  return Number.isFinite(n) && n >= min && n <= max ? n : fallback;
 }
 
 /** Anything unexpected in the stored value falls back to the centre. */

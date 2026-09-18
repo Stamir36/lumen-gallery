@@ -338,6 +338,7 @@ function CollageTile({
             "absolute inset-0 h-full w-full bg-black object-contain transition-opacity duration-[160ms]",
             playing ? "opacity-100" : "opacity-0",
           )}
+          style={{ filter: "var(--video-filter, none)" }}
         />
       ) : (
         <img

@@ -39,6 +39,7 @@ import { useRootsStore, useScanStore } from "@/state/library";
 import { filterForRoute, useLibraryUi, type SmartView } from "@/state/library-ui";
 import { getDb } from "@/lib/db";
 import { useAppSettings } from "@/lib/settings";
+import { syncVideoFilterFromStore } from "@/lib/colorCorrection";
 
 /** Every "Add library" entry point resets the onboarding state machine. */
 function useOpenOnboarding() {
@@ -102,8 +103,9 @@ export default function App() {
       const t2 = performance.now();
       await load();
       const t3 = performance.now();
-      // hover scrub speed etc. — read once, before the grid can hover anything
-      void useAppSettings.getState().load();
+      // hover scrub speed etc. — read once, before the grid can hover anything;
+      // P7 F4: then restore the persisted video color correction onto :root
+      void useAppSettings.getState().load().then(syncVideoFilterFromStore);
       // one subscription for thumb results + durability pushes (S1.3)
       startThumbBridge();
       setReady(true);
