@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { invoke } from "@tauri-apps/api/core";
+import { appCacheDir, appLogDir, join } from "@tauri-apps/api/path";
+import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import {
   FolderOpen,
@@ -675,17 +677,64 @@ export function SettingsContent() {
                 placeholder={t("settings.player_placeholder")}
                 className="h-11 w-full rounded-control bg-surface-2 px-4 font-mono text-[13px] text-tprimary placeholder:text-ttertiary focus:outline-none"
               />
-              <PillButton className="mt-4" type="submit" disabled={!ready || busy}>
-                {t("settings.save")}
-              </PillButton>
+              <div className="mt-4 flex items-center gap-3">
+                <PillButton type="submit" disabled={!ready || busy}>
+                  {t("settings.save")}
+                </PillButton>
+                <PillButton
+                  type="button"
+                  variant="ghost"
+                  disabled={!ready || !player.trim()}
+                  onClick={() => {
+                    void invoke<boolean>("check_player", { path: player.trim() })
+                      .then((ok) =>
+                        ok
+                          ? toast.success(t("settings.check_ok"))
+                          : toast.error(t("settings.check_missing")),
+                      )
+                      .catch((e) => toast.error(String(e)));
+                  }}
+                >
+                  {t("settings.check")}
+                </PillButton>
+              </div>
             </form>
             <div className="mt-2 flex items-center justify-between border-t border-hairline py-4">
+              <span className="text-sm text-tprimary">{t("settings.open_logs")}</span>
+              <button
+                type="button"
+                onClick={() =>
+                  void appLogDir()
+                    .then((d) => invoke("reveal_path", { path: d }))
+                    .catch((e) => toast.error(String(e)))
+                }
+                className="rounded-pill px-3 py-1.5 font-mono text-[12px] text-tsecondary transition-colors hover:bg-white/[.06] hover:text-tprimary"
+              >
+                {t("settings.reveal")}
+              </button>
+            </div>
+            <div className="flex items-center justify-between border-t border-hairline py-4">
+              <span className="text-sm text-tprimary">{t("settings.open_thumbs")}</span>
+              <button
+                type="button"
+                onClick={() =>
+                  void appCacheDir()
+                    .then((d) => join(d, "thumbs"))
+                    .then((p) => invoke("reveal_path", { path: p }))
+                    .catch((e) => toast.error(String(e)))
+                }
+                className="rounded-pill px-3 py-1.5 font-mono text-[12px] text-tsecondary transition-colors hover:bg-white/[.06] hover:text-tprimary"
+              >
+                {t("settings.reveal")}
+              </button>
+            </div>
+            <div className="flex items-center justify-between border-t border-hairline py-4">
               <span className="text-sm text-tprimary">{t("settings.version")}</span>
               <span className="font-mono text-[12px] text-ttertiary">0.1.0</span>
             </div>
             <SoonRow
               label={t("settings.associations")}
-              soon={t("settings.soon")}
+              soon={t("settings.soon_phase6")}
             />
           </GlassCard>
         </Section>

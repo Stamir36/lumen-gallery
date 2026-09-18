@@ -99,6 +99,46 @@ pub async fn save_snapshot(
     Ok(path.to_string_lossy().to_string())
 }
 
+/// Does the configured external player exist? (Settings › System › Check.)
+#[tauri::command]
+pub async fn check_player(path: String) -> bool {
+    let p = path.trim();
+    !p.is_empty() && std::path::Path::new(p).is_file()
+}
+
+/// Reveal a path in Explorer: a directory opens as-is, a file gets /select,
+/// a not-yet-existing path (fresh logs/thumbs dir) is created first.
+#[tauri::command]
+pub async fn reveal_path(path: String) -> Result<(), String> {
+    let p = std::path::PathBuf::from(path.trim());
+    let select = p.is_file();
+    if !select && !p.is_dir() {
+        std::fs::create_dir_all(&p).map_err(|e| e.to_string())?;
+    }
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        // CREATE_NO_WINDOW: no console flash for a background helper
+        let mut cmd = std::process::Command::new("explorer");
+        cmd.creation_flags(0x0800_0000);
+        if select {
+            cmd.arg("/select,").arg(&p);
+        } else {
+            cmd.arg(&p);
+        }
+        cmd.spawn().map_err(|e| e.to_string())?;
+        Ok(())
+    }
+    #[cfg(not(windows))]
+    {
+        std::process::Command::new("xdg-open")
+            .arg(&p)
+            .spawn()
+            .map_err(|e| e.to_string())?;
+        Ok(())
+    }
+}
+
 /// Hands a file to the configured external player, falling back to the OS
 /// association (used when a codec cannot be played in the webview).
 #[tauri::command]

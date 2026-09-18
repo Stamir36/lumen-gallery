@@ -129,6 +129,8 @@ pub fn run() {
       commands::restore_folder,
       commands::save_snapshot,
       commands::open_external,
+      commands::check_player,
+      commands::reveal_path,
       commands::media_url,
       cache::thumbnail_cache_size,
       cache::clear_thumbnail_cache,

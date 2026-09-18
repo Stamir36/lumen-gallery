@@ -1,6 +1,8 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useTranslation } from "react-i18next";
+import { invoke } from "@tauri-apps/api/core";
+import { toast } from "sonner";
 import {
   Check,
   Clipboard,
@@ -8,12 +10,11 @@ import {
   FolderOpen,
   Heart,
   Play,
+  SquareArrowOutUpRight,
   Star,
   Trash2,
   Unplug,
 } from "lucide-react";
-import { toast } from "sonner";
-import { invoke } from "@tauri-apps/api/core";
 import { useContextMenu } from "@/state/contextMenu";
 import { tauriAvailable } from "@/lib/assets";
 import { cn } from "@/lib/utils";
@@ -173,6 +174,17 @@ export const MediaCard = memo(function MediaCard({
               disabled: !tauriAvailable(),
               onSelect: () => {
                 void invoke("open_external", { path: dir }).catch((err) =>
+                  toast.error(String(err)),
+                );
+              },
+            },
+            {
+              id: "external_player",
+              label: t("menu.open_external"),
+              icon: <SquareArrowOutUpRight size={15} />,
+              disabled: !tauriAvailable(),
+              onSelect: () => {
+                void invoke("open_external", { path: media.path }).catch((err) =>
                   toast.error(String(err)),
                 );
               },

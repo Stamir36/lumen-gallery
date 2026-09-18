@@ -163,7 +163,8 @@
     "folder_exclude": "Exclude folder",
     "folder_excluded": "Folder excluded: {{name}}",
     "folder_excluded_chip": "excluded",
-    "trash": "Move to trash"
+    "trash": "Move to trash",
+    "open_external": "Open in external player"
   },
   "viewer": {
     "controls": "Viewer controls",
@@ -213,7 +214,8 @@
     "error_title": "This file cannot play in the app",
     "error_hint": "the Windows engine does not support this codec — open it in an external player",
     "external": "Open in external player",
-    "next_file": "Next file"
+    "next_file": "Next file",
+    "open_external": "Open in external player"
   },
   "titlebar": {
     "minimize": "Minimize",
@@ -284,7 +286,14 @@
     "loading": "Loading…",
     "saved": "Saved",
     "load_error": "Couldn't load settings",
-    "operation_error": "Operation failed"
+    "operation_error": "Operation failed",
+    "check": "Check",
+    "check_ok": "Player found",
+    "check_missing": "Player executable not found",
+    "open_logs": "Open logs folder",
+    "open_thumbs": "Open thumbnails cache",
+    "reveal": "Open",
+    "soon_phase6": "ships in the installer build (Phase 6)"
   },
   "actions": {
     "favorite": "Favorite",

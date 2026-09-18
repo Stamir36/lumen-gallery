@@ -7,6 +7,7 @@ import {
   Camera,
   ChevronLeft,
   ChevronRight,
+  ExternalLink,
   EyeOff,
   FlipHorizontal,
   Gauge,
@@ -1052,6 +1053,16 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
                 }}
               >
                 <PictureInPicture2 size={18} />
+              </IconBtn>
+              <IconBtn
+                label={t("player.open_external")}
+                onClick={() =>
+                  void invoke("open_external", { path: row.path }).catch(() =>
+                    toast.error(t("errors.action_failed")),
+                  )
+                }
+              >
+                <ExternalLink size={18} />
               </IconBtn>
               {/* VR immersion: compact mono chip, only for recognised SBS/VR
                   sources; accent tint marks the active state */}
