@@ -7,9 +7,9 @@ import { formatDuration } from "@/lib/format";
 import { ThumbTile } from "@/components/library/ThumbTile";
 import { useViewer } from "@/state/viewer";
 
-/** horizontal tiles: 1.6:1, vertical rail: 1.7:1 — both keep the same look */
+/** horizontal tiles: 1.6:1, vertical rail: 16:9 full-width (FIX 2) */
 const H_TILE = { w: 108, h: 68 };
-const V_TILE = { w: 96, h: 58 };
+const V_TILE = { w: 128, h: 72 };
 
 /**
  * The viewer queue as a VIRTUALIZED strip (STEP 1 / STEP 2): a 9 390-item queue
@@ -102,15 +102,16 @@ export function Filmstrip({
             aria-label={row.path.split(/[\\/]/).pop() ?? row.path}
             aria-current={active}
             className={cn(
-              "group relative rounded-[12px] outline-none transition-all duration-[160ms] ease-out",
+              "group relative rounded-[8px] outline-none transition-all duration-[160ms] ease-out",
+              // 4px each side = an 8px gap between tiles (FIX 2)
               vertical ? "my-1" : "mx-1",
               active
-                ? "scale-[1.04] ring-2 ring-accent shadow-[0_8px_24px_rgba(0,0,0,.45)]"
-                : "opacity-60 hover:opacity-100 hover:scale-[1.02] focus-visible:opacity-100",
+                ? "scale-[1.03] ring-2 ring-accent shadow-[0_8px_24px_rgba(0,0,0,.45)]"
+                : "opacity-75 hover:opacity-100 hover:scale-[1.02] focus-visible:opacity-100",
             )}
             style={{ width: tile.w, height: tileH }}
           >
-            <span className="absolute inset-0 overflow-hidden rounded-[12px] bg-surface-2">
+            <span className="absolute inset-0 overflow-hidden rounded-[8px] bg-surface-2">
               <ThumbTile media={row} shimmer={false} />
               {/* video affordance: dim + glyph, duration chip bottom-right */}
               {row.kind === "video" && (

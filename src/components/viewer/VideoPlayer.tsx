@@ -755,7 +755,7 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
             animate={{ x: 0 }}
             exit={reduced ? { opacity: 0 } : { x: 20 }}
             transition={{ duration: reduced ? 0 : 0.18, ease: "easeOut" }}
-            className="glass absolute bottom-4 right-3 top-4 z-40 flex w-[136px] flex-col rounded-viewer p-2.5"
+            className="glass absolute bottom-3 right-3 top-3 z-40 flex w-[144px] flex-col rounded-viewer p-2"
           >
             <div className="mb-2 flex items-baseline gap-2">
               <span className="min-w-0 flex-1 truncate font-mono text-[10px] uppercase tracking-[0.1em] text-ttertiary">
@@ -783,7 +783,7 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
             exit={reduced ? { opacity: 0 } : { y: 16 }}
             transition={{ type: "spring", stiffness: 260, damping: 26 }}
             className="absolute bottom-24 left-0 z-40 transition-[right] duration-[180ms] ease-out"
-            style={{ right: stripOpen ? 152 : 0 }}
+            style={{ right: stripOpen ? 156 : 0 }}
             onPointerEnter={() => setBarHover(true)}
             onPointerLeave={() => {
               setBarHover(false);
