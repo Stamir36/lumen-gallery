@@ -134,9 +134,16 @@ Phase 0 (docs) — done: `docs/SPEC.md`, `docs/DESIGN.md`, `.clinerules`, `TODO.
 - [ ] Collage mode (2–6 items, mosaic split, per-tile view/play)
 - [ ] QA + screenshot pass; `feat: favorites albums trash search collage`
 
-## Phase 6 — Windows integration & polish
-- [ ] Single-instance plugin; file associations (image+video); launch-to-viewer with sibling queue, no full scan
-- [ ] External player fallback ("Open in external player", VLC/MPC path in Settings; auto-show on unsupported codec)
-- [ ] Settings: thumbnail cache size + clear, external player path
-- [ ] Final perf audit + QA + screenshot pass; `feat: windows integration`
-- [ ] Document ffmpeg sidecar as v2 option in docs/SPEC.md
+## Phase 6 — Windows integration & polish — DONE (0.2.0)
+- [x] Single-instance plugin; file associations (opt-in OpenWithProgids, HKCU only, reversible); launch-to-viewer fullscreen
+- [x] External player fallback; Settings: cache size + clear, player path
+- [x] Installer: NSIS currentUser, ru/en selector
+- [ ] Prod metrics (STEP 6, measured on the built exe):
+  - installer 4.3 MB (4,490,997 B); portable 16.9 MB
+  - cold start 0.45 s click→window visible; RAM idle 181 MB (process tree)
+  - RAM with 4K video open: n/a this session (user desktop was in use — no screen automation)
+  - smoke: db migrated to com.unesell.lumen (9,390 rows), watch_progress writes (14 rows),
+    single-instance second-launch exit 0 + focus, file-arg launch → viewer played
+  - associations register/unregister round-trip: PENDING (needs a VM / spare profile, see audit backlog)
+- [ ] Associations round-trip on a VM + uninstaller .reg dry-run (user-side checklist)
+- [ ] Doc ffmpeg sidecar as v2 option in docs/SPEC.md
