@@ -167,8 +167,33 @@ pub async fn trash_delete(paths: Vec<String>) -> Result<usize, String> {
     Ok(deleted)
 }
 
-/// Hands a file to the configured external player, falling back to the OS
-/// association (used when a codec cannot be played in the webview).
+/// Open an http(s) URL in the user's default browser (About card link).
+/// Whitelist-shaped: only absolute http/https URLs are ever passed to the OS.
+#[tauri::command]
+pub fn open_url(url: String) -> Result<(), String> {
+  if !(url.starts_with("https://") || url.starts_with("http://")) {
+    return Err("only http(s) URLs can be opened".into());
+  }
+  #[cfg(windows)]
+  {
+    use std::os::windows::process::CommandExt;
+    std::process::Command::new("cmd")
+      .args(["/C", "start", "", &url])
+      .creation_flags(0x0800_0000) // CREATE_NO_WINDOW
+      .spawn()
+      .map_err(|e| e.to_string())?;
+    Ok(())
+  }
+  #[cfg(not(windows))]
+  {
+    std::process::Command::new("xdg-open")
+      .arg(&url)
+      .spawn()
+      .map_err(|e| e.to_string())?;
+    Ok(())
+  }
+}
+
 #[tauri::command]
 pub async fn open_external(app: AppHandle, path: String) -> Result<(), String> {
     let pool = pool_for(&app).await?;

@@ -27,6 +27,7 @@ import { resetThumbs } from "@/lib/thumbs";
 import { queryClient } from "@/lib/queryClient";
 import { getDb } from "@/lib/db";
 import { useRootsStore } from "@/state/library";
+import { APP_VERSION } from "@/lib/version";
 import {
   readSetting,
   writeSetting,
@@ -57,21 +58,6 @@ function Section({
       </div>
       {children}
     </section>
-  );
-}
-
-function SoonRow({
-  label,
-  soon,
-}: {
-  label: string;
-  soon: string;
-}) {
-  return (
-    <div className="flex items-center justify-between border-t border-hairline py-4 opacity-50">
-      <span className="text-sm text-tsecondary">{label}</span>
-      <span className="font-mono text-[11px] text-ttertiary">{soon}</span>
-    </div>
   );
 }
 
@@ -728,14 +714,57 @@ export function SettingsContent() {
                 {t("settings.reveal")}
               </button>
             </div>
-            <div className="flex items-center justify-between border-t border-hairline py-4">
+          </GlassCard>
+        </Section>
+
+        {/* 06 About (Phase 6 STEP 1) */}
+        <Section index="06" id="about" title={t("settings.nav_about")}>
+          <GlassCard>
+            <div className="flex items-center justify-between border-b border-hairline pb-4">
               <span className="text-sm text-tprimary">{t("settings.version")}</span>
-              <span className="font-mono text-[12px] text-ttertiary">0.1.0</span>
+              <span className="font-mono text-[12px] text-tsecondary">
+                {__BUILD_ID__ === "dev"
+                  ? t("settings.about_dev_build")
+                  : `${APP_VERSION} (${__BUILD_ID__})`}
+              </span>
             </div>
-            <SoonRow
-              label={t("settings.associations")}
-              soon={t("settings.soon_phase6")}
-            />
+            <div className="flex items-center justify-between border-b border-hairline py-4">
+              <span className="text-sm text-tprimary">{t("settings.about_author")}</span>
+              <span className="text-[13px] text-tsecondary">
+                Stanislav Miroshnichenko ·{" "}
+                <button
+                  type="button"
+                  onClick={() =>
+                    void invoke("open_url", { url: "https://github.com/Stamir36" }).catch(
+                      (e) => toast.error(String(e)),
+                    )
+                  }
+                  className="rounded-pill px-1 font-mono text-[13px] text-accent underline decoration-accent/40 underline-offset-2 transition-colors hover:decoration-accent focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+                >
+                  Stamir36
+                </button>
+              </span>
+            </div>
+            <div className="flex items-center justify-between border-b border-hairline py-4">
+              <span className="text-sm text-tprimary">{t("settings.about_studio")}</span>
+              <span className="text-[13px] text-tsecondary">Unesell Studio</span>
+            </div>
+            <div className="flex items-center justify-between border-b border-hairline py-4">
+              <span className="text-sm text-tprimary">{t("settings.about_package")}</span>
+              <span className="font-mono text-[12px] text-tsecondary">com.unesell.lumen</span>
+            </div>
+            <div className="flex items-center justify-between border-b border-hairline py-4">
+              <span className="text-sm text-tprimary">{t("settings.about_license")}</span>
+              <span className="text-[13px] text-tsecondary">
+                {t("settings.about_license_value")}
+              </span>
+            </div>
+            <div className="flex items-center justify-between py-4">
+              <span className="text-sm text-tprimary">{t("settings.about_stack")}</span>
+              <span className="font-mono text-[12px] text-tsecondary">
+                Tauri v2 · React · Rust · SQLite
+              </span>
+            </div>
           </GlassCard>
         </Section>
 

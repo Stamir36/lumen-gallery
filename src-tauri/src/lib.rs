@@ -1,5 +1,6 @@
 mod assets;
 mod cache;
+mod legacy;
 
 mod commands;
 mod db;
@@ -129,6 +130,7 @@ pub fn run() {
       commands::restore_folder,
       commands::save_snapshot,
       commands::open_external,
+      commands::open_url,
       commands::check_player,
       commands::reveal_path,
       commands::trash_delete,
@@ -141,6 +143,10 @@ pub fn run() {
     .manage(thumbs::ThumbEngine::default())
     .manage(commands::BackendState::default())
     .setup(|app| {
+      // Phase 6 STEP 1: the identifier change moves app dirs — rescue the
+      // existing library (db + thumbs) once, before the sql plugin opens it.
+      legacy::migrate(app.handle());
+
       if cfg!(debug_assertions) {
         app.handle().plugin(
           tauri_plugin_log::Builder::default()
