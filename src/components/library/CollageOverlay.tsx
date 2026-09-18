@@ -306,7 +306,7 @@ function CollageTile({
 
   return (
     <div
-      className="group relative min-h-0 min-w-0 overflow-hidden rounded-2xl bg-surface-1"
+      className="group relative min-h-0 min-w-0 overflow-hidden rounded-2xl border border-white/[.08] bg-surface-1 shadow-[0_8px_28px_rgba(0,0,0,.35)]"
       // C2: dominant-color bed — a soft vertical wash instead of flat gray;
       // visible in the contain letterbox and as the pre-thumb placeholder
       style={{
