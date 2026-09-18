@@ -17,6 +17,15 @@ function mmss(seconds: number): string {
   return `${h > 0 ? `${h}:` : ""}${h > 0 ? String(m).padStart(2, "0") : m}:${String(s).padStart(2, "0")}`;
 }
 
+/** C2: hex → darkened hex (amount 0..1), falling back to the raw value. */
+function darkenHex(hex: string, amount: number): string {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!m) return hex;
+  const n = parseInt(m[1], 16);
+  const ch = [16, 8, 0].map((sh) => Math.round(((n >> sh) & 255) * (1 - amount)));
+  return `#${ch.map((c) => c.toString(16).padStart(2, "0")).join("")}`;
+}
+
 /**
  * Collage multi-viewer (FIX 4): a fullscreen composition of the selected items,
  * NOT a grid mode. Layout presets follow the selection count, the glass chip
@@ -290,10 +299,22 @@ function CollageTile({
     setMuted(v.muted);
   };
 
+  const darkened = useMemo(
+    () => (row.dominantColor ? darkenHex(row.dominantColor, 0.35) : null),
+    [row.dominantColor],
+  );
+
   return (
     <div
       className="group relative min-h-0 min-w-0 overflow-hidden rounded-2xl bg-surface-1"
-      style={{ ...area, backgroundColor: row.dominantColor ?? undefined }}
+      // C2: dominant-color bed — a soft vertical wash instead of flat gray;
+      // visible in the contain letterbox and as the pre-thumb placeholder
+      style={{
+        ...area,
+        background: darkened
+          ? `linear-gradient(160deg, ${darkened}, var(--surface-2))`
+          : undefined,
+      }}
       // click: play/pause for a video, the full viewer for a photo
       onClick={isVideo ? togglePlay : onOpen}
       onDoubleClick={onOpen}
