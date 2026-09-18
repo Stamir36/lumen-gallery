@@ -177,11 +177,36 @@ export function SettingsContent() {
     { id: "cache", icon: <Gauge size={18} />, label: t("settings.nav_cache") },
     { id: "system", icon: <Cpu size={18} />, label: t("settings.nav_system") },
   ];
+  /** stable list for the scrollspy observer (navItems is rebuilt per render) */
+  const SECTION_IDS = navItems.map((n) => n.id);
 
   const jump = (id: string) => {
     setActive(id);
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
   };
+
+  // Scrollspy (FIX 2): keep the sticky nav in sync with the section actually
+  // in view. The page scroller is the closest <main> ancestor (SettingsPage
+  // owns `overflow-y-auto`), NOT the window — so it is the observer root.
+  useEffect(() => {
+    const first = document.getElementById(SECTION_IDS[0]);
+    const root = (first?.closest("main") as HTMLElement | null) ?? null;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        // band intersects exactly one section in practice; take the last hit
+        for (const e of entries) {
+          if (e.isIntersecting) setActive(e.target.id);
+        }
+      },
+      // a thin band just under the top edge decides what "current" is
+      { root, rootMargin: "-12% 0px -75% 0px", threshold: 0 },
+    );
+    for (const id of SECTION_IDS) {
+      const el = document.getElementById(id);
+      if (el) obs.observe(el);
+    }
+    return () => obs.disconnect();
+  }, []);
 
   return (
     <div className="flex items-start gap-10">
