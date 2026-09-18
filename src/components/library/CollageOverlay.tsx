@@ -152,9 +152,12 @@ export function CollageOverlay({ rows, onClose }: { rows: MediaRow[]; onClose: (
   const { t } = useTranslation();
   const reduced = useReducedMotion();
   const [variant, setVariant] = useState(0);
+  // C4: cascade transport — "play" | "pause"; tiles stagger their reaction
+  const [cascade, setCascade] = useState<"play" | "pause">("pause");
 
   const layouts = useMemo(() => layoutsFor(rows.length), [rows.length]);
   const layout = layouts[variant % layouts.length];
+  const videoCount = useMemo(() => rows.filter((r) => r.kind === "video").length, [rows]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -188,6 +191,8 @@ export function CollageOverlay({ rows, onClose }: { rows: MediaRow[]; onClose: (
             key={row.id}
             row={row}
             area={layout.tiles[i]}
+            cascade={row.kind === "video" ? cascade : null}
+            cascadeIndex={i}
             // double-click a tile: hand the whole collage to the full viewer,
             // which then keeps walking the same queue
             onOpen={() => {
@@ -200,6 +205,18 @@ export function CollageOverlay({ rows, onClose }: { rows: MediaRow[]; onClose: (
 
       {/* floating glass chips — whitelisted (v2.2) */}
       <div className="absolute right-6 top-6 z-10 flex items-center gap-2">
+        {videoCount > 0 && (
+          <button
+            type="button"
+            onClick={() => setCascade((c) => (c === "play" ? "pause" : "play"))}
+            title={cascade === "play" ? t("collage.pause_all") : t("collage.play_all")}
+            aria-label={cascade === "play" ? t("collage.pause_all") : t("collage.play_all")}
+            aria-pressed={cascade === "play"}
+            className="glass flex h-10 w-10 items-center justify-center rounded-pill text-tprimary transition-transform duration-[160ms] active:scale-[.97]"
+          >
+            {cascade === "play" ? <Pause size={16} /> : <Play size={16} />}
+          </button>
+        )}
         {layouts.length > 1 && (
           <button
             type="button"
@@ -234,10 +251,15 @@ export function CollageOverlay({ rows, onClose }: { rows: MediaRow[]; onClose: (
 function CollageTile({
   row,
   area,
+  cascade,
+  cascadeIndex,
   onOpen,
 }: {
   row: MediaRow;
   area: { gridColumn: string; gridRow: string };
+  /** C4: parent-issued transport command, staggered per tile */
+  cascade: "play" | "pause" | null;
+  cascadeIndex: number;
   onOpen: () => void;
 }) {
   const { t } = useTranslation();
@@ -270,6 +292,24 @@ function CollageTile({
         cancelled = true;
     };
   }, [isVideo, row.path]);
+
+  // C4: react to the cascade command with a 120ms-per-tile stagger
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v || !cascade) return;
+    const timer = window.setTimeout(
+      () => {
+        if (cascade === "play") {
+          void v.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
+        } else {
+          v.pause();
+          setPlaying(false);
+        }
+      },
+      cascadeIndex * 120,
+    );
+    return () => window.clearTimeout(timer);
+  }, [cascade, cascadeIndex]);
 
   /** click or drag anywhere on the bar seeks (the tile itself toggles play) */
   const seekTo = (clientX: number, el: HTMLElement) => {

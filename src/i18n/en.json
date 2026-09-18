@@ -127,6 +127,8 @@
     "open": "Open as collage",
     "range": "Collage: select 2 to 6 items",
     "cycle": "Layout",
+    "play_all": "Play all videos",
+    "pause_all": "Pause all videos",
     "close": "Close",
     "hint": "Esc closes · click a video to play/pause",
     "play": "Play",
