@@ -129,6 +129,8 @@
     "cycle": "Layout",
     "play_all": "Play all videos",
     "pause_all": "Pause all videos",
+    "fit_cover": "Fill the tile",
+    "fit_contain": "Fit",
     "close": "Close",
     "hint": "Esc closes · click a video to play/pause",
     "play": "Play",

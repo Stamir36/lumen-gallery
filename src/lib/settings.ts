@@ -27,6 +27,9 @@ export const DEFAULT_DENSITY: GridDensity = "medium";
 /** P7 F4 — global video color correction (applies to every video surface). */
 export const VIDEO_SATURATION_KEY = "video_saturation";
 export const VIDEO_SHARPNESS_KEY = "video_sharpness";
+/** C1 — collage tile fit: contain (default) | cover (fill the tile). */
+export const COLLAGE_FIT_KEY = "collage_fit";
+export type CollageFit = "contain" | "cover";
 
 /**
  * Density → grid metrics. `targetH` is the justified target row height, `gap`
@@ -84,6 +87,8 @@ interface AppSettingsState {
   videoSaturation: number;
   /** global video unsharp strength 0..1 (0 = off, P7 F4) */
   videoSharpness: number;
+  /** collage tiles: contain or cover (C1, global default) */
+  collageFit: CollageFit;
   loaded: boolean;
   load: () => Promise<void>;
   setVideoScrubRate: (rate: number) => Promise<void>;
@@ -98,6 +103,7 @@ interface AppSettingsState {
   setGridDensity: (density: GridDensity) => Promise<void>;
   setVideoSaturation: (v: number) => Promise<void>;
   setVideoSharpness: (v: number) => Promise<void>;
+  setCollageFit: (fit: CollageFit) => Promise<void>;
 }
 
 export const useAppSettings = create<AppSettingsState>((set) => ({
@@ -113,13 +119,14 @@ export const useAppSettings = create<AppSettingsState>((set) => ({
   gridDensity: DEFAULT_DENSITY,
   videoSaturation: 1,
   videoSharpness: 0,
+  collageFit: "contain",
   loaded: false,
 
   load: async () => {
     try {
       const db = await getDb();
       const rows = await db.select<{ key: string; value: string }[]>(
-        "SELECT key, value FROM settings WHERE key IN ('video_scrub_rate', 'hover_captions', 'video_autoplay', 'viewer_swipe', 'viewer_pill_align', 'perf_show_fps', 'show_excluded', 'thumb_workers', 'accent', 'grid_density', 'video_saturation', 'video_sharpness')",
+        "SELECT key, value FROM settings WHERE key IN ('video_scrub_rate', 'hover_captions', 'video_autoplay', 'viewer_swipe', 'viewer_pill_align', 'perf_show_fps', 'show_excluded', 'thumb_workers', 'accent', 'grid_density', 'video_saturation', 'video_sharpness', 'collage_fit')",
       );
       const byKey = new Map(rows.map((r) => [r.key, r.value]));
       const raw = Number(byKey.get(SCRUB_RATE_KEY));
@@ -138,6 +145,7 @@ export const useAppSettings = create<AppSettingsState>((set) => ({
         gridDensity: readDensity(byKey.get(DENSITY_KEY)),
         videoSaturation: readFilterNumber(byKey.get(VIDEO_SATURATION_KEY), 1, 0.5, 2),
         videoSharpness: readFilterNumber(byKey.get(VIDEO_SHARPNESS_KEY), 0, 0, 1),
+        collageFit: byKey.get(COLLAGE_FIT_KEY) === "cover" ? "cover" : "contain",
         loaded: true,
       });
       // the stored accent wins over the pre-paint cache
@@ -271,6 +279,16 @@ export const useAppSettings = create<AppSettingsState>((set) => ({
       await writeSetting(VIDEO_SHARPNESS_KEY, String(v));
     } catch (e) {
       console.error("video sharpness save failed", e);
+      toast.error(i18n.t("errors.action_failed"));
+    }
+  },
+
+  setCollageFit: async (collageFit) => {
+    set({ collageFit }); // optimistic: open collage restyles instantly
+    try {
+      await writeSetting(COLLAGE_FIT_KEY, collageFit);
+    } catch (e) {
+      console.error("collage fit save failed", e);
       toast.error(i18n.t("errors.action_failed"));
     }
   },

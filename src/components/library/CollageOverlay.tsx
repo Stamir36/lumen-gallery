@@ -7,6 +7,9 @@ import { mediaUrl, type MediaRow } from "@/lib/api";
 import { fileSrc, tauriAvailable } from "@/lib/assets";
 import { thumbSrc } from "@/lib/thumbs";
 import { useViewer } from "@/state/viewer";
+import { useAppSettings, type CollageFit } from "@/lib/settings";
+import { useContextMenu } from "@/state/contextMenu";
+import { Maximize, Minimize } from "lucide-react";
 
 /** mono timecode for the tile scrubber ("1:04") */
 function mmss(seconds: number): string {
@@ -158,6 +161,10 @@ export function CollageOverlay({ rows, onClose }: { rows: MediaRow[]; onClose: (
   const layouts = useMemo(() => layoutsFor(rows.length), [rows.length]);
   const layout = layouts[variant % layouts.length];
   const videoCount = useMemo(() => rows.filter((r) => r.kind === "video").length, [rows]);
+  // C1: global fit from settings + per-tile overrides kept per session
+  const globalFit = useAppSettings((s) => s.collageFit);
+  const setCollageFit = useAppSettings((s) => s.setCollageFit);
+  const [fitOverrides, setFitOverrides] = useState<Record<number, CollageFit>>({});
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -193,6 +200,14 @@ export function CollageOverlay({ rows, onClose }: { rows: MediaRow[]; onClose: (
             area={layout.tiles[i]}
             cascade={row.kind === "video" ? cascade : null}
             cascadeIndex={i}
+            globalFit={globalFit}
+            fitOverride={fitOverrides[row.id]}
+            onToggleFit={() => {
+              const current = fitOverrides[row.id] ?? globalFit;
+              const next: CollageFit = current === "cover" ? "contain" : "cover";
+              setFitOverrides((m) => ({ ...m, [row.id]: next }));
+              void setCollageFit(next); // the last gesture wins globally
+            }}
             // double-click a tile: hand the whole collage to the full viewer,
             // which then keeps walking the same queue
             onOpen={() => {
@@ -253,6 +268,9 @@ function CollageTile({
   area,
   cascade,
   cascadeIndex,
+  globalFit,
+  fitOverride,
+  onToggleFit,
   onOpen,
 }: {
   row: MediaRow;
@@ -260,10 +278,17 @@ function CollageTile({
   /** C4: parent-issued transport command, staggered per tile */
   cascade: "play" | "pause" | null;
   cascadeIndex: number;
+  /** C1: global default + per-tile override (persisted in the parent) */
+  globalFit: CollageFit;
+  fitOverride: CollageFit | undefined;
+  onToggleFit: () => void;
   onOpen: () => void;
 }) {
   const { t } = useTranslation();
   const isVideo = row.kind === "video";
+  // C1: per-tile override wins over the global setting
+  const fit = fitOverride ?? globalFit;
+  const openContextMenu = useContextMenu((s) => s.openMenu);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [playing, setPlaying] = useState(false);
   const [muted, setMuted] = useState(true);
@@ -358,6 +383,28 @@ function CollageTile({
       // click: play/pause for a video, the full viewer for a photo
       onClick={isVideo ? togglePlay : onOpen}
       onDoubleClick={onOpen}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        openContextMenu({
+          x: e.clientX,
+          y: e.clientY,
+          title: row.path.split(/[\\/]/).pop(),
+          sections: [
+            {
+              id: "tile",
+              items: [
+                {
+                  id: "tile-fit",
+                  label: fit === "cover" ? t("collage.fit_contain") : t("collage.fit_cover"),
+                  icon: fit === "cover" ? <Minimize size={15} /> : <Maximize size={15} />,
+                  hint: fit === "cover" ? "contain" : "cover",
+                  onSelect: onToggleFit,
+                },
+              ],
+            },
+          ],
+        });
+      }}
       data-viewer-hook={row.id}
     >
       {/* placeholder: cached 480w thumb, scaled → blur-free enough at tile size */}
@@ -366,7 +413,10 @@ function CollageTile({
           src={thumb}
           alt=""
           draggable={false}
-          className="absolute inset-0 h-full w-full object-contain"
+          className={cn(
+            "absolute inset-0 h-full w-full",
+            fit === "cover" ? "object-cover" : "object-contain",
+          )}
         />
       )}
 
@@ -396,7 +446,8 @@ function CollageTile({
             }
           }}
           className={cn(
-            "absolute inset-0 h-full w-full bg-black object-contain transition-opacity duration-[160ms]",
+            "absolute inset-0 h-full w-full bg-black transition-opacity duration-[160ms]",
+            fit === "cover" ? "object-cover" : "object-contain",
             playing ? "opacity-100" : "opacity-0",
           )}
           style={{ filter: "var(--video-filter, none)" }}
@@ -406,7 +457,10 @@ function CollageTile({
           src={fileSrc(row.path)}
           alt=""
           draggable={false}
-          className="absolute inset-0 h-full w-full object-contain"
+          className={cn(
+            "absolute inset-0 h-full w-full",
+            fit === "cover" ? "object-cover" : "object-contain",
+          )}
         />
       )}
 
