@@ -14,6 +14,7 @@ import {
   Heart,
   Info,
   Maximize2,
+  MoreHorizontal,
   Pause,
   PanelRight,
   PictureInPicture2,
@@ -93,6 +94,8 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
   const [chrome, setChrome] = useState(true);
   /** pointer is over the control pill — idle-hide must hold (FIX 1) */
   const [pillHover, setPillHover] = useState(false);
+  /** P7 F3: the "…" overflow popover (snapshot / external / PiP / loop) */
+  const [overflowOpen, setOverflowOpen] = useState(false);
   /** FIX 3: manual interface hide (pill button / H) — wins over the idle timer */
   const [manualHide, setManualHide] = useState(false);
   /** VR immersion (SBS 180): mono projection of one stereo half */
@@ -164,7 +167,35 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
   const pillAlign = useAppSettings((s) => s.pillAlign);
   const videoAutoplay = useAppSettings((s) => s.videoAutoplay);
 
-  const src = tauriAvailable() ? fileSrc(row.path) : "";
+  // P7 F3: the MAIN video source comes from the loopback media server. With
+  // crossOrigin="anonymous" + ACAO:* the frames stay CORS-clean, so canvas
+  // drawImage/toBlob works — this is exactly what the snapshot needed. The
+  // asset:// protocol stays for <img> thumbnails only; if the server is down
+  // we fall back to it for PLAYBACK (frames become tainted: playback fine,
+  // snapshot unavailable — surfaced once in the console).
+  const [mediaSrc, setMediaSrc] = useState<string | null>(null);
+  const [mediaSrcTainted, setMediaSrcTainted] = useState(false);
+  useEffect(() => {
+    if (!tauriAvailable()) return;
+    let cancelled = false;
+    setMediaSrc(null);
+    setMediaSrcTainted(false);
+    mediaUrl(row.path)
+      .then((u) => {
+        if (!cancelled) setMediaSrc(u);
+      })
+      .catch((e) => {
+        console.warn("media server unavailable — asset fallback (snapshot disabled)", e);
+        if (!cancelled) {
+          setMediaSrcTainted(true);
+          setMediaSrc(fileSrc(row.path));
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [row.path]);
+  const src = mediaSrc ?? "";
   // VR sources are name-driven (the library encodes it in file names): a
   // standalone "VR" token ("… 8K VR.mkv", "VR180 …"), or "SBS 180" PLUS an
   // actual stereo-pair frame — two 1:1 halves side by side, aspect ≈ 2:1
@@ -192,6 +223,12 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
     vrResumeAt.current = video.current ? video.current.currentTime : 0;
 
     const resolve = async () => {
+      // F3: the main source is already CORS-clean — the dome reuses it
+      if (mediaSrc && !mediaSrcTainted) {
+        setVrError(false);
+        setVrSrc(mediaSrc);
+        return;
+      }
       try {
         const url = await mediaUrl(row.path);
         if (!cancelled) {
@@ -224,7 +261,7 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
       cancelled = true;
       if (blobUrl) URL.revokeObjectURL(blobUrl);
     };
-  }, [vrMode, row.path, row.size]);
+  }, [vrMode, row.path, row.size, mediaSrc, mediaSrcTainted]);
   const ambience = useMemo(
     () => !reduced && (row.width ?? 0) * (row.height ?? 0) <= AMBIENT_MAX_PIXELS,
     [reduced, row.width, row.height],
@@ -427,6 +464,29 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [applyVolume, row, seekBy, toggle, toggleFavorite, toggleInfo, volume, muted, revealControls, vrMode, exitVr]);
 
+  // P7 F3: the overflow closes on outside click / Esc; stopImmediatePropagation
+  // keeps the viewer's own Esc handler from closing the whole viewer.
+  useEffect(() => {
+    if (!overflowOpen) return;
+    const onDown = (e: MouseEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (!t?.closest("[data-overflow-root]")) setOverflowOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        setOverflowOpen(false);
+      }
+    };
+    window.addEventListener("mousedown", onDown, true);
+    window.addEventListener("keydown", onKey, true);
+    return () => {
+      window.removeEventListener("mousedown", onDown, true);
+      window.removeEventListener("keydown", onKey, true);
+    };
+  }, [overflowOpen]);
+
   // wheel = volume, attached natively so preventDefault is allowed (a passive
   // React handler cannot cancel the gesture)
   useEffect(() => {
@@ -457,17 +517,12 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
       canvas.width = w;
       canvas.height = h;
       canvas.getContext("2d")?.drawImage(el, 0, 0, w, h);
-      const blob = await new Promise<Blob | null>((res) =>
-        canvas.toBlob((b) => res(b), "image/jpeg", 0.9),
-      );
+      // F3: the loopback server keeps frames CORS-clean, so toBlob succeeds —
+      // the asset:// source tainted the canvas and this exact line threw.
+      const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, "image/png"));
       if (!blob) throw new Error("toBlob failed");
-      const bytes = Array.from(new Uint8Array(await blob.arrayBuffer()));
-      const stem = (row.path.split(/[\\/]/).pop() ?? "frame").replace(/\.[^.]+$/, "");
-      const saved = await invoke<string>("save_snapshot", {
-        bytes,
-        name: `${stem} ${clock(el.currentTime).replace(/:/g, "-")}`,
-      });
-      toast.success(t("player.snapshot_saved"), { description: saved });
+      await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+      toast.success(t("player.snapshot_copied"));
     } catch (e) {
       console.error("snapshot failed", e);
       toast.error(t("player.snapshot_failed"));
@@ -503,7 +558,8 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
       {ambience && !error && src && !vrMode && (
         <video
           ref={ambient}
-          src={src}
+          src={src || undefined}
+          crossOrigin="anonymous"
           muted
           playsInline
           aria-hidden
@@ -520,7 +576,8 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
           object-contain letterboxes inside the element) ---------- */}
       <video
         ref={video}
-        src={src}
+        src={src || undefined}
+        crossOrigin="anonymous"
         playsInline
         loop={loop}
         className="relative z-10 h-full w-full object-contain"
@@ -834,7 +891,8 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
               )}
               <video
                 ref={bubble}
-                src={src}
+                src={src || undefined}
+                crossOrigin="anonymous"
                 muted
                 playsInline
                 preload="metadata"
@@ -1026,44 +1084,7 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
                 </DropdownMenu.Portal>
               </DropdownMenu.Root>
 
-              <IconBtn
-                label={t("player.loop")}
-                active={loop}
-                onClick={() => {
-                  const el = vrVideo.current ?? video.current;
-                  const next = !loop;
-                  setLoop(next);
-                  if (el) el.loop = next;
-                }}
-              >
-                <Repeat size={18} />
-              </IconBtn>
-              <IconBtn label={t("player.snapshot")} onClick={() => void onSnapshot()}>
-                <Camera size={18} />
-              </IconBtn>
-              <IconBtn
-                label={t("player.pip")}
-                onClick={() => {
-                  const el = (vrVideo.current ?? video.current) as
-                    | (HTMLVideoElement & { requestPictureInPicture?: () => Promise<unknown> })
-                    | null;
-                  void el?.requestPictureInPicture?.().catch(() =>
-                    toast.error(t("player.pip_failed")),
-                  );
-                }}
-              >
-                <PictureInPicture2 size={18} />
-              </IconBtn>
-              <IconBtn
-                label={t("player.open_external")}
-                onClick={() =>
-                  void invoke("open_external", { path: row.path }).catch(() =>
-                    toast.error(t("errors.action_failed")),
-                  )
-                }
-              >
-                <ExternalLink size={18} />
-              </IconBtn>
+
               {/* VR immersion: compact mono chip, only for recognised SBS/VR
                   sources; accent tint marks the active state */}
               {isVrSource && (
@@ -1124,6 +1145,75 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
               <IconBtn label={t("player.fullscreen")} onClick={onFullscreen}>
                 <Maximize2 size={18} />
               </IconBtn>
+
+              {/* P7 F3: the rightmost "…" — the pill stays lean, everything
+                  occasional lives in one dark-glass popover (whitelisted) */}
+              <div className="relative" data-overflow-root>
+                <IconBtn
+                  label={t("player.more")}
+                  active={overflowOpen}
+                  onClick={() => setOverflowOpen((o) => !o)}
+                >
+                  <MoreHorizontal size={18} />
+                </IconBtn>
+                <AnimatePresence>
+                  {overflowOpen && (
+                    <motion.div
+                      initial={reduced ? false : { opacity: 0, y: 6, scale: 0.97 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={reduced ? { opacity: 0 } : { opacity: 0, y: 6, scale: 0.97 }}
+                      transition={{ duration: reduced ? 0 : 0.14, ease: "easeOut" }}
+                      role="menu"
+                      aria-label={t("player.more")}
+                      className="glass absolute bottom-12 right-0 z-50 w-[252px] rounded-[16px] p-1.5"
+                    >
+                      <OverflowItem
+                        icon={<Camera size={15} />}
+                        label={t("player.snapshot_clipboard")}
+                        onClick={() => {
+                          setOverflowOpen(false);
+                          void onSnapshot();
+                        }}
+                      />
+                      <OverflowItem
+                        icon={<ExternalLink size={15} />}
+                        label={t("player.open_external")}
+                        onClick={() => {
+                          setOverflowOpen(false);
+                          void invoke("open_external", { path: row.path }).catch(() =>
+                            toast.error(t("errors.action_failed")),
+                          );
+                        }}
+                      />
+                      <OverflowItem
+                        icon={<PictureInPicture2 size={15} />}
+                        label={t("player.pip")}
+                        onClick={() => {
+                          setOverflowOpen(false);
+                          const el = (vrVideo.current ?? video.current) as
+                            | (HTMLVideoElement & { requestPictureInPicture?: () => Promise<unknown> })
+                            | null;
+                          void el?.requestPictureInPicture?.().catch(() =>
+                            toast.error(t("player.pip_failed")),
+                          );
+                        }}
+                      />
+                      {/* loop stays open so the check state is visible live */}
+                      <OverflowItem
+                        icon={<Repeat size={15} />}
+                        label={t("player.loop")}
+                        active={loop}
+                        onClick={() => {
+                          const el = vrVideo.current ?? video.current;
+                          const next = !loop;
+                          setLoop(next);
+                          if (el) el.loop = next;
+                        }}
+                      />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             </div>
           </motion.div>
         )}
@@ -1166,6 +1256,36 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+function OverflowItem({
+  icon,
+  label,
+  active,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  active?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="menuitem"
+      onClick={onClick}
+      className={cn(
+        "flex h-9 w-full items-center gap-3 rounded-[10px] px-2.5 text-left text-[13px] transition-colors duration-[120ms]",
+        active
+          ? "bg-white/[.10] text-tprimary"
+          : "text-tsecondary hover:bg-white/[.08] hover:text-tprimary",
+      )}
+    >
+      <span className="flex h-4 w-4 shrink-0 items-center justify-center opacity-80">{icon}</span>
+      <span className="min-w-0 flex-1 truncate">{label}</span>
+      {active && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />}
+    </button>
   );
 }
 

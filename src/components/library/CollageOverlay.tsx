@@ -3,8 +3,8 @@ import { motion, useReducedMotion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { Pause, Play, Rows3, Volume2, VolumeX, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { MediaRow } from "@/lib/api";
-import { fileSrc } from "@/lib/assets";
+import { mediaUrl, type MediaRow } from "@/lib/api";
+import { fileSrc, tauriAvailable } from "@/lib/assets";
 import { thumbSrc } from "@/lib/thumbs";
 import { useViewer } from "@/state/viewer";
 
@@ -243,6 +243,25 @@ function CollageTile({
   const thumb = row.thumbPath ? thumbSrc(row.thumbPath) : null;
   const progress = total > 0 ? Math.min(1, shown / total) : 0;
 
+  // P7 F3: resolve the loopback media_url once per tile (videos only).
+  // crossOrigin + ACAO:* keeps the frames CORS-clean so a tile handed to the
+  // full viewer can snapshot immediately; asset:// fallback keeps playback
+  // alive if the server is down. Images stay on the asset protocol — canvas
+  // never reads from them.
+  const [tileUrl, setTileUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!isVideo || !tauriAvailable()) return;
+    let cancelled = false;
+    mediaUrl(row.path)
+      .then((u) => {
+        if (!cancelled) setTileUrl(u);
+      })
+      .catch(() => {});
+    return () => {
+        cancelled = true;
+    };
+  }, [isVideo, row.path]);
+
   /** click or drag anywhere on the bar seeks (the tile itself toggles play) */
   const seekTo = (clientX: number, el: HTMLElement) => {
     const v = videoRef.current;
@@ -293,7 +312,11 @@ function CollageTile({
       {isVideo ? (
         <video
           ref={videoRef}
-          src={fileSrc(row.path)}
+          // P7 F3: loopback media server + crossOrigin keeps tiles CORS-clean,
+          // so a tile handed to the full viewer can snapshot from day one;
+          // fallback to the asset protocol keeps playback alive if it is down.
+          src={tileUrl ?? fileSrc(row.path)}
+          crossOrigin={tileUrl ? "anonymous" : undefined}
           muted={muted}
           loop
           playsInline
