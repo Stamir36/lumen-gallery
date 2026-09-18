@@ -30,6 +30,7 @@ import {
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { cn } from "@/lib/utils";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { fileSrc, tauriAvailable } from "@/lib/assets";
 import { thumbSrc } from "@/lib/thumbs";
 import { formatBytes, mediaUrl, type MediaRow } from "@/lib/api";
@@ -489,6 +490,26 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
       window.removeEventListener("keydown", onKey, true);
     };
   }, [overflowOpen]);
+
+  // F5: the mini window hands the position back (button / Esc / X / Alt+F4);
+  // the main player seeks there and resumes exactly where the mini stopped.
+  const rowIdRef = useRef(row.id);
+  rowIdRef.current = row.id;
+  useEffect(() => {
+    if (!tauriAvailable()) return;
+    let unlisten: (() => void) | undefined;
+    void listen<{ mediaId: number; positionMs: number }>("mini-return", (e) => {
+      const p = e.payload;
+      if (!p || p.mediaId !== rowIdRef.current) return;
+      const el = vrVideo.current ?? video.current;
+      if (!el) return;
+      el.currentTime = p.positionMs / 1000;
+      void el.play().catch(() => undefined);
+    }).then((off) => {
+      unlisten = off;
+    });
+    return () => unlisten?.();
+  }, []);
 
   // wheel = volume, attached natively so preventDefault is allowed (a passive
   // React handler cannot cancel the gesture)
@@ -1189,17 +1210,23 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
                           );
                         }}
                       />
+                      {/* F5: the OS-painted browser PiP is replaced by a
+                          frameless always-on-top child window; the main
+                          player pauses and resumes at the handed-back time */}
                       <OverflowItem
                         icon={<PictureInPicture2 size={15} />}
-                        label={t("player.pip")}
+                        label={t("player.mini_open")}
                         onClick={() => {
                           setOverflowOpen(false);
-                          const el = (vrVideo.current ?? video.current) as
-                            | (HTMLVideoElement & { requestPictureInPicture?: () => Promise<unknown> })
-                            | null;
-                          void el?.requestPictureInPicture?.().catch(() =>
-                            toast.error(t("player.pip_failed")),
-                          );
+                          const el = vrVideo.current ?? video.current;
+                          const positionMs = el ? Math.round(el.currentTime * 1000) : 0;
+                          el?.pause();
+                          void invoke("open_mini_player", {
+                            payload: { row, positionMs },
+                          }).catch((e) => {
+                            console.error("open_mini_player failed", e);
+                            toast.error(t("errors.action_failed"));
+                          });
                         }}
                       />
                       {/* P7 F4: nested color-correction popover */}

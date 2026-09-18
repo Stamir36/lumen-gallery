@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use sqlx::{Row, SqlitePool};
 use tauri::{AppHandle, Manager, State};
 use tauri_plugin_sql::{DbInstances, DbPool};
@@ -70,6 +70,94 @@ pub async fn save_progress(
     app.state::<crate::writer::DbWriter>()
         .progress(id, position_ms, duration_ms)
         .await;
+    Ok(())
+}
+
+/// F5 — custom mini-player: a frameless always-on-top child window replacing
+/// the OS-painted browser PiP (its caption cannot be styled away). The payload
+/// is injected via `window.eval` + a command hand-off instead of an event so
+/// the freshly created webview can never miss the message.
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MiniPayload {
+    pub row: crate::scan::MediaRow,
+    pub position_ms: i64,
+}
+
+/// F5: last known (media_id, position_ms) of the mini player, refreshed by
+/// `mini_note_position` (on pause + every 5 s) so that a close via ANY path
+/// (X, taskbar, Alt+F4) can emit a recent position even though the mini's
+/// webview is already going down and cannot speak for itself.
+#[derive(Default)]
+pub struct MiniPlayerState(pub std::sync::Mutex<Option<(i64, i64)>>);
+
+#[tauri::command]
+pub async fn mini_note_position(
+    app: AppHandle,
+    media_id: i64,
+    position_ms: i64,
+) -> Result<(), String> {
+    if let Some(state) = app.try_state::<MiniPlayerState>() {
+        *state.0.lock().unwrap() = Some((media_id, position_ms));
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn open_mini_player(app: AppHandle, payload: MiniPayload) -> Result<(), String> {
+    use tauri::{WebviewUrl, WebviewWindowBuilder};
+
+    let payload_json = serde_json::to_string(&payload).map_err(|e| e.to_string())?;
+    if let Some(existing) = app.get_webview_window("mini") {
+        // already open: hand over the new media and focus it
+        existing
+            .eval(format!("window.__LUMEN_MINI__ = {payload_json};"))
+            .map_err(|e| e.to_string())?;
+        let _ = existing.set_focus();
+        return Ok(());
+    }
+    let window = WebviewWindowBuilder::new(
+        &app,
+        "mini",
+        WebviewUrl::App("index.html#/miniplayer".into()),
+    )
+    .title("LUMEN mini")
+    .inner_size(460.0, 260.0)
+    .min_inner_size(320.0, 180.0)
+    .resizable(true)
+    .decorations(false)
+    .always_on_top(true)
+    .skip_taskbar(true)
+    .build()
+    .map_err(|e| e.to_string())?;
+    // injected once navigation has started; the route polls briefly on mount
+    window
+        .eval(format!("window.__LUMEN_MINI__ = {payload_json};"))
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+/// The mini player hands its position back; the main window resumes there and
+/// the mini closes (F5). Called for the return button, the X button and the
+/// window-close request alike.
+#[tauri::command]
+pub async fn mini_return(
+    app: AppHandle,
+    media_id: i64,
+    position_ms: i64,
+    close: bool,
+) -> Result<(), String> {
+    use tauri::Emitter;
+    app.emit(
+        "mini-return",
+        serde_json::json!({ "mediaId": media_id, "positionMs": position_ms }),
+    )
+    .map_err(|e| e.to_string())?;
+    if close {
+        if let Some(mini) = app.get_webview_window("mini") {
+            mini.close().map_err(|e| e.to_string())?;
+        }
+    }
     Ok(())
 }
 

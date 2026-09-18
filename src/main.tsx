@@ -9,6 +9,7 @@ import OnboardingPage from "./pages/OnboardingRoute";
 import SettingsPage from "./pages/SettingsPage";
 import AssetTest from "./pages/AssetTest";
 import GridDemo from "./pages/GridDemo";
+import MiniPlayer from "./components/miniplayer/MiniPlayer";
 import { invoke } from "@tauri-apps/api/core";
 import { initI18n, readSavedLang, applyCursorPreference } from "./i18n";
 import { tauriAvailable } from "./lib/assets";
@@ -89,6 +90,8 @@ async function bootstrap() {
             <Route path="/asset-test" element={<AssetTest />} />
             {/* dev-only grid QA surface (synthetic rows, no Tauri calls) */}
             <Route path="/grid-demo" element={<GridDemo />} />
+            {/* F5: the custom mini-player lives in its own frameless window */}
+            <Route path="/miniplayer" element={<MiniPlayer />} />
           </Routes>
         </HashRouter>
         <Toaster

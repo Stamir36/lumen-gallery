@@ -8,7 +8,7 @@ use std::time::UNIX_EPOCH;
 
 use tokio::sync::Mutex as AsyncMutex;
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use sqlx::{Connection as _, SqlitePool};
 use tauri::{AppHandle, Emitter};
 use walkdir::WalkDir;
@@ -26,7 +26,7 @@ pub struct ScanProgress {
     pub added: u64,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MediaRow {
     pub id: i64,

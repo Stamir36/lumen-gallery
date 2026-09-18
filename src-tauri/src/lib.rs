@@ -149,7 +149,9 @@ pub fn run() {
       commands::open_external,
       commands::open_url,
       commands::open_file,
-      commands::cli_args,
+      commands::open_mini_player,
+      commands::mini_return,
+      commands::mini_note_position,      commands::cli_args,
       assoc::assoc_status,
       assoc::assoc_register,
       assoc::assoc_unregister,
@@ -165,6 +167,26 @@ pub fn run() {
     .manage(watch::WatcherRegistry::default())
     .manage(thumbs::ThumbEngine::default())
     .manage(commands::BackendState::default())
+    .manage(commands::MiniPlayerState::default())
+    .on_window_event(|window, event| {
+      // F5: the mini player closing by ANY path (X button, taskbar, Alt+F4)
+      // still hands its position back before the webview dies.
+      if let tauri::WindowEvent::CloseRequested { .. } = event {
+        if window.label() != "mini" {
+          return;
+        }
+        use tauri::Emitter;
+        let app = window.app_handle();
+        if let Some(state) = app.try_state::<commands::MiniPlayerState>() {
+          if let Some(p) = state.0.lock().unwrap().take() {
+            let _ = app.emit(
+              "mini-return",
+              serde_json::json!({ "mediaId": p.0, "positionMs": p.1 }),
+            );
+          }
+        }
+      }
+    })
     .setup(|app| {
       // Phase 6 STEP 1: the identifier change moves app dirs — rescue the
       // existing library (db + thumbs) once, before the sql plugin opens it.
