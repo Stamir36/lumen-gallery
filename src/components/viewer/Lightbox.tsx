@@ -118,8 +118,13 @@ export function Lightbox({ row }: { row: MediaRow }) {
 
   const clampPan = useCallback(
     (x: number, y: number, z: number) => {
-      const overW = Math.max(0, (fit.w * z - stage.w) / 2);
-      const overH = Math.max(0, (fit.h * z - stage.h) / 2);
+      // contain-fit means the picture is centred at z = 1 — keep it there
+      if (z <= 1.001) return { x: 0, y: 0 };
+      // Edge-lock when the zoomed picture exceeds the stage; ROAM range when
+      // it is still smaller — otherwise a photo at 110–130% was nailed to the
+      // centre ("pan refuses to move until I reset to 100% and zoom again")
+      const overW = Math.abs(fit.w * z - stage.w) / 2;
+      const overH = Math.abs(fit.h * z - stage.h) / 2;
       return {
         x: Math.min(overW, Math.max(-overW, x)),
         y: Math.min(overH, Math.max(-overH, y)),
@@ -195,8 +200,12 @@ export function Lightbox({ row }: { row: MediaRow }) {
 
   const onPointerDown = (e: React.PointerEvent) => {
     if (failed) return;
-    if (zoom > MIN_ZOOM) {
-      (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+    // read the LIVE zoom from the ref — the wheel path commits through rAF, so
+    // a state read here could still see the pre-zoom value and route the
+    // gesture into the swipe branch (pan dead until reset to fit)
+    if (zoomRef.current > MIN_ZOOM) {
+      e.preventDefault();
+      (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
       drag.current = { x: e.clientX, y: e.clientY, px: pan.x, py: pan.y };
       setDragging(true);
       return;
@@ -298,7 +307,7 @@ export function Lightbox({ row }: { row: MediaRow }) {
           }
         }}
         className={cn(
-          "relative min-h-0 flex-1 overflow-hidden",
+          "relative min-h-0 flex-1 touch-none overflow-hidden",
           zoom > MIN_ZOOM ? (dragging ? "cursor-grabbing" : "cursor-grab") : "cursor-default",
         )}
       >
