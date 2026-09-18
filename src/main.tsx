@@ -9,7 +9,9 @@ import OnboardingPage from "./pages/OnboardingRoute";
 import SettingsPage from "./pages/SettingsPage";
 import AssetTest from "./pages/AssetTest";
 import GridDemo from "./pages/GridDemo";
+import { invoke } from "@tauri-apps/api/core";
 import { initI18n, readSavedLang, applyCursorPreference } from "./i18n";
+import { tauriAvailable } from "./lib/assets";
 import { applyCachedAccent } from "./lib/accent";
 import { initScanListener, initOfflineListener } from "./state/library";
 import { queryClient } from "./lib/queryClient";
@@ -47,8 +49,25 @@ applyCachedAccent();
 // (a plain browser preview has no IPC — surface it, never leave it unhandled)
 initScanListener().catch((e) => console.warn("scan listener unavailable:", e));
 initOfflineListener().catch((e) => console.warn("offline listener unavailable:", e));
+// P7 F2: resolve the CLI file BEFORE the first paint. With a boot file the
+// html gets `boot-viewer` (pure black, #root hidden) so the gallery never
+// flashes for even one frame — the viewer opens as a portal over the black
+// surface and removes the class when it mounts.
+const bootFile = await resolveBootFile();
+if (bootFile) document.documentElement.classList.add("boot-viewer");
+
 // file from Explorer / second launch / drag onto the window → fullscreen viewer
-initExternalOpen();
+initExternalOpen(bootFile);
+
+async function resolveBootFile(): Promise<string | null> {
+  if (!tauriAvailable()) return null;
+  try {
+    const args: string[] = await invoke("cli_args");
+    return args.find((a) => a !== "lumen" && /^[A-Za-z]:\\/.test(a)) ?? null;
+  } catch {
+    return null; // browser QA — no IPC
+  }
+}
 
 async function bootstrap() {
   // apply the persisted/system language BEFORE the first render

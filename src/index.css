@@ -214,3 +214,18 @@ html.cursor-pointer [data-clickable] { cursor: pointer; }
     transition-duration: 0.01ms !important;
   }
 }
+
+/* P7 F2 — cold external open: the boot surface exists ONLY while the html
+   carries the `boot-viewer` class (set by main.tsx before the first paint,
+   removed when the viewer portal mounts or on boot failure). #root stays in
+   the DOM (hydration untouched); the viewer portal is appended to <body>
+   AFTER it, so the fullscreen media paints over a black surface — zero
+   frames of gallery/sidebar ever reach the screen. */
+html.boot-viewer {
+  background: #000;
+}
+html.boot-viewer #root {
+  display: none;
+}
+html.boot-viewer #root ~ * {
+  display: revert; /* portals appended after #root stay visible */}

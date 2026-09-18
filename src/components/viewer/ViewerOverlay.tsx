@@ -25,6 +25,13 @@ export function ViewerOverlay() {
     if (open) stopCardPreviews();
   }, [open]);
 
+  // P7 F2: cold external open — the boot surface (pure black, gallery hidden)
+  // is removed the moment the viewer portal actually mounts. Boot failures
+  // clear it in externalOpen's catch, so no path can strand a black screen.
+  useEffect(() => {
+    if (open) document.documentElement.classList.remove("boot-viewer");
+  }, [open]);
+
   const row = queue[index];
   if (!open || !row) return null;
 
