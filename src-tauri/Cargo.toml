@@ -35,6 +35,8 @@ notify = "6"
 tiny_http = "0.12"
 # OS recycle bin for real trash deletion (P6): no std::fs::remove anywhere.
 trash = "5"
+# Phase 6 STEP 4: opt-in file associations — HKCU ONLY, never HKLM, no admin
+winreg = "0.55"
 thiserror = "2"
 sqlx = { version = "0.8", default-features = false, features = ["sqlite", "runtime-tokio", "macros"] }
 tokio = { version = "1.53.1", features = ["sync"] }

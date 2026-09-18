@@ -2619,6 +2619,7 @@ dependencies = [
  "tokio",
  "trash",
  "walkdir",
+ "winreg",
 ]
 
 [[package]]

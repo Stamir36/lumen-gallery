@@ -1,3 +1,4 @@
+mod assoc;
 mod assets;
 mod cache;
 mod legacy;
@@ -149,6 +150,10 @@ pub fn run() {
       commands::open_url,
       commands::open_file,
       commands::cli_args,
+      assoc::assoc_status,
+      assoc::assoc_register,
+      assoc::assoc_unregister,
+      assoc::assoc_open_settings,
       commands::check_player,
       commands::reveal_path,
       commands::trash_delete,

@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { DENSITY_PARAMS, SCRUB_RATES, THUMB_WORKER_OPTIONS, useAppSettings, type GridDensity } from "@/lib/settings";
 import { ACCENTS } from "@/lib/accent";
 import { ExcludedFolders } from "@/components/settings/ExcludedFolders";
+import { FileAssociations } from "@/components/settings/FileAssociations";
 import { LanguageDropdown } from "@/components/LanguageSwitcher";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { PillButton } from "@/components/ui/PillButton";
@@ -685,6 +686,8 @@ export function SettingsContent() {
                 </PillButton>
               </div>
             </form>
+            {/* Phase 6 STEP 4: opt-in, reversible, HKCU-only associations */}
+            <FileAssociations />
             <div className="mt-2 flex items-center justify-between border-t border-hairline py-4">
               <span className="text-sm text-tprimary">{t("settings.open_logs")}</span>
               <button
