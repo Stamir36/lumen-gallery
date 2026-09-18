@@ -106,8 +106,13 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
    */
   const [vrSrc, setVrSrc] = useState<string | null>(null);
   const [vrError, setVrError] = useState(false);
-  /** playback position carried across the VR source switch */
-  const vrResumeAt = useRef<number | null>(null);
+  /** playback position carried into the VR element (and back on exit) */
+  const vrResumeAt = useRef<number>(0);
+  /** VR draws from its own CORS-clean element (FIX 1) — controls target it */
+  const vrVideo = useRef<HTMLVideoElement | null>(null);
+  /** was the main element playing when VR was entered → resume on exit */
+  const wasPlayingBeforeVr = useRef(false);
+  /** was the main element playing when VR was entered → resume on exit */
   const [volumeOpen, setVolumeOpen] = useState(false);
   const [barHover, setBarHover] = useState(false);
   const [scrub, setScrub] = useState<{ x: number; time: number } | null>(null);
@@ -180,7 +185,10 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
     if (!vrMode) return;
     let cancelled = false;
     let blobUrl: string | null = null;
-    vrResumeAt.current = video.current ? video.current.currentTime : null;
+    // drop any stale source from a previous session/row — VrView mounts only
+    // once THIS row's clean URL is resolved
+    setVrSrc(null);
+    vrResumeAt.current = video.current ? video.current.currentTime : 0;
 
     const resolve = async () => {
       try {
@@ -246,7 +254,7 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
   // ---------- persist position (every 5s + on unmount) ----------
   const saveNow = useCallback(
     (force = false) => {
-      const el = video.current;
+      const el = vrVideo.current ?? video.current;
       if (!tauriAvailable() || !el || (!force && el.paused)) return;
       const position = Math.round(el.currentTime * 1000);
       if (!force && position < 1_000) return;
@@ -287,9 +295,23 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
     hideAt.current = Date.now() + HIDE_AFTER_MS;
   }, []);
 
+  // FIX 1: exit the dome — copy the position back, resume the main element.
+  const exitVr = useCallback(() => {
+    const vr = vrVideo.current;
+    const main = video.current;
+    if (vr && main) main.currentTime = vr.currentTime;
+    vrVideo.current = null;
+    setVrMode(false);
+    if (wasPlayingBeforeVr.current && main) {
+      void main.play().catch(() => undefined);
+    }
+    wasPlayingBeforeVr.current = false;
+    poke();
+  }, [poke]);
+
   useEffect(() => {
     const id = window.setInterval(() => {
-      const el = video.current;
+      const el = vrVideo.current ?? video.current;
       // FIX 1 holds — the chrome never idle-hides while: paused, scrubbing,
       // pointer over the bar or the pill, volume popover open, or the
       // codec-error card is up.
@@ -311,7 +333,7 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
 
   // ---------- playback helpers ----------
   const toggle = useCallback(() => {
-    const el = video.current;
+    const el = vrVideo.current ?? video.current;
     if (!el || error) return;
     if (el.paused) void el.play().catch((e) => setError(String(e)));
     else el.pause();
@@ -320,7 +342,7 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
 
   const seekBy = useCallback(
     (delta: number) => {
-      const el = video.current;
+      const el = vrVideo.current ?? video.current;
       if (!el) return;
       el.currentTime = Math.max(0, Math.min(el.duration || 0, el.currentTime + delta));
       poke();
@@ -330,7 +352,7 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
 
   const applyVolume = useCallback(
     (next: number) => {
-      const el = video.current;
+      const el = vrVideo.current ?? video.current;
       const v = Math.max(0, Math.min(1, next));
       setVolume(v);
       setMuted(v === 0);
@@ -346,7 +368,7 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
   // ---------- keyboard map (STEP 2 contract) ----------
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const el = video.current;
+      const el = vrVideo.current ?? video.current;
       const v = useViewer.getState();
       // FIX 3: H toggles the manual interface hide; any other key reveals.
       if (e.key === "h" || e.key === "H") {
@@ -359,7 +381,7 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
       if (e.key === "Escape") {
         // VR first: one Esc leaves the dome, the next closes the viewer
         if (vrMode) {
-          setVrMode(false);
+          exitVr();
           return;
         }
         // fullscreen first, viewer second
@@ -402,7 +424,7 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [applyVolume, row, seekBy, toggle, toggleFavorite, toggleInfo, volume, muted, revealControls, vrMode]);
+  }, [applyVolume, row, seekBy, toggle, toggleFavorite, toggleInfo, volume, muted, revealControls, vrMode, exitVr]);
 
   // wheel = volume, attached natively so preventDefault is allowed (a passive
   // React handler cannot cancel the gesture)
@@ -425,7 +447,7 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
   };
 
   const onSnapshot = async () => {
-    const el = video.current;
+    const el = vrVideo.current ?? video.current;
     if (!el) return;
     try {
       const w = Math.min(1920, el.videoWidth || 1280);
@@ -497,29 +519,14 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
           object-contain letterboxes inside the element) ---------- */}
       <video
         ref={video}
-        src={vrMode ? (vrSrc ?? undefined) : src}
-        // only for the loopback URL: a blob is same-origin and needs no CORS
-        crossOrigin={vrMode && vrSrc?.startsWith("http") ? "anonymous" : undefined}
+        src={src}
         playsInline
         loop={loop}
-        className={
-          vrMode
-            ? // stays a full-size PAINTED element under the opaque VR canvas —
-              // harder hiding (display:none / opacity ~0) makes the WebView2
-              // compositor stop delivering fresh frames to texImage2D
-              "absolute inset-0 h-full w-full object-contain"
-            : "relative z-10 h-full w-full object-contain"
-        }
+        className="relative z-10 h-full w-full object-contain"
         onLoadedMetadata={(e) => {
           setDuration(e.currentTarget.duration || 0);
           setNat({ w: e.currentTarget.videoWidth, h: e.currentTarget.videoHeight });
           e.currentTarget.volume = volume;
-          // a VR source switch reloads the element: keep the watch position
-          const at = vrResumeAt.current;
-          if (at && at > 1) {
-            vrResumeAt.current = null;
-            e.currentTarget.currentTime = at;
-          }
           // Settings › Appearance: play at once (the click that opened the
           // viewer is the user activation WebView2 requires for sound)
           if (videoAutoplay) void e.currentTarget.play().catch(() => undefined);
@@ -548,15 +555,28 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
         onError={() => setError("codec")}
       />
 
-      {/* ---------- VR immersion (SBS 180): mono 180° projection ---------- */}
-      {vrMode && (
+      {/* ---------- VR immersion (SBS 180): mono 180° projection. Draws from
+          a DEDICATED CORS-clean element (FIX 1): crossOrigin must be set on a
+          FRESH element BEFORE its src — swapping src/crossOrigin on the already
+          loaded main element is ignored and the frames stay tainted. The main
+          element keeps its asset:// source untouched; VrView carries playback
+          (audio, decode, position) inside the dome. ---------- */}
+      {vrMode && vrSrc && (
         <VrView
-          videoRef={video}
+          videoRef={vrVideo}
+          src={vrSrc}
+          startAt={vrResumeAt.current}
           eye={vrEye}
+          volume={volume}
+          muted={muted}
+          rate={rate}
+          loop={loop}
+          onTime={setCurrent}
+          onPlayState={setPlaying}
           onFatal={() => {
             // tainted frame: leave the dome instead of a black canvas
             setVrError(true);
-            setVrMode(false);
+            exitVr();
           }}
         />
       )}
@@ -647,7 +667,7 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
             exit={reduced ? { opacity: 0 } : { y: 8 }}
             transition={{ type: "spring", stiffness: 260, damping: 26 }}
             onClick={() => {
-              const el = video.current;
+              const el = vrVideo.current ?? video.current;
               if (el) {
                 el.currentTime = resume.positionMs / 1000;
                 void el.play().catch(() => undefined);
@@ -841,7 +861,7 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
             (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
             const rect = e.currentTarget.getBoundingClientRect();
             const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-            const el = video.current;
+            const el = vrVideo.current ?? video.current;
             if (el && duration) el.currentTime = ratio * duration;
             poke();
           }}
@@ -849,8 +869,9 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
             const rect = e.currentTarget.getBoundingClientRect();
             const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
             pushScrub({ x: e.clientX - rect.left, time: ratio * duration });
-            if (scrubbing.current && video.current && duration) {
-              video.current.currentTime = ratio * duration;
+            if (scrubbing.current) {
+              const el = vrVideo.current ?? video.current;
+              if (el && duration) el.currentTime = ratio * duration;
             }
           }}
           onPointerUp={() => {
@@ -986,7 +1007,7 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
                       <DropdownMenu.Item
                         key={r}
                         onSelect={() => {
-                          const el = video.current;
+                          const el = vrVideo.current ?? video.current;
                           if (el) el.playbackRate = r;
                           setRate(r);
                         }}
@@ -1008,7 +1029,7 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
                 label={t("player.loop")}
                 active={loop}
                 onClick={() => {
-                  const el = video.current;
+                  const el = vrVideo.current ?? video.current;
                   const next = !loop;
                   setLoop(next);
                   if (el) el.loop = next;
@@ -1022,7 +1043,7 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
               <IconBtn
                 label={t("player.pip")}
                 onClick={() => {
-                  const el = video.current as
+                  const el = (vrVideo.current ?? video.current) as
                     | (HTMLVideoElement & { requestPictureInPicture?: () => Promise<unknown> })
                     | null;
                   void el?.requestPictureInPicture?.().catch(() =>
@@ -1040,7 +1061,16 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
                     type="button"
                     aria-label={t("player.vr")}
                     aria-pressed={vrMode}
-                    onClick={() => setVrMode((v) => !v)}
+                    onClick={() => {
+                      if (vrMode) {
+                        exitVr();
+                        return;
+                      }
+                      const main = video.current;
+                      wasPlayingBeforeVr.current = !!main && !main.paused;
+                      main?.pause();
+                      setVrMode(true);
+                    }}
                     className={cn(
                       "flex h-10 items-center rounded-pill px-3 font-mono text-[11px] tracking-[0.08em] transition-all duration-[160ms] ease-out active:scale-[.97]",
                       vrMode

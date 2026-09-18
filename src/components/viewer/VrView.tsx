@@ -6,6 +6,9 @@ import {
   type RefObject,
 } from "react";
 
+/** SecurityError is logged ONCE per session — never a per-frame storm. */
+let vrSecurityLogged = false;
+
 const VERT_SRC = `
 attribute vec2 a_pos;
 varying vec2 v_uv;
@@ -55,18 +58,46 @@ const FOV_MAX = (110 * Math.PI) / 180;
 /**
  * Immersion mode for SBS 180° video: one stereo half is projected as a MONO
  * 180° panorama (normal viewing, not stereoscopic). Raw WebGL — no new
- * dependency. The <video> element keeps playing (audio + decode run outside
- * this canvas); frames upload as a texture when the playback time changes.
- * Drag = look around (grab-the-world), wheel = fov.
+ * dependency.
+ *
+ * FIX 1: VrView owns a DEDICATED <video> whose source is the CORS-clean
+ * loopback URL. The player's own element keeps its asset:// source —
+ * `crossOrigin` is ignored when swapped onto an already-loaded element, which
+ * is exactly what tainted every frame (texImage2D SecurityError). Here
+ * `crossOrigin` is set BEFORE `src` on a fresh element, so the canvas stays
+ * untainted. Playback (audio, decode, position, rate, loop) lives in this
+ * element while the dome is up; the parent pauses its main element and reads
+ * the position back on exit.
+ * Drag = look around (grab-the-world), wheel = fov, dbl-click = re-centre.
  */
 export function VrView({
   videoRef,
+  src,
+  startAt,
   eye,
+  volume,
+  muted,
+  rate,
+  loop,
+  onTime,
+  onPlayState,
   onFatal,
 }: {
+  /** ref the element registers itself into — the player's controls target it */
   videoRef: RefObject<HTMLVideoElement | null>;
+  /** CORS-clean source resolved by the player (loopback URL or blob URL) */
+  src: string;
+  /** playback position carried over from the main element */
+  startAt: number;
   /** 0 = left half of the stereo pair, 1 = right half */
   eye: 0 | 1;
+  volume: number;
+  muted: boolean;
+  rate: number;
+  loop: boolean;
+  /** mirror currentTime so the pill/progress line keep working inside VR */
+  onTime?: (t: number) => void;
+  onPlayState?: (playing: boolean) => void;
   /** called ONCE when the canvas can no longer take frames (tainted source) */
   onFatal?: () => void;
 }) {
@@ -79,6 +110,10 @@ export function VrView({
   /** the draw loop must die on the first SecurityError, not spam every frame */
   const onFatalRef = useRef(onFatal);
   onFatalRef.current = onFatal;
+  const onTimeRef = useRef(onTime);
+  onTimeRef.current = onTime;
+  const onPlayRef = useRef(onPlayState);
+  onPlayRef.current = onPlayState;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -228,11 +263,14 @@ export function VrView({
           checkUpload();
         } catch (err) {
           // SecurityError = tainted frame (a non-CORS source slipped through).
-          // Stop the loop ONCE and hand control back to the player — never a
-          // console-per-frame storm.
+          // Stop the loop ONCE and hand control back to the player — the
+          // message is logged once per session, never per frame.
           dead = true;
           cancelAnimationFrame(raf);
-          console.error("vr: frame rejected, leaving the dome", err);
+          if (!vrSecurityLogged) {
+            vrSecurityLogged = true;
+            console.error("vr: frame rejected, leaving the dome", err);
+          }
           onFatalRef.current?.();
           return;
         }
@@ -288,14 +326,39 @@ export function VrView({
   };
 
   return (
-    <canvas
-      ref={canvasRef}
-      className="absolute inset-0 z-10 h-full w-full cursor-grab active:cursor-grabbing"
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={endDrag}
-      onPointerCancel={endDrag}
-      onDoubleClick={onDoubleClick}
-    />
+    <>
+      {/* DEDICATED CORS element: crossOrigin is declared BEFORE src so it is
+          applied to the load (swapping it onto a loaded element is ignored).
+          Tiny and nearly transparent — the opaque dome canvas covers it, but
+          it stays a painted element so the compositor keeps the decode fed. */}
+      <video
+        ref={videoRef as RefObject<HTMLVideoElement>}
+        crossOrigin="anonymous"
+        src={src}
+        playsInline
+        loop={loop}
+        muted={muted}
+        onLoadedMetadata={(e) => {
+          const el = e.currentTarget;
+          el.volume = volume;
+          el.playbackRate = rate;
+          if (startAt > 0.25) el.currentTime = Math.min(startAt, el.duration || startAt);
+          void el.play().catch(() => undefined);
+        }}
+        onTimeUpdate={(e) => onTimeRef.current?.(e.currentTarget.currentTime)}
+        onPlay={() => onPlayRef.current?.(true)}
+        onPause={() => onPlayRef.current?.(false)}
+        className="pointer-events-none absolute left-0 top-0 z-0 h-2 w-2 opacity-[.02]"
+      />
+      <canvas
+        ref={canvasRef}
+        className="absolute inset-0 z-10 h-full w-full cursor-grab active:cursor-grabbing"
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={endDrag}
+        onPointerCancel={endDrag}
+        onDoubleClick={onDoubleClick}
+      />
+    </>
   );
 }
