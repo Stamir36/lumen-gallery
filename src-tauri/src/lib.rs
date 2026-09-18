@@ -131,6 +131,7 @@ pub fn run() {
       commands::open_external,
       commands::check_player,
       commands::reveal_path,
+      commands::trash_delete,
       commands::media_url,
       cache::thumbnail_cache_size,
       cache::clear_thumbnail_cache,

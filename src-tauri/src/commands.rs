@@ -139,6 +139,34 @@ pub async fn reveal_path(path: String) -> Result<(), String> {
     }
 }
 
+/// Real trash deletion (P6): hand every file to the OS recycle bin via the
+/// `trash` crate, then drop its DB row through the single writer. Per-item
+/// failures are collected — rows without a successful file delete are KEPT,
+/// so the library never loses track of a file that still exists.
+#[tauri::command]
+pub async fn trash_delete(paths: Vec<String>) -> Result<usize, String> {
+    let mut deleted = 0usize;
+    let mut failed: Vec<String> = Vec::new();
+    for p in &paths {
+        match trash::delete(std::path::Path::new(p)) {
+            Ok(()) => deleted += 1,
+            Err(e) => failed.push(format!("{p}: {e}")),
+        }
+    }
+    if !failed.is_empty() {
+        log::warn!("trash_delete: {} file(s) failed", failed.len());
+        for f in failed.iter().take(5) {
+            log::warn!("trash_delete: {f}");
+        }
+        return Err(format!(
+            "{} of {} file(s) could not be moved to the recycle bin",
+            failed.len(),
+            paths.len()
+        ));
+    }
+    Ok(deleted)
+}
+
 /// Hands a file to the configured external player, falling back to the OS
 /// association (used when a codec cannot be played in the webview).
 #[tauri::command]

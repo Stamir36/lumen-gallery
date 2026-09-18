@@ -156,3 +156,47 @@ export async function trashMedia(ids: number[]) {
     toast.error(i18n.t("errors.action_failed"));
   }
 }
+
+/** Unflag rows — instant, no rescan: the files never left the disk. */
+export async function restoreTrash(ids: number[]) {
+  if (ids.length === 0) return;
+  try {
+    let affected = 0;
+    for (const chunk of chunkIds(ids)) {
+      affected += await run(
+        `UPDATE media SET trashed = 0 WHERE id IN (${placeholderList(chunk.length)})`,
+        chunk,
+      );
+    }
+    await invalidateAfterWrite();
+    toast.success(i18n.t("trash.restored", { count: affected }));
+  } catch (e) {
+    console.error("restore failed", e);
+    toast.error(i18n.t("errors.action_failed"));
+  }
+}
+
+/**
+ * "Delete forever" (P6): every file goes to the OS RECYCLE BIN through the
+ * Rust `trash` crate — NEVER unlink. On success the DB row is dropped; a
+ * per-file failure aborts with rows kept, so the library never loses track of
+ * a file that still exists on disk.
+ */
+export async function deleteForever(rows: { id: number; path: string }[]) {
+  if (rows.length === 0) return;
+  try {
+    await invoke<number>("trash_delete", { paths: rows.map((r) => r.path) });
+    let affected = 0;
+    for (const chunk of chunkIds(rows.map((r) => r.id))) {
+      affected += await run(
+        `DELETE FROM media WHERE id IN (${placeholderList(chunk.length)})`,
+        chunk,
+      );
+    }
+    await invalidateAfterWrite();
+    toast.success(i18n.t("trash.deleted", { count: affected }));
+  } catch (e) {
+    console.error("delete forever failed", e);
+    toast.error(String(e));
+  }
+}

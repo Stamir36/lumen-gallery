@@ -311,5 +311,16 @@
     "trash": "Move to trash",
     "trashed": "{{count}} moved to trash",
     "clear_selection": "Clear selection"
+  },
+  "trash": {
+    "restore": "Restore",
+    "delete_forever": "Delete forever",
+    "empty": "Empty trash",
+    "confirm_title": "Delete forever?",
+    "confirm_counts": "{{count}} files · {{size}}",
+    "confirm_note": "Files will be moved to the system recycle bin — they can be restored from there",
+    "cancel": "Cancel",
+    "restored": "Restored: {{count}}",
+    "deleted": "Deleted forever: {{count}}"
   }
 }

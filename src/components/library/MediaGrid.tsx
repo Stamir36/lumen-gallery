@@ -2,15 +2,17 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
-import { Heart, LayoutGrid, Trash2, X } from "lucide-react";
+import { Heart, LayoutGrid, RotateCcw, Trash2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatBytes, formatCount, type MediaRow } from "@/lib/api";
+import { setFavorite, trashMedia, restoreTrash, deleteForever } from "@/lib/mediaActions";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/Dialog";
+import { PillButton } from "@/components/ui/PillButton";
 import { MonoChip } from "@/components/ui/Chip";
 import { buildGrid, HEADER_HEIGHT, type GridItem } from "@/lib/gridItems";
 import { DENSITY_PARAMS, useAppSettings } from "@/lib/settings";
 import { useElementWidth } from "@/lib/hooks";
 import { formatDuration, formatResolution, baseName } from "@/lib/format";
-import { setFavorite, trashMedia } from "@/lib/mediaActions";
 import { enqueueRows, seedThumbs, setViewportIds } from "@/lib/thumbs";
 import { useViewer } from "@/state/viewer";
 import { useLibraryUi } from "@/state/library-ui";
@@ -74,6 +76,14 @@ export function MediaGrid({
   );
 
   const selectedSet = useMemo(() => new Set(selected), [selected]);
+  /** trash view: selection bar swaps to Restore / Delete-forever (P6 FIX 4) */
+  const trashView = emptyKind === "trash";
+  /** confirmation for the real (recycle-bin) deletion */
+  const [confirmTrash, setConfirmTrash] = useState<MediaRow[] | null>(null);
+  const selectedRows = useMemo(
+    () => (trashView ? rows.filter((r) => selectedSet.has(r.id)) : []),
+    [rows, selectedSet, trashView],
+  );
   /** collage multi-viewer: 2–6 selected items, tallest-first order kept */
   const collageRows = useMemo(
     () => rows.filter((r) => selectedSet.has(r.id)),
@@ -438,15 +448,34 @@ export function MediaGrid({
               icon={<Heart size={16} />}
               onClick={() => void setFavorite(selected, true)}
             />
-            <BarAction
-              label={t("actions.trash")}
-              icon={<Trash2 size={16} />}
-              danger
-              onClick={() => {
-                void trashMedia(selected);
-                clearSelection();
-              }}
-            />
+            {trashView ? (
+              <>
+                <BarAction
+                  label={t("trash.restore")}
+                  icon={<RotateCcw size={16} />}
+                  onClick={() => {
+                    void restoreTrash(selected);
+                    clearSelection();
+                  }}
+                />
+                <BarAction
+                  label={t("trash.delete_forever")}
+                  icon={<Trash2 size={16} />}
+                  danger
+                  onClick={() => setConfirmTrash(selectedRows)}
+                />
+              </>
+            ) : (
+              <BarAction
+                label={t("actions.trash")}
+                icon={<Trash2 size={16} />}
+                danger
+                onClick={() => {
+                  void trashMedia(selected);
+                  clearSelection();
+                }}
+              />
+            )}
             <BarAction
               label={t("actions.clear_selection")}
               icon={<X size={16} />}
@@ -459,6 +488,62 @@ export function MediaGrid({
       <AnimatePresence>
         {collageOpen && collageRows.length >= 2 && (
           <CollageOverlay rows={collageRows} onClose={() => setCollageOpen(false)} />
+        )}
+      </AnimatePresence>
+
+      {/* Delete-forever confirmation (P6 FIX 4): count + size in mono, and the
+          recycle-bin note — the files stay recoverable from the OS bin */}
+      <Dialog open={confirmTrash !== null} onOpenChange={(o) => !o && setConfirmTrash(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("trash.confirm_title")}</DialogTitle>
+          </DialogHeader>
+          <p className="font-mono text-[13px] tabular-nums text-tprimary">
+            {t("trash.confirm_counts", {
+              count: confirmTrash?.length ?? 0,
+              size: formatBytes((confirmTrash ?? []).reduce((s, r) => s + (r.size || 0), 0)),
+            })}
+          </p>
+          <p className="mt-3 text-[13px] leading-relaxed text-tsecondary">
+            {t("trash.confirm_note")}
+          </p>
+          <div className="mt-6 flex items-center justify-end gap-3">
+            <PillButton variant="ghost" onClick={() => setConfirmTrash(null)}>
+              {t("trash.cancel")}
+            </PillButton>
+            <PillButton
+              variant="danger"
+              onClick={() => {
+                if (confirmTrash) void deleteForever(confirmTrash);
+                setConfirmTrash(null);
+                clearSelection();
+              }}
+            >
+              {t("trash.delete_forever")}
+            </PillButton>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* trash view, nothing selected: one-action pill — empty the whole trash */}
+      <AnimatePresence>
+        {trashView && selected.length === 0 && rows.length > 0 && (
+          <motion.div
+            initial={reduced ? false : { opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={reduced ? { opacity: 0 } : { opacity: 0, y: 12 }}
+            transition={{ type: "spring", stiffness: 260, damping: 26 }}
+            role="toolbar"
+            aria-label={t("trash.empty")}
+            className="glass absolute bottom-6 right-6 z-40 flex h-14 items-center rounded-pill p-2"
+          >
+            <BarAction
+              label={t("trash.empty")}
+              icon={<Trash2 size={16} />}
+              danger
+              onClick={() => setConfirmTrash(rows)}
+            />
+          </motion.div>
         )}
       </AnimatePresence>
     </div>
