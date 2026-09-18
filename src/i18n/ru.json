@@ -323,41 +323,14 @@
     "clear_selection": "Снять выделение"
   },
   "trash": {
-    "restore": [
-      "Восстановить",
-      "Restore"
-    ],
-    "delete_forever": [
-      "Удалить навсегда",
-      "Delete forever"
-    ],
-    "empty": [
-      "Очистить корзину",
-      "Empty trash"
-    ],
-    "confirm_title": [
-      "Удалить навсегда?",
-      "Delete forever?"
-    ],
-    "confirm_counts": [
-      "{{count}} файлов · {{size}}",
-      "{{count}} files · {{size}}"
-    ],
-    "confirm_note": [
-      "Файлы будут перемещены в системную корзину — их можно восстановить оттуда",
-      "Files will be moved to the system recycle bin — they can be restored from there"
-    ],
-    "cancel": [
-      "Отмена",
-      "Cancel"
-    ],
-    "restored": [
-      "Восстановлено: {{count}}",
-      "Restored: {{count}}"
-    ],
-    "deleted": [
-      "Удалено навсегда: {{count}}",
-      "Deleted forever: {{count}}"
-    ]
+    "restore": "Восстановить",
+    "delete_forever": "Удалить навсегда",
+    "empty": "Очистить корзину",
+    "confirm_title": "Удалить навсегда?",
+    "confirm_counts": "{{count}} файлов · {{size}}",
+    "confirm_note": "Файлы будут перемещены в системную корзину — их можно восстановить оттуда",
+    "cancel": "Отмена",
+    "restored": "Восстановлено: {{count}}",
+    "deleted": "Удалено навсегда: {{count}}"
   }
 }
