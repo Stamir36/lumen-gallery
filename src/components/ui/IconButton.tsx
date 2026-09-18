@@ -19,7 +19,7 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
         "inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-control " +
           "text-tsecondary transition-all duration-[160ms] ease-out " +
           "hover:bg-surface-2 hover:text-tprimary hover:-translate-y-0.5 " +
-          "hover:shadow-[0_8px_24px_rgba(0,0,0,.35),0_0_0_1px_rgba(110,193,255,.14)] " +
+          "hover:shadow-[0_8px_24px_rgba(0,0,0,.35),0_0_0_1px_var(--accent-soft)] " +
           "active:translate-y-0 active:scale-[.97] " +
           "disabled:pointer-events-none disabled:opacity-40",
         className,

@@ -12,7 +12,7 @@ const pillButtonVariants = cva(
       variant: {
         // Primary: white bg + black text, elev-1, hover lift
         primary:
-          "bg-white text-black shadow-elev1 hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(0,0,0,.4),0_0_0_1px_rgba(110,193,255,.18)] active:translate-y-0",
+          "bg-white text-black shadow-elev1 hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(0,0,0,.4),0_0_0_1px_var(--accent-soft)] active:translate-y-0",
         // Ghost: tonal surface-2 (no border), hover surface-3 + lift
         ghost:
           "bg-surface-2 text-tprimary hover:bg-surface-3 hover:-translate-y-0.5 hover:shadow-elev1 active:translate-y-0",

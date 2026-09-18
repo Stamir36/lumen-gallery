@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 import {
   Heart,
   Images,
@@ -108,7 +108,7 @@ function SectionsDemo({
 }) {
   return (
     <>
-      {/* 01 вЂ” Color */}
+      {/* 01 — Color */}
       <Section index="01" title="Color tokens">
         <div className="grid w-full grid-cols-4 gap-3">
           {swatches.map((s) => (
@@ -124,27 +124,27 @@ function SectionsDemo({
         </div>
       </Section>
 
-      {/* 02 вЂ” Typography */}
+      {/* 02 — Typography */}
       <Section index="02" title="Typography">
         <GlassCard className="w-full">
           <div className="mb-2 text-3xl font-semibold tracking-tight text-tprimary">
-            Display вЂ” 30px / 650
+            Display — 30px / 650
           </div>
           <div className="mb-3 text-lg font-semibold text-tprimary">
-            Section title вЂ” 20px / 600
+            Section title — 20px / 600
           </div>
           <div className="text-[14.5px] text-tsecondary">
-            Body вЂ” 14.5px / 400, line-height 1.55. Inter Variable for all UI copy;
+            Body — 14.5px / 400, line-height 1.55. Manrope Variable for all UI copy;
             generous whitespace is part of the design.
           </div>
           <div className="mt-6 font-mono text-sm text-tprimary">
-            JetBrains Mono вЂ” 12,482 items В· 00:04:32 В· 3840Г—2160 В· 60fps
+            Space Grotesk (tnum) — 12,482 items · 00:04:32 · 3840×2160 · 60fps
           </div>
         </GlassCard>
       </Section>
 
-      {/* 03 вЂ” Buttons */}
-      <Section index="03" title="Buttons вЂ” chunky pills">
+      {/* 03 — Buttons */}
+      <Section index="03" title="Buttons — chunky pills">
         <PillButton onClick={() => toast.success("Primary action")}>Primary</PillButton>
         <PillButton variant="ghost">Ghost</PillButton>
         <PillButton variant="danger">Danger</PillButton>
@@ -158,17 +158,17 @@ function SectionsDemo({
         <PillButton disabled>Disabled</PillButton>
       </Section>
 
-      {/* 04 вЂ” Chips */}
+      {/* 04 — Chips */}
       <Section index="04" title="Chips">
         <Chip>Type chip</Chip>
         <Chip mono>00:04:32</Chip>
-        <Chip mono>3840Г—2160</Chip>
+        <Chip mono>3840×2160</Chip>
         <Chip mono accent>
-          H.264 В· 60FPS
+          H.264 · 60FPS
         </Chip>
       </Section>
 
-      {/* 05 вЂ” Segmented */}
+      {/* 05 — Segmented */}
       <Section index="05" title="Segmented control">
         <Segmented
           aria-label="Demo view mode"
@@ -178,7 +178,7 @@ function SectionsDemo({
         />
       </Section>
 
-      {/* 06 вЂ” Slider & FAB */}
+      {/* 06 — Slider & FAB */}
       <Section index="06" title="Slider & FAB">
         <GlassCard className="w-full max-w-xl">
           <div className="mb-4 text-base font-medium text-tprimary">Preview size</div>
@@ -303,7 +303,7 @@ function SectionsDemo({
 function ExtraSections() {
   return (
     <>
-      {/* 07 вЂ” Dialog & Menu */}
+      {/* 07 — Dialog & Menu */}
       <Section index="08" title="Dialog & Menu">
         <Dialog>
           <DialogTrigger asChild>
@@ -313,7 +313,7 @@ function ExtraSections() {
             <DialogHeader>
               <DialogTitle>Add library</DialogTitle>
               <DialogDescription>
-                Choose a folder or drive to scan. LUMEN never copies your files вЂ”
+                Choose a folder or drive to scan. LUMEN never copies your files —
                 everything stays in place.
               </DialogDescription>
             </DialogHeader>
@@ -353,8 +353,8 @@ function ExtraSections() {
         </Menu>
       </Section>
 
-      {/* 08 вЂ” Empty / loading / progress */}
-      <Section index="09" title="Empty state В· Loading В· Progress">
+      {/* 08 — Empty / loading / progress */}
+      <Section index="09" title="Empty state · Loading · Progress">
         <div className="flex w-full flex-col gap-6">
           <div className="flex flex-col items-center justify-center rounded-card border border-dashed border-hairline-hover py-16">
             <span className="text-sm text-ttertiary">No items yet</span>
@@ -394,7 +394,7 @@ export default function StylePage() {
               Settings
             </button>
             <div className="px-3 font-mono text-[10px] leading-relaxed text-ttertiary">
-              SCANNINGвЂ¦ 3,412 / 12,482
+              SCANNING… 3,412 / 12,482
             </div>
           </div>
         }
@@ -441,7 +441,7 @@ export default function StylePage() {
               LUMEN Design System
             </h1>
             <p className="mb-16 mt-3 text-[15px] text-tsecondary">
-              Living style sheet вЂ” every token and base component, per
+              Living style sheet — every token and base component, per
               docs/DESIGN.md v2.
             </p>
             <SectionsDemo view={view} setView={setView} />
@@ -471,7 +471,7 @@ export default function StylePage() {
           </div>
         </div>
 
-        {/* bottom-left status line вЂ” mono metadata only */}
+        {/* bottom-left status line — mono metadata only */}
         <div className="pointer-events-none absolute bottom-7 left-10 font-mono text-[11px] text-ttertiary">
           12,482 items - 348 GB - scanned 2s ago
         </div>

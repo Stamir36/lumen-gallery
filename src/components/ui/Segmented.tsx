@@ -52,7 +52,7 @@ export function Segmented<T extends string>({
               <motion.span
                 layoutId={`segmented-${id}`}
                 transition={{ type: "spring", stiffness: 260, damping: 26 }}
-                className="absolute inset-0 rounded-pill bg-accent shadow-[inset_0_1px_0_rgba(255,255,255,.35),0_4px_12px_rgba(110,193,255,.25)]"
+                className="absolute inset-0 rounded-pill bg-accent shadow-[inset_0_1px_0_rgba(255,255,255,.35),0_4px_12px_var(--accent-strong)]"
               />
             )}
             {opt.icon && <span className="relative z-10">{opt.icon}</span>}

@@ -1,7 +1,8 @@
 /**
- * Mono metadata formatting + date group keys.
- * Counters, durations and resolutions are metadata → JetBrains Mono at the
- * call site; these helpers only produce the strings.
+ * Metadata formatting + date group keys.
+ * Counters, durations and resolutions are metadata → Space Grotesk with
+ * tabular figures at the call site (`.font-mono`, v2.4); these helpers only
+ * produce the strings.
  */
 
 const DAY = 86_400_000;

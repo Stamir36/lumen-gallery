@@ -34,7 +34,7 @@ export function EmptyState({
           <button
             type="button"
             onClick={onCta}
-            className="mt-1 inline-flex h-12 items-center gap-2 rounded-pill bg-tprimary px-6 text-sm font-medium text-[#0A0A0C] transition-all duration-[160ms] ease-out hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(0,0,0,.4),0_0_0_1px_rgba(110,193,255,.18)] active:scale-[.97]"
+            className="mt-1 inline-flex h-12 items-center gap-2 rounded-pill bg-tprimary px-6 text-sm font-medium text-[#0A0A0C] transition-all duration-[160ms] ease-out hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(0,0,0,.4),0_0_0_1px_var(--accent-soft)] active:scale-[.97]"
           >
             {cta}
           </button>

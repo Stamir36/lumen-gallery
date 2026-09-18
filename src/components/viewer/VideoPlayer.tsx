@@ -165,7 +165,9 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
   // (e.g. 7680×3840). A bare aspect match alone kept offering VR on 2.35:1
   // cinema rips.
   const vrName = baseName(row.path);
-  const hasVrToken = /(^|[^a-zа-яё0-9])vr[0-9]*([^a-zа-яё0-9]|$)/i.test(vrName);
+  // standalone "VR" token — \p{L}/\p{N} keep it script-agnostic (a Cyrillic
+  // name like "ЛекцияVR.mkv" must NOT match, "Лекция VR 8K.mkv" must)
+  const hasVrToken = /(?:^|[^\p{L}\p{N}])vr\d*(?:[^\p{L}\p{N}]|$)/iu.test(vrName);
   const hasSbs180 = /sbs[\s._-]*180/i.test(vrName);
   const effW = row.width ?? nat.w;
   const effH = row.height ?? nat.h;

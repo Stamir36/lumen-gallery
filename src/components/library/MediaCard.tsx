@@ -212,7 +212,7 @@ export const MediaCard = memo(function MediaCard({
         className={cn(
           "absolute inset-0 overflow-hidden transition-[transform,box-shadow] duration-[160ms] ease-out",
           "hover:-translate-y-0.5 hover:z-10",
-          "hover:shadow-[0_12px_28px_rgba(0,0,0,.4),0_0_0_1px_rgba(110,193,255,.18)]",
+          "hover:shadow-[0_12px_28px_rgba(0,0,0,.4),0_0_0_1px_var(--accent-soft)]",
           "active:scale-[.97]",
           selected && "ring-2 ring-accent/60",
           focused && "ring-2 ring-accent/40 ring-offset-2 ring-offset-canvas",
