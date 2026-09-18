@@ -336,8 +336,15 @@ export default function App() {
               <LibraryTopBar
                 title={title}
                 count={rows.length}
-                // explorer's own header control: tree vs wrapping folder cards
-                extra={explorer ? <ExplorerLayoutSwitch /> : undefined}
+                // explorer's own header control: tree vs wrapping folder cards.
+                // FIX 3: only where it actually does something — a library
+                // root in Папки mode; on Вся медиатека and smart views the
+                // explorer has no tree to switch (state stays persisted).
+                extra={
+                  explorer && route.kind === "root" ? (
+                    <ExplorerLayoutSwitch />
+                  ) : undefined
+                }
               />
               <div className="relative flex min-h-0 flex-1">
                 {explorer && explorerLayout === "tree" && route.kind === "root" && root && (
