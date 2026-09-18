@@ -14,7 +14,7 @@
 //!  - thumbs are MERGED file-by-file, existing targets are never rewritten.
 
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use tauri::Manager;
 
 const OLD_IDENTIFIER: &str = "app.lumen.gallery";
