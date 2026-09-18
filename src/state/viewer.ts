@@ -21,6 +21,9 @@ interface ViewerState {
   favorites: Record<number, boolean>;
   /** id the grid should scroll back to after the viewer closes (STEP 3) */
   revealId: number | null;
+  /** true when the fullscreen window came WITH the open (external file, STEP 3):
+   *  viewers restore the window state on close only in that case */
+  fsByUser: boolean;
   openAt: (queue: MediaRow[], index: number) => void;
   close: () => void;
   step: (delta: number) => void;
@@ -41,6 +44,7 @@ export const useViewer = create<ViewerState>((set, get) => ({
   stripOpen: false,
   favorites: {},
   revealId: null,
+  fsByUser: false,
 
   openAt: (queue, index) =>
     set({
@@ -48,10 +52,11 @@ export const useViewer = create<ViewerState>((set, get) => ({
       queue,
       index: Math.max(0, Math.min(queue.length - 1, index)),
       revealId: null,
+      fsByUser: false,
     }),
 
   close: () => {
-    const { queue, index } = get();
+    const { queue, index, fsByUser } = get();
     const current = queue[index];
     set({
       open: false,
@@ -59,7 +64,15 @@ export const useViewer = create<ViewerState>((set, get) => ({
       stripOpen: false,
       // STEP 3: returning to the grid scrolls to the item we were looking at
       revealId: current ? current.id : null,
+      fsByUser: false,
     });
+    // external open entered fullscreen automatically — leave it symmetrically
+    // (a user who left it earlier has fsByUser=true and keeps their choice)
+    if (!fsByUser) {
+      import("@tauri-apps/api/window")
+        .then(({ getCurrentWindow }) => getCurrentWindow().setFullscreen(false))
+        .catch(() => undefined);
+    }
   },
 
   step: (delta) => {

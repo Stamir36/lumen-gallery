@@ -14,6 +14,7 @@ import { applyCachedAccent } from "./lib/accent";
 import { initScanListener, initOfflineListener } from "./state/library";
 import { queryClient } from "./lib/queryClient";
 import { startPerfWatchdog } from "./lib/perf";
+import { initExternalOpen } from "./lib/externalOpen";
 import "./index.css";
 
 // frame-rate + long-task watchdog: an "it froze" report should come with numbers
@@ -27,6 +28,8 @@ applyCachedAccent();
 // (a plain browser preview has no IPC — surface it, never leave it unhandled)
 initScanListener().catch((e) => console.warn("scan listener unavailable:", e));
 initOfflineListener().catch((e) => console.warn("offline listener unavailable:", e));
+// file from Explorer / second launch / drag onto the window → fullscreen viewer
+initExternalOpen();
 
 async function bootstrap() {
   // apply the persisted/system language BEFORE the first render

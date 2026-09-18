@@ -571,6 +571,129 @@ fn media_from_row(r: &sqlx::sqlite::SqliteRow) -> MediaRow {
     }
 }
 
+/// LIKE pattern escaping (paths may contain % or _ — a wildcard there would
+/// silently widen the folder queue).
+fn like_escape(s: &str) -> String {
+    s.replace('\\', "\\\\")
+        .replace('%', "\\%")
+        .replace('_', "\\_")
+}
+
+/// Raw CLI args for the external-open pipeline (STEP 3). Tauri core has no
+/// cross-plugin args accessor, so the plugin-free probe reads them directly.
+#[tauri::command]
+pub fn cli_args() -> Vec<String> {
+    std::env::args().skip(1).collect()
+}
+
+/// STEP 3 result: the requested row plus the queue (its folder) to open it in.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OpenFileResult {
+    pub row: MediaRow,
+    pub queue: Vec<MediaRow>,
+    pub index: usize,
+}
+
+/// A file opened through the OS (association, drag onto the exe, single-instance
+/// forward) goes straight into the viewer with its folder as the queue.
+#[tauri::command]
+pub async fn open_file(app: AppHandle, path: String) -> Result<OpenFileResult, String> {
+    let p = std::path::Path::new(&path);
+    if !p.is_file() {
+        return Err(format!("file does not exist: {path}"));
+    }
+    // the asset protocol (and the fs-decoder fallback) must serve this file even
+    // though the folder was never added as a library root
+    if let Some(parent) = p.parent() {
+        crate::assets::allow_dir(&app, parent);
+    }
+
+    let pool = pool_for(&app).await?;
+    let norm = path.replace('/', "\\");
+    let known = sqlx::query(
+        "SELECT * FROM media WHERE trashed = 0 AND REPLACE(path, '/', '\\') = ?1",
+    )
+    .bind(&norm)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|e| e.to_string())?;
+
+    let row = match known {
+        Some(r) => media_from_row(&r),
+        None => {
+            // not indexed (yet): derive a minimal row from the filesystem so the
+            // viewer still opens it; the queue below falls back to just this file
+            let meta = std::fs::metadata(p).map_err(|e| e.to_string())?;
+            let ext = p
+                .extension()
+                .and_then(|e| e.to_str())
+                .unwrap_or("")
+                .to_lowercase();
+            let kind = if crate::db::IMAGE_EXTENSIONS.contains(&ext.as_str()) {
+                "image"
+            } else {
+                "video"
+            };
+            let mtime = meta
+                .modified()
+                .ok()
+                .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+                .map(|d| d.as_secs() as i64)
+                .unwrap_or(0);
+            MediaRow {
+                id: -1,
+                root_id: -1,
+                path: path.clone(),
+                kind: kind.into(),
+                ext,
+                size: meta.len() as i64,
+                mtime,
+                width: None,
+                height: None,
+                duration_ms: None,
+                favorite: false,
+                trashed: false,
+                added_at: 0,
+                thumb_path: None,
+                dominant_color: None,
+                thumb_error: false,
+                offline: false,
+                excluded: false,
+            }
+        }
+    };
+
+    // queue = folder contents in the library's default order (date desc, path
+    // asc — the same tie-break list_media uses), so arrows/filmstrip walk the
+    // folder exactly like the grid would
+    let dir = row
+        .path
+        .rsplit_once('\\')
+        .map(|(d, _)| d.to_string())
+        .or_else(|| row.path.rsplit_once('/').map(|(d, _)| d.to_string()));
+    let mut queue: Vec<MediaRow> = Vec::new();
+    if let Some(dir) = dir {
+        let pattern = format!("{}\\%", like_escape(&dir));
+        let rows = sqlx::query(
+            "SELECT * FROM media WHERE trashed = 0 AND excluded = 0 \n             AND path LIKE ?1 ESCAPE '\\' ORDER BY mtime DESC, path ASC",
+        )
+        .bind(pattern)
+        .fetch_all(&pool)
+        .await
+        .unwrap_or_default();
+        queue = rows.iter().map(media_from_row).collect();
+    }
+    if queue.is_empty() {
+        queue.push(row.clone());
+    }
+    let index = queue
+        .iter()
+        .position(|m| m.path == row.path)
+        .unwrap_or(0);
+    Ok(OpenFileResult { row, queue, index })
+}
+
 /// Library listing for the grid.
 ///
 /// v1 strategy: pull the rows for the cheap SQL predicates (trash/kind/

@@ -25,6 +25,8 @@ tauri = { version = "2.11.3", features = ["protocol-asset"] }
   tauri-plugin-log = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
+# Phase 6 STEP 3: second launch focuses the running window + forwards file args
+tauri-plugin-single-instance = "2"
 image = { version = "0.25", default-features = false, features = ["jpeg", "png", "gif", "webp", "bmp", "avif"] }
 tauri-plugin-sql = { version = "2", features = ["sqlite"] }
 sysinfo = "0.33"

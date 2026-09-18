@@ -101,6 +101,22 @@ pub fn run() {
   ];
 
   tauri::Builder::default()
+    // single instance MUST be the first plugin (docs): the callback runs on the
+    // PRIMARY instance when a second launch arrives — focus the window and
+    // forward any file argument straight to the viewer pipeline (STEP 3).
+    .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
+      use tauri::Manager;
+      if let Some(w) = app.get_webview_window("main") {
+        let _ = w.show();
+        let _ = w.unminimize();
+        let _ = w.set_focus();
+      }
+      // argv[0] is the exe; the first arg that is an existing FILE wins.
+      if let Some(file) = argv.iter().skip(1).find(|a| std::path::Path::new(a).is_file()) {
+        let _ = tauri::Emitter::emit(app, "open-file", file.clone());
+        log::info!("single-instance: forwarded file arg: {file}");
+      }
+    }))
     .plugin(tauri_plugin_dialog::init())
     .plugin(tauri_plugin_fs::init())
     .plugin(
@@ -131,6 +147,8 @@ pub fn run() {
       commands::save_snapshot,
       commands::open_external,
       commands::open_url,
+      commands::open_file,
+      commands::cli_args,
       commands::check_player,
       commands::reveal_path,
       commands::trash_delete,
