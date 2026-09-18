@@ -14,6 +14,10 @@
   --text-secondary: rgba(255, 255, 255, 0.62);
   --text-tertiary: rgba(255, 255, 255, 0.38);
   --accent: #6ec1ff;
+  /* accent-derived tokens: EVERY accent anchor reads these, so switching the
+     preset (Settings › Appearance) repaints the whole UI without a rebuild */
+  --accent-soft: rgba(110, 193, 255, 0.16);
+  --accent-strong: rgba(110, 193, 255, 0.4);
   --success: #3ecf8e;
   --danger: #ff5c5c;
   --warning: #f5b85c;
@@ -26,7 +30,7 @@
   --shadow-elev1: 0 8px 24px rgba(0, 0, 0, 0.35);
   --shadow-elev3: 0 12px 32px rgba(0, 0, 0, 0.55);
   --shadow-hover: 0 12px 28px rgba(0, 0, 0, 0.4);
-  --glow-hover: 0 0 0 1px rgba(110, 193, 255, 0.18);
+  --glow-hover: 0 0 0 1px var(--accent-soft);
 }
 
 /* ============ Tailwind v4 theme ============ */
@@ -40,7 +44,8 @@
   --color-tprimary: #f2f2f4;
   --color-tsecondary: rgba(255, 255, 255, 0.62);
   --color-ttertiary: rgba(255, 255, 255, 0.38);
-  --color-accent: #6ec1ff;
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
   --color-success: #3ecf8e;
   --color-danger: #ff5c5c;
   --color-warning: #f5b85c;
@@ -88,14 +93,14 @@ body::after {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
-/* Focus ring: 2px accent/40 offset 2 */
+/* Focus ring: 2px accent/40 offset 2 (follows the accent preset) */
 :focus-visible {
-  outline: 2px solid rgba(110, 193, 255, 0.4);
+  outline: 2px solid var(--accent-strong);
   outline-offset: 2px;
   border-radius: var(--radius-control);
 }
 
-::selection { background: rgba(110, 193, 255, 0.25); }
+::selection { background: var(--accent-soft); }
 
 /* Scrollbars: 8px, thumb white/12 hover /20 */
 ::-webkit-scrollbar { width: 8px; height: 8px; }

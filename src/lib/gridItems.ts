@@ -18,10 +18,24 @@ import type { SortKey, ViewMode } from "@/state/library-ui";
 export const HEADER_HEIGHT = 52;
 export const LIST_ROW_HEIGHT = 64;
 
+/** Grid metrics that the density setting drives (FIX 4b). */
+export interface GridMetrics {
+  targetH: number;
+  gap: number;
+}
+
+/** Fallback metrics when a caller does not pass the user's density preset. */
+export const DEFAULT_METRICS: GridMetrics = {
+  targetH: TARGET_ROW_H,
+  gap: GRID_GAP,
+};
+
 export interface GridCell {
   media: MediaRow;
   w: number;
   h: number;
+  /** left offset inside the row, computed with the density gutter (FIX 4b) */
+  x: number;
 }
 
 export type GridItem =
@@ -53,6 +67,7 @@ export function buildGrid(
   view: ViewMode,
   sort: SortKey,
   lang: string,
+  metrics: GridMetrics = DEFAULT_METRICS,
 ): BuiltGrid {
   const items: GridItem[] = [];
   const groups: GridGroup[] = [];
@@ -100,24 +115,26 @@ export function buildGrid(
     } else {
       const layout =
         view === "square"
-          ? computeSquareRows(slice.length, width, TARGET_ROW_H, GRID_GAP)
+          ? computeSquareRows(slice.length, width, metrics.targetH, metrics.gap)
           : computeJustifiedRows(
               slice.map((m) => ratioOf(m.kind, m.width, m.height)),
               width,
-              TARGET_ROW_H,
-              GRID_GAP,
+              metrics.targetH,
+              metrics.gap,
             );
       for (const row of layout) {
-        const cells: GridCell[] = row.indices.map((k, ci) => ({
-          media: slice[k],
-          w: row.widths[ci],
-          h: row.height,
-        }));
+        const cells: GridCell[] = [];
+        let x = 0;
+        for (let ci = 0; ci < row.indices.length; ci += 1) {
+          const w = row.widths[ci];
+          cells.push({ media: slice[row.indices[ci]], w, h: row.height, x });
+          x += w + metrics.gap;
+        }
         items.push({
           kind: "cells",
           key: `r-${cells[0].media.id}`,
           cells,
-          height: row.height + GRID_GAP,
+          height: row.height + metrics.gap,
           group: gi,
         });
         groupOf.push(gi);

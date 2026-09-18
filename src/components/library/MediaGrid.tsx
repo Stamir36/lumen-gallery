@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { formatBytes, formatCount, type MediaRow } from "@/lib/api";
 import { MonoChip } from "@/components/ui/Chip";
 import { buildGrid, HEADER_HEIGHT, type GridItem } from "@/lib/gridItems";
-import { GRID_GAP } from "@/lib/justified";
+import { DENSITY_PARAMS, useAppSettings } from "@/lib/settings";
 import { useElementWidth } from "@/lib/hooks";
 import { formatDuration, formatResolution, baseName } from "@/lib/format";
 import { setFavorite, trashMedia } from "@/lib/mediaActions";
@@ -64,9 +64,13 @@ export function MediaGrid({
   const clearSelection = useLibraryUi((s) => s.clearSelection);
   const setQ = useLibraryUi((s) => s.setQ);
 
+  // FIX 4b: grid density drives row height + gutter, applied live
+  const density = useAppSettings((s) => s.gridDensity);
+  const metrics = DENSITY_PARAMS[density];
+
   const built = useMemo(
-    () => buildGrid(rows, usable, view, sort, i18n.language),
-    [rows, usable, view, sort, i18n.language],
+    () => buildGrid(rows, usable, view, sort, i18n.language, metrics),
+    [rows, usable, view, sort, i18n.language, metrics],
   );
 
   const selectedSet = useMemo(() => new Set(selected), [selected]);
@@ -590,13 +594,12 @@ function GridRow({
 
   const row = item;
   const cells: React.ReactNode[] = [];
-  let x = 0;
   for (const cell of row.cells) {
     cells.push(
       <div
         key={cell.media.id}
         className="absolute top-0"
-        style={{ left: x, width: cell.w, height: cell.h }}
+        style={{ left: cell.x, width: cell.w, height: cell.h }}
       >
         <MediaCard
           media={cell.media}
@@ -609,7 +612,6 @@ function GridRow({
         />
       </div>,
     );
-    x += cell.w + GRID_GAP;
   }
 
   // NOTE: absolute children are positioned against the PADDING box, so the

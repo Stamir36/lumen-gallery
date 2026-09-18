@@ -13,7 +13,8 @@ import {
   Play,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { SCRUB_RATES, THUMB_WORKER_OPTIONS, useAppSettings } from "@/lib/settings";
+import { DENSITY_PARAMS, SCRUB_RATES, THUMB_WORKER_OPTIONS, useAppSettings, type GridDensity } from "@/lib/settings";
+import { ACCENTS } from "@/lib/accent";
 import { ExcludedFolders } from "@/components/settings/ExcludedFolders";
 import { LanguageDropdown } from "@/components/LanguageSwitcher";
 import { GlassCard } from "@/components/ui/GlassCard";
@@ -29,6 +30,9 @@ import {
   writeSetting,
   CURSOR_KEY,
 } from "@/i18n";
+
+/** Density presets in the order the segmented control shows them (FIX 4b). */
+const DENSITY_ORDER: GridDensity[] = ["comfort", "medium", "compact"];
 
 /** Editorial numbered section header per DESIGN.md v2.2 §6. */
 function Section({
@@ -85,6 +89,10 @@ export function SettingsContent() {
   const setScrubRate = useAppSettings((s) => s.setVideoScrubRate);
   const hoverCaptions = useAppSettings((s) => s.hoverCaptions);
   const setHoverCaptions = useAppSettings((s) => s.setHoverCaptions);
+  const accent = useAppSettings((s) => s.accent);
+  const setAccent = useAppSettings((s) => s.setAccent);
+  const gridDensity = useAppSettings((s) => s.gridDensity);
+  const setGridDensity = useAppSettings((s) => s.setGridDensity);
   const videoAutoplay = useAppSettings((s) => s.videoAutoplay);
   const setVideoAutoplay = useAppSettings((s) => s.setVideoAutoplay);
   const swipeNavigate = useAppSettings((s) => s.swipeNavigate);
@@ -481,8 +489,77 @@ export function SettingsContent() {
                 />
               </button>
             </div>
-            <SoonRow label={t("settings.accent_color")} soon={t("settings.soon")} />
-            <SoonRow label={t("settings.grid_density")} soon={t("settings.soon")} />
+            {/* FIX 4a: accent presets — the swatch rewrites the CSS vars live,
+                every accent anchor in the app follows it */}
+            <div className="flex items-center justify-between border-t border-hairline py-4">
+              <span className="flex flex-col gap-0.5">
+                <span className="text-sm text-tprimary">
+                  {t("settings.accent_color")}
+                </span>
+                <span className="text-[12px] text-ttertiary">
+                  {t("settings.accent_hint")}
+                </span>
+              </span>
+              <div className="flex items-center gap-2">
+                {ACCENTS.map((preset) => {
+                  const active =
+                    accent.toLowerCase() === preset.hex.toLowerCase();
+                  return (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      title={t(preset.labelKey)}
+                      aria-label={t(preset.labelKey)}
+                      aria-pressed={active}
+                      onClick={() => void setAccent(preset.hex)}
+                      className={cn(
+                        "h-8 w-8 rounded-pill transition-all duration-[160ms] ease-out active:scale-[.94]",
+                        active
+                          ? "ring-2 ring-white/85 ring-offset-2 ring-offset-surface-1"
+                          : "opacity-80 hover:scale-105 hover:opacity-100",
+                      )}
+                      style={{ background: preset.hex }}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* FIX 4b: grid density — target row height, gutter and masonry
+                column width, applied to the grid live (no reload) */}
+            <div className="flex items-center justify-between border-t border-hairline py-4">
+              <span className="flex flex-col gap-0.5">
+                <span className="text-sm text-tprimary">
+                  {t("settings.grid_density")}
+                </span>
+                <span className="text-[12px] text-ttertiary">
+                  {t("settings.grid_density_hint", {
+                    h: DENSITY_PARAMS[gridDensity].targetH,
+                    gap: DENSITY_PARAMS[gridDensity].gap,
+                  })}
+                </span>
+              </span>
+              <div className="flex items-center gap-1.5">
+                {DENSITY_ORDER.map((d) => (
+                  <button
+                    key={d}
+                    type="button"
+                    aria-pressed={gridDensity === d}
+                    aria-label={t(`settings.density_${d}`)}
+                    onClick={() => void setGridDensity(d)}
+                    className={cn(
+                      "inline-flex h-9 items-center rounded-pill px-3.5",
+                      "font-mono text-[12px] transition-colors duration-[160ms] ease-out active:scale-[.97]",
+                      gridDensity === d
+                        ? "bg-accent text-[#0A0A0C]"
+                        : "bg-surface-2 text-tsecondary hover:text-tprimary",
+                    )}
+                  >
+                    {t(`settings.density_${d}`)}
+                  </button>
+                ))}
+              </div>
+            </div>
           </GlassCard>
         </Section>
 

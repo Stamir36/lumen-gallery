@@ -10,6 +10,7 @@ import SettingsPage from "./pages/SettingsPage";
 import AssetTest from "./pages/AssetTest";
 import GridDemo from "./pages/GridDemo";
 import { initI18n, readSavedLang, applyCursorPreference } from "./i18n";
+import { applyCachedAccent } from "./lib/accent";
 import { initScanListener, initOfflineListener } from "./state/library";
 import { queryClient } from "./lib/queryClient";
 import { startPerfWatchdog } from "./lib/perf";
@@ -17,6 +18,10 @@ import "./index.css";
 
 // frame-rate + long-task watchdog: an "it froze" report should come with numbers
 startPerfWatchdog();
+
+// accent BEFORE the first paint (SQLite is the source of truth, the cached hex
+// only prevents a default-colour flash on launch — FIX 4a)
+applyCachedAccent();
 
 // subscribe to Rust scan-progress / root-offline events for the whole session
 // (a plain browser preview has no IPC — surface it, never leave it unhandled)

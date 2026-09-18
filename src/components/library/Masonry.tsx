@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { MediaRow } from "@/lib/api";
-import { GRID_GAP, computeMasonryColumns, ratioOf } from "@/lib/justified";
+import { computeMasonryColumns, ratioOf } from "@/lib/justified";
+import { DENSITY_PARAMS, useAppSettings } from "@/lib/settings";
 import { useElementWidth, useRafScroll } from "@/lib/hooks";
 import { formatCount } from "@/lib/api";
 import { MediaCard } from "./MediaCard";
@@ -55,11 +56,14 @@ export function Masonry({
     () => visibleRows.map((m) => ratioOf(m.kind, m.width, m.height)),
     [visibleRows],
   );
-  const cols = Math.max(2, Math.min(6, Math.round(usableWidth / 300)));
+  // FIX 4b: density drives the masonry column width and the gutter
+  const density = useAppSettings((s) => s.gridDensity);
+  const { colW, gap } = DENSITY_PARAMS[density];
+  const cols = Math.max(2, Math.min(6, Math.round(usableWidth / colW)));
 
   const packed = useMemo(
-    () => computeMasonryColumns(ratios, usableWidth, cols, GRID_GAP),
-    [ratios, usableWidth, cols],
+    () => computeMasonryColumns(ratios, usableWidth, cols, gap),
+    [ratios, usableWidth, cols, gap],
   );
 
   const [view, setView] = useState({ top: 0, bottom: 1400 });
@@ -101,7 +105,7 @@ export function Masonry({
   const columnWidth = packed.colW;
   const tiles: { media: MediaRow; x: number; y: number; h: number }[] = [];
   packed.columns.forEach((col, c) => {
-    const x = c * (columnWidth + GRID_GAP);
+    const x = c * (columnWidth + gap);
     col.items.forEach((itemIndex, k) => {
       const y = col.offsets[k];
       const h = col.heights[k];
