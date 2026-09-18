@@ -31,6 +31,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { fileSrc, tauriAvailable } from "@/lib/assets";
 import { thumbSrc } from "@/lib/thumbs";
 import { formatBytes, type MediaRow } from "@/lib/api";
+import { baseName } from "@/lib/format";
 import { useAppSettings } from "@/lib/settings";
 import { useViewer } from "@/state/viewer";
 import { NavTooltip } from "@/components/ui/NavTooltip";
@@ -144,12 +145,22 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
   const favoriteOf = useViewer((s) => s.favoriteOf);
   const toggleFavorite = useViewer((s) => s.toggleFavorite);
   const pillAlign = useAppSettings((s) => s.pillAlign);
+  const videoAutoplay = useAppSettings((s) => s.videoAutoplay);
 
   const src = tauriAvailable() ? fileSrc(row.path) : "";
-  // SBS 180 detection: two 1:1 eye halves side by side → frame aspect ≈ 2:1
+  // VR sources are name-driven (the library encodes it in file names): a
+  // standalone "VR" token ("… 8K VR.mkv", "VR180 …"), or "SBS 180" PLUS an
+  // actual stereo-pair frame — two 1:1 halves side by side, aspect ≈ 2:1
+  // (e.g. 7680×3840). A bare aspect match alone kept offering VR on 2.35:1
+  // cinema rips.
+  const vrName = baseName(row.path);
+  const hasVrToken = /(^|[^a-zа-яё0-9])vr[0-9]*([^a-zа-яё0-9]|$)/i.test(vrName);
+  const hasSbs180 = /sbs[\s._-]*180/i.test(vrName);
   const effW = row.width ?? nat.w;
   const effH = row.height ?? nat.h;
-  const isSbs = effW > 0 && effH > 0 && Math.abs(effW / effH - 2) <= 0.35;
+  const stereoPair =
+    effW > 0 && effH > 0 && Math.abs(effW / effH - 2) <= 0.25;
+  const isVrSource = hasVrToken || (hasSbs180 && stereoPair);
   const ambience = useMemo(
     () => !reduced && (row.width ?? 0) * (row.height ?? 0) <= AMBIENT_MAX_PIXELS,
     [reduced, row.width, row.height],
@@ -431,14 +442,19 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
         loop={loop}
         className={
           vrMode
-            ? // hidden decoder: audio + frame decode keep running for the VR canvas
-              "pointer-events-none absolute left-0 top-0 h-2 w-2 opacity-[.02]"
+            ? // stays a full-size PAINTED element under the opaque VR canvas —
+              // harder hiding (display:none / opacity ~0) makes the WebView2
+              // compositor stop delivering fresh frames to texImage2D
+              "absolute inset-0 h-full w-full object-contain"
             : "relative z-10 h-full w-full object-contain"
         }
         onLoadedMetadata={(e) => {
           setDuration(e.currentTarget.duration || 0);
           setNat({ w: e.currentTarget.videoWidth, h: e.currentTarget.videoHeight });
           e.currentTarget.volume = volume;
+          // Settings › Appearance: play at once (the click that opened the
+          // viewer is the user activation WebView2 requires for sound)
+          if (videoAutoplay) void e.currentTarget.play().catch(() => undefined);
         }}
         onTimeUpdate={(e) => {
           setCurrent(e.currentTarget.currentTime);
@@ -920,8 +936,8 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
               >
                 <PictureInPicture2 size={18} />
               </IconBtn>
-              {/* VR immersion: only for SBS-shaped sources (aspect ≈ 2:1) */}
-              {isSbs && (
+              {/* VR immersion: only for recognised SBS/VR sources */}
+              {isVrSource && (
                 <IconBtn
                   label={t("player.vr")}
                   active={vrMode}
@@ -930,7 +946,7 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
                   <Globe size={18} />
                 </IconBtn>
               )}
-              {isSbs && vrMode && (
+              {isVrSource && vrMode && (
                 <IconBtn
                   label={t("player.vr_eye")}
                   onClick={() => setVrEye((v) => (v === 0 ? 1 : 0))}

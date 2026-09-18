@@ -134,6 +134,22 @@ export function VrView({
     const uHalf = gl.getUniformLocation(prog, "u_half");
     gl.uniform1i(gl.getUniformLocation(prog, "u_tex"), 0);
 
+    // 8K SBS frames can exceed the GPU texture limit — an over-limit
+    // texImage2D fails SILENTLY (GL error) and sampling an incomplete
+    // texture gives a black canvas. Cap through a 2D downscale canvas.
+    const maxSize = gl.getParameter(gl.MAX_TEXTURE_SIZE) as number;
+    const stageCanvas = document.createElement("canvas");
+    const stageCtx = stageCanvas.getContext("2d");
+    let uploadsChecked = 0;
+    const checkUpload = () => {
+      if (uploadsChecked > 10) return;
+      uploadsChecked++;
+      const err = gl.getError();
+      if (err !== gl.NO_ERROR) {
+        console.error("vr: texture upload failed, GL error", err, "max", maxSize);
+      }
+    };
+
     const resize = () => {
       const dpr = Math.min(2, window.devicePixelRatio || 1);
       const w = Math.max(2, Math.round(canvas.clientWidth * dpr));
@@ -167,7 +183,39 @@ export function VrView({
       // upload a frame only when the playback time moved (seek/loop included)
       if (vid.currentTime !== lastTime) {
         lastTime = vid.currentTime;
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, vid);
+        if (vid.videoWidth > maxSize || vid.videoHeight > maxSize) {
+          // over-limit source: downscale through a 2D canvas first
+          const scale = Math.min(
+            maxSize / vid.videoWidth,
+            maxSize / vid.videoHeight,
+            1,
+          );
+          const w = Math.max(2, Math.round(vid.videoWidth * scale));
+          const h = Math.max(2, Math.round(vid.videoHeight * scale));
+          if (stageCanvas.width !== w || stageCanvas.height !== h) {
+            stageCanvas.width = w;
+            stageCanvas.height = h;
+          }
+          stageCtx?.drawImage(vid, 0, 0, w, h);
+          gl.texImage2D(
+            gl.TEXTURE_2D,
+            0,
+            gl.RGBA,
+            gl.RGBA,
+            gl.UNSIGNED_BYTE,
+            stageCanvas,
+          );
+        } else {
+          gl.texImage2D(
+            gl.TEXTURE_2D,
+            0,
+            gl.RGBA,
+            gl.RGBA,
+            gl.UNSIGNED_BYTE,
+            vid,
+          );
+        }
+        checkUpload();
       }
       gl.uniform1f(uYaw, look.current.yaw);
       gl.uniform1f(uPitch, look.current.pitch);
