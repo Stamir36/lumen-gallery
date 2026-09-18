@@ -20,6 +20,25 @@ import "./index.css";
 // frame-rate + long-task watchdog: an "it froze" report should come with numbers
 startPerfWatchdog();
 
+// P7 F1: kill the browser context menu app-wide — the app ships its own
+// right-click menus (cards, folders, tree rows, viewer). Native editing menu
+// stays on text inputs so copy/paste keeps working in search and settings.
+// Capture phase = nothing downstream can re-open it.
+document.addEventListener(
+  "contextmenu",
+  (e) => {
+    const el = e.target instanceof Element ? e.target : null;
+    if (
+      el?.closest(
+        "input, textarea, [contenteditable=''], [contenteditable='true'], [contenteditable='plaintext-only']",
+      )
+    )
+      return;
+    e.preventDefault();
+  },
+  true,
+);
+
 // accent BEFORE the first paint (SQLite is the source of truth, the cached hex
 // only prevents a default-colour flash on launch — FIX 4a)
 applyCachedAccent();
