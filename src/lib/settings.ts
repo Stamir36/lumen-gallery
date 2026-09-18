@@ -14,6 +14,8 @@ export const HOVER_CAPTIONS_KEY = "hover_captions";
 export const SWIPE_NAVIGATE_KEY = "viewer_swipe";
 /** Where the floating control pill sits in the viewers (center | left | right). */
 export const PILL_ALIGN_KEY = "viewer_pill_align";
+/** Start playing immediately when a video is opened (Settings › Appearance). */
+export const VIDEO_AUTOPLAY_KEY = "video_autoplay";
 
 export type PillAlign = "center" | "left" | "right";
 export const DEFAULT_PILL_ALIGN: PillAlign = "center";
@@ -37,6 +39,8 @@ interface AppSettingsState {
   videoScrubRate: number;
   /** filename caption on card hover (F2) */
   hoverCaptions: boolean;
+  /** a freshly opened video starts playing at once (Settings › Appearance) */
+  videoAutoplay: boolean;
   /** horizontal swipe walks the photo queue (Settings › Appearance) */
   swipeNavigate: boolean;
   /** where the viewer control pill floats (Settings › Appearance) */
@@ -51,6 +55,7 @@ interface AppSettingsState {
   load: () => Promise<void>;
   setVideoScrubRate: (rate: number) => Promise<void>;
   setHoverCaptions: (on: boolean) => Promise<void>;
+  setVideoAutoplay: (on: boolean) => Promise<void>;
   setSwipeNavigate: (on: boolean) => Promise<void>;
   setPillAlign: (align: PillAlign) => Promise<void>;
   setShowFps: (on: boolean) => Promise<void>;
@@ -61,6 +66,7 @@ interface AppSettingsState {
 export const useAppSettings = create<AppSettingsState>((set) => ({
   videoScrubRate: DEFAULT_SCRUB_RATE,
   hoverCaptions: true,
+  videoAutoplay: true,
   swipeNavigate: true,
   pillAlign: DEFAULT_PILL_ALIGN,
   showFps: false,
@@ -72,7 +78,7 @@ export const useAppSettings = create<AppSettingsState>((set) => ({
     try {
       const db = await getDb();
       const rows = await db.select<{ key: string; value: string }[]>(
-        "SELECT key, value FROM settings WHERE key IN ('video_scrub_rate', 'hover_captions', 'viewer_swipe', 'viewer_pill_align', 'perf_show_fps', 'show_excluded', 'thumb_workers')",
+        "SELECT key, value FROM settings WHERE key IN ('video_scrub_rate', 'hover_captions', 'video_autoplay', 'viewer_swipe', 'viewer_pill_align', 'perf_show_fps', 'show_excluded', 'thumb_workers')",
       );
       const byKey = new Map(rows.map((r) => [r.key, r.value]));
       const raw = Number(byKey.get(SCRUB_RATE_KEY));
@@ -81,6 +87,7 @@ export const useAppSettings = create<AppSettingsState>((set) => ({
           Number.isFinite(raw) && raw > 0 ? raw : DEFAULT_SCRUB_RATE,
         // absent = first run: captions are ON by default (F2)
         hoverCaptions: byKey.get(HOVER_CAPTIONS_KEY) !== "false",
+        videoAutoplay: byKey.get(VIDEO_AUTOPLAY_KEY) !== "false",
         swipeNavigate: byKey.get(SWIPE_NAVIGATE_KEY) !== "false",
         pillAlign: readPillAlign(byKey.get(PILL_ALIGN_KEY)),
         showFps: byKey.get(SHOW_FPS_KEY) === "true",
@@ -112,6 +119,16 @@ export const useAppSettings = create<AppSettingsState>((set) => ({
       await writeSetting(HOVER_CAPTIONS_KEY, String(on));
     } catch (e) {
       console.error("hover captions save failed", e);
+      toast.error(i18n.t("errors.action_failed"));
+    }
+  },
+
+  setVideoAutoplay: async (on) => {
+    set({ videoAutoplay: on }); // optimistic: the player reacts instantly
+    try {
+      await writeSetting(VIDEO_AUTOPLAY_KEY, String(on));
+    } catch (e) {
+      console.error("autoplay setting save failed", e);
       toast.error(i18n.t("errors.action_failed"));
     }
   },

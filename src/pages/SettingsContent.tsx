@@ -85,6 +85,8 @@ export function SettingsContent() {
   const setScrubRate = useAppSettings((s) => s.setVideoScrubRate);
   const hoverCaptions = useAppSettings((s) => s.hoverCaptions);
   const setHoverCaptions = useAppSettings((s) => s.setHoverCaptions);
+  const videoAutoplay = useAppSettings((s) => s.videoAutoplay);
+  const setVideoAutoplay = useAppSettings((s) => s.setVideoAutoplay);
   const swipeNavigate = useAppSettings((s) => s.swipeNavigate);
   const setSwipeNavigate = useAppSettings((s) => s.setSwipeNavigate);
   const pillAlign = useAppSettings((s) => s.pillAlign);
@@ -396,6 +398,28 @@ export function SettingsContent() {
                   className={
                     "absolute top-0.5 h-5 w-5 rounded-pill bg-white transition-all duration-[160ms] ease-out " +
                     (hoverCaptions ? "left-[22px]" : "left-0.5")
+                  }
+                />
+              </button>
+            </div>
+            <div className="flex items-center justify-between border-t border-hairline py-4">
+              <span className="text-sm text-tprimary">
+                {t("settings.video_autoplay")}
+              </span>
+              <button
+                role="switch"
+                aria-checked={videoAutoplay}
+                aria-label={t("settings.video_autoplay")}
+                onClick={() => void setVideoAutoplay(!videoAutoplay)}
+                className={
+                  "relative h-6 w-11 rounded-pill transition-colors duration-[160ms] ease-out " +
+                  (videoAutoplay ? "bg-accent" : "bg-surface-3")
+                }
+              >
+                <span
+                  className={
+                    "absolute top-0.5 h-5 w-5 rounded-pill bg-white transition-all duration-[160ms] ease-out " +
+                    (videoAutoplay ? "left-[22px]" : "left-0.5")
                   }
                 />
               </button>
