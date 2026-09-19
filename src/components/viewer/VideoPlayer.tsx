@@ -7,6 +7,7 @@ import {
   Camera,
   ChevronLeft,
   ChevronRight,
+  Droplet,
   ExternalLink,
   EyeOff,
   FlipHorizontal,
@@ -24,6 +25,7 @@ import {
   RotateCcw,
   RotateCw,
   Shuffle,
+  Sparkles,
   SquareArrowOutUpRight,
   Volume2,
   VolumeX,
@@ -564,11 +566,8 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
   const nextRow = queue[index + 1];
   const canPrev = index > 0;
   const canNext = index < queue.length - 1;
-  const chips = [
-    row.width && row.height ? `${row.width}×${row.height}` : null,
-    formatBytes(row.size),
-    clock(duration),
-  ].filter(Boolean) as string[];
+  // the res/size/duration chips left the top bar (bug: the bar read as an
+  // overloaded strip) — they live in the info panel, which still owns them
 
   // FIX 1: one visibility condition for the pill AND the progress line —
   // the codec-error card keeps both up even past the 2s idle point.
@@ -715,75 +714,87 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
             animate={{ y: 0 }}
             exit={reduced ? { opacity: 0 } : { y: -12 }}
             transition={{ type: "spring", stiffness: 260, damping: 26 }}
-            className="absolute left-4 top-4 z-40 flex items-center gap-2"
+            className="absolute inset-x-4 top-4 z-40 flex items-center gap-2"
           >
-            <button
-              type="button"
-              aria-label={t("viewer.close")}
-              title={t("viewer.close")}
-              onClick={() => useViewer.getState().close()}
-              className="glass flex h-10 w-10 items-center justify-center rounded-pill text-tprimary"
-            >
-              <ArrowLeft size={18} />
-            </button>
-            <div className="glass flex h-10 max-w-[46vw] items-center gap-3 rounded-pill px-4">
-              {/* the name leads, LEFT-aligned, then the mono format chips */}
-              <span className="truncate text-[13px] font-medium text-tprimary">
-                {row.path.split(/[\\/]/).pop()}
-              </span>
-              {chips.map((c) => (
-                <span key={c} className="shrink-0 font-mono text-[11px] text-ttertiary">
-                  {c}
-                </span>
-              ))}
+            {/* LEFT — back to the gallery, and the X ONLY when this window was
+                OPENED with the file (P2 semantics). In an internal session the
+                X did exactly what the back arrow does, so it is not rendered
+                at all: one action, one affordance. */}
+            <div className="flex shrink-0 items-center gap-2">
+              <button
+                type="button"
+                aria-label={t("viewer.back")}
+                title={t("viewer.back")}
+                onClick={() => useViewer.getState().close()}
+                className="glass flex h-10 w-10 items-center justify-center rounded-pill text-tprimary transition-colors duration-[160ms] hover:bg-white/[.12]"
+              >
+                <ArrowLeft size={18} />
+              </button>
+              {session === "external" && (
+                <button
+                  type="button"
+                  aria-label={t("viewer.close_app")}
+                  title={t("viewer.close_app")}
+                  onClick={requestClose}
+                  className="glass flex h-10 w-10 items-center justify-center rounded-pill text-tprimary transition-colors duration-[160ms] hover:bg-white/[.12]"
+                >
+                  <X size={17} />
+                </button>
+              )}
             </div>
-            <button
-              type="button"
-              aria-label={t("viewer.shuffle")}
-              title={t(shuffled ? "viewer.shuffle_off" : "viewer.shuffle")}
-              aria-pressed={shuffled}
-              onClick={toggleShuffle}
-              className={cn(
-                "glass flex h-10 w-10 items-center justify-center rounded-pill transition-colors duration-[160ms]",
-                shuffled ? "text-accent" : "text-tsecondary hover:text-tprimary",
-              )}
-            >
-              <Shuffle size={17} />
-            </button>
-            <button
-              type="button"
-              aria-label={t("viewer.info")}
-              title={t("viewer.info")}
-              aria-pressed={infoOpen}
-              onClick={toggleInfo}
-              className={cn(
-                "glass flex h-10 w-10 items-center justify-center rounded-pill",
-                infoOpen ? "text-tprimary" : "text-tsecondary",
-              )}
-            >
-              <Info size={17} />
-            </button>
-            <button
-              type="button"
-              aria-label={t("viewer.favorite")}
-              title={t("viewer.favorite")}
-              onClick={() => toggleFavorite(row)}
-              className="glass flex h-10 w-10 items-center justify-center rounded-pill text-tprimary"
-            >
-              <Heart size={17} className={fav ? "fill-accent text-accent" : undefined} />
-            </button>
-            {/* P2: back arrow = always the gallery; the X is context-aware —
-                for a window OPENED with this file (and before the gallery has
-                been seen) it closes the whole app, otherwise just the viewer */}
-            <button
-              type="button"
-              aria-label={t(session === "external" ? "viewer.close_app" : "viewer.close_viewer")}
-              title={t(session === "external" ? "viewer.close_app" : "viewer.close_viewer")}
-              onClick={requestClose}
-              className="glass flex h-10 w-10 items-center justify-center rounded-pill text-tprimary transition-colors duration-[160ms] hover:bg-white/[.12]"
-            >
-              <X size={17} />
-            </button>
+
+            {/* CENTRE — the name and nothing else. The res/size/duration chips
+                made this bar read as a data dump next to the actions; they are
+                all in the info panel, so the bar keeps ONE focal element. */}
+            <div className="pointer-events-none flex min-w-0 flex-1 justify-center">
+              <div className="glass flex h-10 min-w-0 items-center gap-3 rounded-pill px-4">
+                <span className="truncate text-[13px] font-medium text-tprimary">
+                  {row.path.split(/[\\/]/).pop()}
+                </span>
+                <span className="shrink-0 font-mono text-[10.5px] tabular-nums text-ttertiary">
+                  {index + 1} / {queue.length}
+                </span>
+              </div>
+            </div>
+
+            {/* RIGHT — the quiet actions, at the edge where they belong */}
+            <div className="flex shrink-0 items-center gap-2">
+              <button
+                type="button"
+                aria-label={t("viewer.shuffle")}
+                title={t(shuffled ? "viewer.shuffle_off" : "viewer.shuffle")}
+                aria-pressed={shuffled}
+                onClick={toggleShuffle}
+                className={cn(
+                  "glass flex h-10 w-10 items-center justify-center rounded-pill transition-colors duration-[160ms]",
+                  shuffled ? "text-accent" : "text-tsecondary hover:text-tprimary",
+                )}
+              >
+                <Shuffle size={17} />
+              </button>
+              <button
+                type="button"
+                aria-label={t("viewer.info")}
+                title={t("viewer.info")}
+                aria-pressed={infoOpen}
+                onClick={toggleInfo}
+                className={cn(
+                  "glass flex h-10 w-10 items-center justify-center rounded-pill",
+                  infoOpen ? "text-tprimary" : "text-tsecondary",
+                )}
+              >
+                <Info size={17} />
+              </button>
+              <button
+                type="button"
+                aria-label={t("viewer.favorite")}
+                title={t("viewer.favorite")}
+                onClick={() => toggleFavorite(row)}
+                className="glass flex h-10 w-10 items-center justify-center rounded-pill text-tprimary"
+              >
+                <Heart size={17} className={fav ? "fill-accent text-accent" : undefined} />
+              </button>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -1061,18 +1072,19 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
             onPointerEnter={() => setPillHover(true)}
             onPointerLeave={() => setPillHover(false)}
           >
-            {/* P1 — COLOR SHEET: a standalone surface anchored directly ABOVE
-                the pill (inset-x-0 = the pill's own width, capped at 420). Solid
-                surface-2, radius 20: no glass, so nothing bleeds through it and
-                it can never overlap a menu — opening it CLOSES the overflow. */}
+            {/* P1 — COLOR SHEET: a standalone glass sheet anchored directly
+                ABOVE the pill, the same width as the pill (capped at 420) and
+                the same material as it (glass = white 5% + blur(28) saturate
+                1.2 + inner highlight), radius 20. Opening it CLOSES the
+                overflow menu, so two surfaces can never overlap. */}
             <AnimatePresence>
               {colorOpen && (
                 <motion.div
-                  initial={reduced ? false : { opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={reduced ? { opacity: 0 } : { opacity: 0, y: 10 }}
+                  initial={reduced ? false : { opacity: 0, y: 10, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={reduced ? { opacity: 0 } : { opacity: 0, y: 10, scale: 0.98 }}
                   transition={{ duration: reduced ? 0 : 0.16, ease: "easeOut" }}
-                  className="absolute inset-x-0 bottom-[80px] z-50 mx-auto max-w-[420px] rounded-[20px] bg-surface-2 shadow-[0_16px_48px_rgba(0,0,0,.5)] outline outline-1 outline-white/[.06]"
+                  className="glass absolute inset-x-0 bottom-[80px] z-50 mx-auto max-w-[420px] rounded-[20px] shadow-[0_16px_48px_rgba(0,0,0,.5)] outline outline-1 outline-white/[.08]"
                 >
                   <ColorSheet onClose={() => setColorOpen(false)} />
                 </motion.div>
@@ -1382,11 +1394,13 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
  * P1 — COLOR CORRECTION SHEET. Two global filters written through the settings
  * store; the CSS var updates live, so the picture changes while you drag.
  *
- * DESIGN v2.4 contract: this is a menu-grade surface, and glass is FORBIDDEN on
- * menus (§3.3) — the old translucent panel sat inside the overflow menu and the
- * menu's own rows bled straight through the sliders. Now: solid surface-2,
- * radius 20, one editorial hairline before the reset row, sliders at spec
- * (4px track, accent fill, 18px white thumb) with a mono value chip.
+ * The sheet is the PILL'S OWN MATERIAL (glass: white 5% + blur(28) saturate
+ * 1.2 + inner top highlight), radius 20, width-matched to the pill and capped
+ * at 420 — it reads as the pill unfolding upward rather than a foreign panel.
+ * It can never overlap the overflow menu either: opening it closes the menu.
+ * Sliders run the glass variant of the shared Slider (white/14 track, accent
+ * fill with a soft glow, 18px white thumb), with a mono value chip and a detent
+ * at the neutral point.
  * It is rendered ABOVE the pill so the pill stays visible and clickable — the
  * user adjusts the filters while the video is playing.
  */
@@ -1400,40 +1414,48 @@ function ColorSheet({ onClose }: { onClose: () => void }) {
 
   return (
     <div role="group" aria-label={t("player.color")} className="px-4 pb-3 pt-4">
-      <header className="mb-4 flex items-center justify-between">
-        <h3 className="text-[14px] font-semibold text-tprimary">{t("player.color")}</h3>
+      <header className="mb-5 flex items-center justify-between">
+        <h3 className="flex items-center gap-2 text-[13px] font-semibold tracking-[-0.01em] text-tprimary">
+          <Palette size={14} className="text-accent" />
+          {t("player.color")}
+        </h3>
         <button
           type="button"
           aria-label={t("viewer.close")}
           title={t("viewer.close")}
           onClick={onClose}
-          className="flex h-7 w-7 items-center justify-center rounded-control text-tsecondary transition-colors duration-[120ms] hover:bg-white/[.08] hover:text-tprimary"
+          className="flex h-7 w-7 items-center justify-center rounded-control text-tsecondary transition-colors duration-[120ms] hover:bg-white/[.10] hover:text-tprimary"
         >
           <X size={15} />
         </button>
       </header>
 
+      {/* saturation: 100% is the neutral point, so the track carries a detent */}
       <FilterSlider
+        icon={<Droplet size={14} />}
         label={t("player.color_saturation")}
         value={Math.round(saturation * 100)}
         min={50}
         max={200}
         step={5}
         suffix="%"
+        mark={((100 - 50) / (200 - 50)) * 100}
         onChange={(pct) => void setSaturation(pct / 100)}
       />
       <FilterSlider
+        icon={<Sparkles size={14} />}
         label={t("player.color_sharpness")}
         value={Math.round(sharpness * 100)}
         min={0}
         max={100}
         step={5}
         suffix="%"
+        mark={0}
         onChange={(pct) => void setSharpness(pct / 100)}
       />
 
       {/* editorial hairline divider (DESIGN §1: the only place borders live) */}
-      <div className="my-3 h-px bg-white/[.06]" />
+      <div className="my-4 h-px bg-white/[.08]" />
 
       <button
         type="button"
@@ -1445,7 +1467,7 @@ function ColorSheet({ onClose }: { onClose: () => void }) {
         className={cn(
           "flex h-10 w-full items-center justify-center gap-2 rounded-control text-[13px] transition-colors duration-[120ms]",
           dirty
-            ? "text-tsecondary hover:bg-white/[.08] hover:text-tprimary"
+            ? "text-tsecondary hover:bg-white/[.10] hover:text-tprimary"
             : "cursor-default text-white/25",
         )}
       >
@@ -1457,29 +1479,36 @@ function ColorSheet({ onClose }: { onClose: () => void }) {
 }
 
 function FilterSlider({
+  icon,
   label,
   value,
   min,
   max,
   step,
   suffix,
+  mark,
   onChange,
 }: {
+  icon: React.ReactNode;
   label: string;
   value: number;
   min: number;
   max: number;
   step: number;
   suffix: string;
+  mark?: number;
   onChange: (v: number) => void;
 }) {
   return (
-    <label className="mb-3 block last:mb-0">
-      <span className="mb-2 flex items-center justify-between text-[12px] text-tsecondary">
-        <span>{label}</span>
+    <label className="mb-5 block last:mb-0">
+      <span className="mb-3 flex items-center justify-between">
+        <span className="flex items-center gap-2 text-[12px] text-tsecondary">
+          <span className="text-ttertiary">{icon}</span>
+          {label}
+        </span>
         {/* mono value chip (DESIGN §7/§10 Slider) — tabular figures, never a
             jumping label while the thumb is dragged */}
-        <span className="rounded-[8px] bg-white/[.06] px-1.5 py-0.5 font-mono text-[10.5px] tabular-nums text-tprimary">
+        <span className="rounded-[9px] bg-white/[.08] px-2 py-[3px] font-mono text-[10.5px] tabular-nums text-tprimary">
           {value}
           {suffix}
         </span>
@@ -1489,9 +1518,10 @@ function FilterSlider({
         min={min}
         max={max}
         step={step}
+        mark={mark}
+        variant="glass"
         aria-label={label}
         onChange={onChange}
-        className="mt-1"
       />
     </label>
   );

@@ -465,50 +465,59 @@ export function Lightbox({ row }: { row: MediaRow }) {
           <ChevronRight size={22} />
         </button>
 
-        {/* top-left: back to the gallery + the name chip (LEFT, never centred) */}
-        <div className="absolute left-4 top-4 z-40 flex items-center gap-2">
-          <button
-            type="button"
-            aria-label={t("viewer.back")}
-            title={t("viewer.back")}
-            onClick={() => useViewer.getState().close()}
-            className="glass flex h-10 w-10 items-center justify-center rounded-pill text-tprimary transition-colors duration-[160ms] hover:bg-white/[.12]"
-          >
-            <ArrowLeft size={18} />
-          </button>
-          <div className="glass pointer-events-none flex h-10 max-w-[62vw] items-center gap-3 rounded-pill px-4">
-            <span className="truncate text-[13px] text-tprimary">{name}</span>
-            <span className="shrink-0 font-mono text-[10.5px] tabular-nums text-ttertiary">
-              {index + 1} / {queue.length}
-            </span>
-          </div>
-          <button
-            type="button"
-            aria-label={t("viewer.shuffle")}
-            title={t(shuffled ? "viewer.shuffle_off" : "viewer.shuffle")}
-            aria-pressed={shuffled}
-            onClick={toggleShuffle}
-            className={cn(
-              "glass flex h-10 w-10 items-center justify-center rounded-pill transition-colors duration-[160ms]",
-              shuffled ? "text-accent" : "text-tsecondary hover:text-tprimary",
+        {/* ---------- one balanced top bar: back (· X) · name · shuffle ----------
+            The X exists ONLY for a file this window was OPENED with — in an
+            internal session it does the same thing as the back arrow, so it is
+            not rendered (bug: two controls, one action). */}
+        <div className="absolute inset-x-4 top-4 z-40 flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              aria-label={t("viewer.back")}
+              title={t("viewer.back")}
+              onClick={() => useViewer.getState().close()}
+              className="glass flex h-10 w-10 items-center justify-center rounded-pill text-tprimary transition-colors duration-[160ms] hover:bg-white/[.12]"
+            >
+              <ArrowLeft size={18} />
+            </button>
+            {session === "external" && (
+              <button
+                type="button"
+                aria-label={t("viewer.close_app")}
+                title={t("viewer.close_app")}
+                onClick={requestClose}
+                className="glass flex h-10 w-10 items-center justify-center rounded-pill text-tprimary transition-colors duration-[160ms] hover:bg-white/[.12]"
+              >
+                <X size={18} />
+              </button>
             )}
-          >
-            <Shuffle size={17} />
-          </button>
-        </div>
+          </div>
 
-        {/* close — P2: for a file this window was OPENED with (and before the
-            gallery has been seen) this closes the whole app window; otherwise
-            it closes just the viewer, exactly like Esc */}
-        <button
-          type="button"
-          aria-label={t(session === "external" ? "viewer.close_app" : "viewer.close_viewer")}
-          title={t(session === "external" ? "viewer.close_app" : "viewer.close_viewer")}
-          onClick={requestClose}
-          className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-pill bg-white/[.06] text-tprimary transition-colors duration-[160ms] hover:bg-white/[.12]"
-        >
-          <X size={18} />
-        </button>
+          <div className="pointer-events-none flex min-w-0 flex-1 justify-center">
+            <div className="glass flex h-10 min-w-0 items-center gap-3 rounded-pill px-4">
+              <span className="truncate text-[13px] text-tprimary">{name}</span>
+              <span className="shrink-0 font-mono text-[10.5px] tabular-nums text-ttertiary">
+                {index + 1} / {queue.length}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              aria-label={t("viewer.shuffle")}
+              title={t(shuffled ? "viewer.shuffle_off" : "viewer.shuffle")}
+              aria-pressed={shuffled}
+              onClick={toggleShuffle}
+              className={cn(
+                "glass flex h-10 w-10 items-center justify-center rounded-pill transition-colors duration-[160ms]",
+                shuffled ? "text-accent" : "text-tsecondary hover:text-tprimary",
+              )}
+            >
+              <Shuffle size={17} />
+            </button>
+          </div>
+        </div>
 
         {/* ---------- mono info panel ---------- */}
         <AnimatePresence>
