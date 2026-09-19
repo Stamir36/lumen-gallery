@@ -29,6 +29,7 @@ import { queryClient } from "@/lib/queryClient";
 import { getDb } from "@/lib/db";
 import { useRootsStore } from "@/state/library";
 import { APP_VERSION } from "@/lib/version";
+import appIcon from "../../assets/icon.svg";
 import {
   readSetting,
   writeSetting,
@@ -84,6 +85,8 @@ export function SettingsContent() {
   const setGridDensity = useAppSettings((s) => s.setGridDensity);
   const videoAutoplay = useAppSettings((s) => s.videoAutoplay);
   const setVideoAutoplay = useAppSettings((s) => s.setVideoAutoplay);
+  const directPlayback = useAppSettings((s) => s.directPlayback);
+  const setDirectPlayback = useAppSettings((s) => s.setDirectPlayback);
   const swipeNavigate = useAppSettings((s) => s.swipeNavigate);
   const setSwipeNavigate = useAppSettings((s) => s.setSwipeNavigate);
   const pillAlign = useAppSettings((s) => s.pillAlign);
@@ -580,7 +583,30 @@ export function SettingsContent() {
         {/* 03 Playback */}
         <Section index="03" id="playback" title={t("settings.nav_playback")}>
           <GlassCard>
-            <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center justify-between border-b border-hairline pb-4">
+              <span className="flex flex-col gap-0.5">
+                <span className="text-sm text-tprimary">{t("settings.direct_playback")}</span>
+                <span className="text-[12px] text-ttertiary">{t("settings.direct_playback_hint")}</span>
+              </span>
+              <button
+                role="switch"
+                aria-checked={directPlayback}
+                aria-label={t("settings.direct_playback")}
+                onClick={() => void setDirectPlayback(!directPlayback)}
+                className={
+                  "relative h-6 w-11 shrink-0 rounded-pill transition-colors duration-[160ms] ease-out " +
+                  (directPlayback ? "bg-accent" : "bg-surface-3")
+                }
+              >
+                <span
+                  className={
+                    "absolute top-0.5 h-5 w-5 rounded-pill bg-white transition-all duration-[160ms] ease-out " +
+                    (directPlayback ? "left-[22px]" : "left-0.5")
+                  }
+                />
+              </button>
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-4 pt-4">
               <span className="text-sm text-tprimary">{t("settings.scrub_speed")}</span>
               <div className="flex items-center gap-1.5">
                 {SCRUB_RATES.map((rate) => (
@@ -720,21 +746,35 @@ export function SettingsContent() {
           </GlassCard>
         </Section>
 
-        {/* 06 About (Phase 6 STEP 1) */}
+        {/* 06 About (P3 — material about screen) */}
         <Section index="06" id="about" title={t("settings.nav_about")}>
           <GlassCard>
-            <div className="flex items-center justify-between border-b border-hairline pb-4">
-              <span className="text-sm text-tprimary">{t("settings.version")}</span>
-              <span className="font-mono text-[12px] text-tsecondary">
+            {/* identity: the app mark, the name in display type, a mono build
+                chip. Nothing else competes with it — the facts live below. */}
+            <div className="flex flex-col items-center pt-2 pb-7 text-center">
+              <img
+                src={appIcon}
+                alt=""
+                aria-hidden
+                width={96}
+                height={96}
+                draggable={false}
+                className="h-24 w-24 select-none rounded-[26px] shadow-[0_8px_24px_rgba(0,0,0,.35)]"
+              />
+              <h3 className="mt-5 text-[32px] leading-[1.05] font-[650] tracking-[-0.02em] text-tprimary">
+                LUMEN
+              </h3>
+              <span className="mt-3 rounded-pill bg-white/[.06] px-3 py-1 font-mono text-[11px] tabular-nums text-tsecondary">
                 {__BUILD_ID__ === "dev"
-                  ? t("settings.about_dev_build")
-                  : `${APP_VERSION} (${__BUILD_ID__})`}
+                  ? `v${APP_VERSION} · ${t("settings.about_dev_build")}`
+                  : `v${APP_VERSION} · ${__BUILD_ID__}`}
               </span>
             </div>
-            <div className="flex items-center justify-between border-b border-hairline py-4">
-              <span className="text-sm text-tprimary">{t("settings.about_author")}</span>
-              <span className="text-[13px] text-tsecondary">
-                Stanislav Miroshnichenko ·{" "}
+
+            {/* the facts: one list, hairline dividers (editorial only) */}
+            <div className="border-t border-hairline">
+              <AboutRow label={t("settings.about_author")}>Stanislav Miroshnichenko</AboutRow>
+              <AboutRow label={t("settings.about_github")}>
                 <button
                   type="button"
                   onClick={() =>
@@ -744,29 +784,19 @@ export function SettingsContent() {
                   }
                   className="rounded-pill px-1 font-mono text-[13px] text-accent underline decoration-accent/40 underline-offset-2 transition-colors hover:decoration-accent focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
                 >
-                  Stamir36
+                  github.com/Stamir36
                 </button>
-              </span>
-            </div>
-            <div className="flex items-center justify-between border-b border-hairline py-4">
-              <span className="text-sm text-tprimary">{t("settings.about_studio")}</span>
-              <span className="text-[13px] text-tsecondary">Unesell Studio</span>
-            </div>
-            <div className="flex items-center justify-between border-b border-hairline py-4">
-              <span className="text-sm text-tprimary">{t("settings.about_package")}</span>
-              <span className="font-mono text-[12px] text-tsecondary">com.unesell.lumen</span>
-            </div>
-            <div className="flex items-center justify-between border-b border-hairline py-4">
-              <span className="text-sm text-tprimary">{t("settings.about_license")}</span>
-              <span className="text-[13px] text-tsecondary">
+              </AboutRow>
+              <AboutRow label={t("settings.about_studio")}>Unesell Studio</AboutRow>
+              <AboutRow label={t("settings.about_package")}>
+                <span className="font-mono text-[12px]">com.unesell.lumen</span>
+              </AboutRow>
+              <AboutRow label={t("settings.about_license")}>
                 {t("settings.about_license_value")}
-              </span>
-            </div>
-            <div className="flex items-center justify-between py-4">
-              <span className="text-sm text-tprimary">{t("settings.about_stack")}</span>
-              <span className="font-mono text-[12px] text-tsecondary">
-                Tauri v2 · React · Rust · SQLite
-              </span>
+              </AboutRow>
+              <AboutRow label={t("settings.about_stack")}>
+                <span className="font-mono text-[12px]">Tauri v2 · React · Rust · SQLite</span>
+              </AboutRow>
             </div>
           </GlassCard>
         </Section>
@@ -780,6 +810,19 @@ export function SettingsContent() {
           </p>
         )}
       </div>
+    </div>
+  );
+}
+
+/**
+ * One fact row of the About list (P3): label left, value right, separated by an
+ * editorial hairline — the only border DESIGN v2.4 allows.
+ */
+function AboutRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-6 border-b border-hairline py-4 last:border-b-0">
+      <span className="shrink-0 text-sm text-tprimary">{label}</span>
+      <span className="min-w-0 text-right text-[13px] text-tsecondary">{children}</span>
     </div>
   );
 }
