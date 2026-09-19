@@ -470,7 +470,7 @@ export function Lightbox({ row }: { row: MediaRow }) {
             internal session it does the same thing as the back arrow, so it is
             not rendered (bug: two controls, one action). */}
         <div className="absolute inset-x-4 top-4 z-40 flex items-center gap-2">
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex min-w-0 items-center gap-2">
             <button
               type="button"
               aria-label={t("viewer.back")}
@@ -491,10 +491,8 @@ export function Lightbox({ row }: { row: MediaRow }) {
                 <X size={18} />
               </button>
             )}
-          </div>
-
-          <div className="pointer-events-none flex min-w-0 flex-1 justify-center">
-            <div className="glass flex h-10 min-w-0 items-center gap-3 rounded-pill px-4">
+            {/* the name leads, directly behind the back arrow (as it always did) */}
+            <div className="glass pointer-events-none flex h-10 min-w-0 max-w-[52vw] items-center gap-3 rounded-pill px-4">
               <span className="truncate text-[13px] text-tprimary">{name}</span>
               <span className="shrink-0 font-mono text-[10.5px] tabular-nums text-ttertiary">
                 {index + 1} / {queue.length}
@@ -502,7 +500,7 @@ export function Lightbox({ row }: { row: MediaRow }) {
             </div>
           </div>
 
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="ml-auto flex shrink-0 items-center gap-2">
             <button
               type="button"
               aria-label={t("viewer.shuffle")}

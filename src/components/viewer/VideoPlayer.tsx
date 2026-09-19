@@ -720,7 +720,7 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
                 OPENED with the file (P2 semantics). In an internal session the
                 X did exactly what the back arrow does, so it is not rendered
                 at all: one action, one affordance. */}
-            <div className="flex shrink-0 items-center gap-2">
+            <div className="flex min-w-0 items-center gap-2">
               <button
                 type="button"
                 aria-label={t("viewer.back")}
@@ -741,13 +741,11 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
                   <X size={17} />
                 </button>
               )}
-            </div>
 
-            {/* CENTRE — the name and nothing else. The res/size/duration chips
-                made this bar read as a data dump next to the actions; they are
-                all in the info panel, so the bar keeps ONE focal element. */}
-            <div className="pointer-events-none flex min-w-0 flex-1 justify-center">
-              <div className="glass flex h-10 min-w-0 items-center gap-3 rounded-pill px-4">
+              {/* the name leads, directly behind the back arrow (as it always
+                  did); the mono res/size/duration chips stay in the info panel
+                  so the bar keeps one focal element */}
+              <div className="glass pointer-events-none flex h-10 min-w-0 max-w-[46vw] items-center gap-3 rounded-pill px-4">
                 <span className="truncate text-[13px] font-medium text-tprimary">
                   {row.path.split(/[\\/]/).pop()}
                 </span>
@@ -757,8 +755,8 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
               </div>
             </div>
 
-            {/* RIGHT — the quiet actions, at the edge where they belong */}
-            <div className="flex shrink-0 items-center gap-2">
+            {/* RIGHT — the quiet actions, pushed to the far edge */}
+            <div className="ml-auto flex shrink-0 items-center gap-2">
               <button
                 type="button"
                 aria-label={t("viewer.shuffle")}
