@@ -136,8 +136,11 @@ export function SettingsContent() {
     setCursorPointer(on);
     try {
       await writeSetting(CURSOR_KEY, String(on));
-    } catch {
-      /* class already applied optimistically */
+    } catch (e) {
+      // B11: the class is applied optimistically, but a silently lost write
+      // means the choice disappears next launch — say so.
+      console.error("cursor setting save failed", e);
+      toast.error(t("errors.action_failed"));
     }
   };
 
@@ -158,7 +161,9 @@ export function SettingsContent() {
         setPlayer(vals[0]?.value ?? "");
         setBytes(size);
         setReady(true);
-      } catch {
+      } catch (e) {
+        // B11: never swallow the reason — the inline message is not enough
+        console.error("settings load failed", e);
         if (alive) {
           setMessage("settings.load_error");
           setFailed(true);
@@ -177,7 +182,9 @@ export function SettingsContent() {
     try {
       await action();
       setMessage("settings.saved");
-    } catch {
+    } catch (e) {
+      // B11: console + inline; the old bare `catch` lost the error entirely
+      console.error("settings operation failed", e);
       setMessage("settings.operation_error");
       setFailed(true);
     } finally {
