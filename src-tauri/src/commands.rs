@@ -375,6 +375,7 @@ pub async fn db_exec(
     const ALLOWED: &[&str] = &[
         "UPDATE media SET favorite",
         "UPDATE media SET trashed",
+        "UPDATE media SET width", // video-player backfill of NULL resolution
         "INSERT INTO settings",
         "UPDATE settings",
         "DELETE FROM media WHERE id",

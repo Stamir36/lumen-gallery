@@ -3,8 +3,9 @@ import { motion, useReducedMotion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { Pause, Play, Rows3, Volume2, VolumeX, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { mediaUrl, type MediaRow } from "@/lib/api";
-import { fileSrc, tauriAvailable } from "@/lib/assets";
+import { type MediaRow } from "@/lib/api";
+import { useMediaSource } from "@/lib/mediaSource";
+import { fileSrc } from "@/lib/assets";
 import { thumbSrc } from "@/lib/thumbs";
 import { useViewer } from "@/state/viewer";
 import { useAppSettings, type CollageFit } from "@/lib/settings";
@@ -299,24 +300,10 @@ function CollageTile({
   const thumb = row.thumbPath ? thumbSrc(row.thumbPath) : null;
   const progress = total > 0 ? Math.min(1, shown / total) : 0;
 
-  // P7 F3: resolve the loopback media_url once per tile (videos only).
-  // crossOrigin + ACAO:* keeps the frames CORS-clean so a tile handed to the
-  // full viewer can snapshot immediately; asset:// fallback keeps playback
-  // alive if the server is down. Images stay on the asset protocol — canvas
-  // never reads from them.
-  const [tileUrl, setTileUrl] = useState<string | null>(null);
-  useEffect(() => {
-    if (!isVideo || !tauriAvailable()) return;
-    let cancelled = false;
-    mediaUrl(row.path)
-      .then((u) => {
-        if (!cancelled) setTileUrl(u);
-      })
-      .catch(() => {});
-    return () => {
-        cancelled = true;
-    };
-  }, [isVideo, row.path]);
+  // ONE app-wide source policy (src/lib/mediaSource.ts): asset protocol by
+  // default, the loopback CORS server only when opted in. Images stay on the
+  // asset protocol — canvas never reads from them.
+  const { src: tileUrl, clean: tileClean } = useMediaSource(isVideo ? row.path : null);
 
   // C4: react to the cascade command with a 120ms-per-tile stagger
   useEffect(() => {
@@ -426,8 +413,8 @@ function CollageTile({
           // P7 F3: loopback media server + crossOrigin keeps tiles CORS-clean,
           // so a tile handed to the full viewer can snapshot from day one;
           // fallback to the asset protocol keeps playback alive if it is down.
-          src={tileUrl ?? fileSrc(row.path)}
-          crossOrigin={tileUrl ? "anonymous" : undefined}
+          src={tileUrl || fileSrc(row.path)}
+          crossOrigin={tileClean ? "anonymous" : undefined}
           muted={muted}
           loop
           playsInline

@@ -26,6 +26,8 @@ pub struct AllowList {
 pub struct MediaServer {
     pub port: u16,
     allow: Arc<RwLock<AllowList>>,
+    /// refresh throttle: one DB round trip per second at most
+    last_refresh: Arc<RwLock<std::time::Instant>>,
 }
 
 impl MediaServer {
@@ -47,9 +49,18 @@ impl MediaServer {
         }
     }
 
-    /// Re-reads roots + excluded folders. Two tiny queries, called once per
-    /// `media_url` request, so the guard can never go stale.
+    /// Re-reads roots + excluded folders. Two tiny queries, throttled to once
+    /// per second: the allow-list is effectively static, while `media_url` may
+    /// be called per video open — a DB round trip on every call added latency
+    /// to exactly the path the user reported as slow.
     pub async fn refresh(&self, app: &AppHandle) {
+        let fresh = match self.last_refresh.read() {
+            Ok(t) => t.elapsed().as_secs_f64() < 1.0,
+            Err(_) => false,
+        };
+        if fresh {
+            return;
+        }
         let pool = match crate::commands::pool_for(app).await {
             Ok(p) => p,
             Err(e) => {
@@ -68,6 +79,9 @@ impl MediaServer {
         if let Ok(mut allow) = self.allow.write() {
             allow.roots = roots.iter().map(|p| canon(Path::new(p))).collect();
             allow.excluded = excluded.iter().map(|p| canon(Path::new(p))).collect();
+        }
+        if let Ok(mut t) = self.last_refresh.write() {
+            *t = std::time::Instant::now();
         }
     }
 }
@@ -195,7 +209,7 @@ fn empty_response(status: StatusCode, headers: Vec<Header>) -> Response<std::io:
 /// Starts the loopback server on an ephemeral port; `None` (logged) on failure.
 pub fn start() -> Option<MediaServer> {
     let server = match tiny_http::Server::http("127.0.0.1:0") {
-        Ok(s) => s,
+        Ok(s) => Arc::new(s),
         Err(e) => {
             log::warn!("media server unavailable ({e}) — VR falls back to blob URLs");
             return None;
@@ -210,15 +224,41 @@ pub fn start() -> Option<MediaServer> {
     };
     let allow = Arc::new(RwLock::new(AllowList::default()));
     let shared = allow.clone();
-    std::thread::spawn(move || {
-        for request in server.incoming_requests() {
-            if let Err(e) = handle(request, &shared) {
-                log::warn!("media server request failed: {e}");
+    // A worker POOL, not one thread: WebView2 opens several connections at once
+    // (video + ambient copy + scrub preview share one URL). A single-threaded
+    // accept loop serialized those requests — the reported multi-second stalls
+    // with a black stage before the first frame. 8 workers is plenty for
+    // loopback and cannot starve anything else (read-only local file IO).
+    const WORKER_THREADS: usize = 8;
+    for _ in 0..WORKER_THREADS {
+        let server = Arc::clone(&server);
+        let allow = shared.clone();
+        std::thread::spawn(move || {
+            loop {
+                match server.recv() {
+                    Ok(request) => {
+                        if let Err(e) = handle(request, &allow) {
+                            log::warn!("media server request failed: {e}");
+                        }
+                    }
+                    Err(e) => {
+                        log::warn!("media server recv failed: {e}");
+                        break;
+                    }
+                }
             }
-        }
-    });
-    log::info!("media server listening on http://127.0.0.1:{port}");
-    Some(MediaServer { port, allow })
+        });
+    }
+    log::info!(
+        "media server listening on http://127.0.0.1:{port} ({WORKER_THREADS} workers)"
+    );
+    Some(MediaServer {
+        port,
+        allow,
+        last_refresh: Arc::new(RwLock::new(
+            std::time::Instant::now() - std::time::Duration::from_secs(2),
+        )),
+    })
 }
 
 fn handle(request: Request, allow: &Arc<RwLock<AllowList>>) -> std::io::Result<()> {
