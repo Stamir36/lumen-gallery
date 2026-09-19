@@ -5,7 +5,6 @@ import { useTranslation } from "react-i18next";
 import { Pause, PictureInPicture2, Play, RotateCcw, RotateCw, X } from "lucide-react";
 import type { MediaRow } from "@/lib/api";
 import { useMediaSource } from "@/lib/mediaSource";
-import { thumbSrc } from "@/lib/thumbs";
 import { tauriAvailable } from "@/lib/assets";
 import { cn } from "@/lib/utils";
 
@@ -223,9 +222,6 @@ export default function MiniPlayer() {
           ref={videoRef}
           src={src || undefined}
           playsInline
-          /* the handed-over row carries its thumb: paint it while the decoder
-             spins up, same staged idea as the main player's poster */
-          poster={row?.thumbPath ? thumbSrc(row.thumbPath) : undefined}
           onPlay={() => {
             setPlaying(true);
             poke();
