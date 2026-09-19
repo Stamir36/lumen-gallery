@@ -1,5 +1,18 @@
 # LUMEN — Roadmap (Phases 1–6)
 
+## P8v2 batch (2026-09-19) — freeze fix, UI redesigns, second layout
+- [x] P0 freeze & preview speed (`1d0b40e`): `thumbs-ready` coalesced into ONE patch pass per 120 ms window; `patchCachedRows` probes per cached query first (no intersection → untouched, nothing allocated) and caps rows per pass; lightbox staged decode (480w thumb underlay + fade-in original keyed by row id + neighbour THUMB prefetch only); thumb queue DROPS offscreen ids above 200 (re-asked when they scroll back) with one log line per storm; scan upserts are time-bounded — adaptive chunk (16–500 rows, target ≤150 ms per transaction) so the writer's thumb flush stops queuing behind a scan.
+- [x] P1 (`fdae6fd`) colour correction is a standalone SHEET above the pill: opening it CLOSES the overflow, solid surface-2, radius 20, pill width capped at 420, mono value chips, Esc closes, effect live while dragging.
+- [x] P2 (`6342882`) context-aware viewer close: `session: external` for arg/association/drag-drop opens — the X then closes the APP window (tooltip «Закрыть приложение»); back button and any library route end the session, after which the X closes only the viewer (`viewer.close_viewer`).
+- [x] P3 (`c9fe165`) material about screen: 96px squircle mark, LUMEN in display type, mono version+build chip, one hairline row list, GitHub row clickable.
+- [x] P4 (`3c8915e`) rail layout: `appearance.main_layout` = classic (default) | rail, live switch, Settings › Appearance row with mini glyph previews. Rail = full-width header (title · search flex-1 · sort/view/selection) + permanent 64px icon rail (mono tooltips, accent active) + chips row; grid, gutters and sticky date headers unchanged. Main screen only: viewers/player/collage untouched.
+- [x] P5 audit fixes (one commit each): B1 (`b6c7301`) thumb retry clears the request marker, B2 (`de7680b`) scan-store selectors in the shell, B9 (`e5f0e8f`) viewer favourite override follows the rollback, B11 (`050fef3`) settings writes report failures, B6+B13 (`2754e53`) stable activate callback + memoized GridRow + scrollerRef cleanup via state, B15 (`c2285e5`) source dropout ≠ codec failure, B4 (`b53b6c8`) viewer focus trap + focus restore.
+- [x] P6 (`97edc9d`, `9d0a22c`) shuffle toggle in both viewers (current item stays first, Fisher–Yates, OFF restores the exact view order); hotkey cheat sheet on `?` (dark-glass panel, mono key chips, grouped grid/viewer/player/collage).
+- [ ] REMAINING — context menu keyboard navigation (B4 part 2): `ContextMenuHost` still has no roving tabindex / arrow keys, so favourite · trash · copy-path are mouse-only there.
+- [ ] REMAINING — P6 items not taken (UI CHANGE APPROVAL required): "В этот день / On this day" shelf; list-view metadata column toggles (size / resolution / date).
+- [ ] REMAINING — acceptance numbers only the GUI can produce: fps chip ≥45 arrowing through a cold lightbox, zero `[perf] long task` >300 ms, and no statement over 1 s in the logs during rescan + scroll.
+- Resume line: `P8 resume: B4 context-menu keyboard navigation → then the On-this-day shelf / list columns → then capture the acceptance numbers.`
+
 ## Phase 4.1 — user-reported fixes (2026-09-18) — DONE
 - [x] `fix: watch_progress rebuilt in milliseconds` — v1 had already created the table with `position_s`,
       so v6's `CREATE TABLE IF NOT EXISTS` never added the ms columns and every save failed every 5s.
