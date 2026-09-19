@@ -43,7 +43,9 @@ export function initExternalOpen(bootFile?: string | null): void {
       // set fullscreen BEFORE opening the overlay: the fade-in plays fullscreen
       const alreadyFs = await win.isFullscreen();
       if (!alreadyFs) await win.setFullscreen(true);
-      useViewer.getState().openAt(res.queue, res.index);
+      // P2: "external" session — the X closes the WINDOW until the user has
+      // actually reached the gallery (back button / any library route)
+      useViewer.getState().openAt(res.queue, res.index, "external");
     } catch (e) {
       console.error("external open failed:", e);
       // boot path: never leave the user on a black screen

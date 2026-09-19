@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import {
+  ArrowLeft,
   ChevronLeft,
   ChevronRight,
   FileWarning,
@@ -83,6 +84,9 @@ export function Lightbox({ row }: { row: MediaRow }) {
   const toggleFavorite = useViewer((s) => s.toggleFavorite);
   const queue = useViewer((s) => s.queue);
   const index = useViewer((s) => s.index);
+  // P2: the back arrow always lands in the gallery; the X depends on the session
+  const session = useViewer((s) => s.session);
+  const requestClose = useViewer((s) => s.requestClose);
 
   /**
    * STAGED DECODE (P0-0c). The stage used to wait for the FULL-RESOLUTION decode
@@ -457,20 +461,33 @@ export function Lightbox({ row }: { row: MediaRow }) {
           <ChevronRight size={22} />
         </button>
 
-        {/* top-left name chip — the media name stays LEFT, never centred */}
-        <div className="glass pointer-events-none absolute left-4 top-4 z-40 flex h-10 max-w-[62vw] items-center gap-3 rounded-pill px-4">
-          <span className="truncate text-[13px] text-tprimary">{name}</span>
-          <span className="shrink-0 font-mono text-[10.5px] tabular-nums text-ttertiary">
-            {index + 1} / {queue.length}
-          </span>
+        {/* top-left: back to the gallery + the name chip (LEFT, never centred) */}
+        <div className="absolute left-4 top-4 z-40 flex items-center gap-2">
+          <button
+            type="button"
+            aria-label={t("viewer.back")}
+            title={t("viewer.back")}
+            onClick={() => useViewer.getState().close()}
+            className="glass flex h-10 w-10 items-center justify-center rounded-pill text-tprimary transition-colors duration-[160ms] hover:bg-white/[.12]"
+          >
+            <ArrowLeft size={18} />
+          </button>
+          <div className="glass pointer-events-none flex h-10 max-w-[62vw] items-center gap-3 rounded-pill px-4">
+            <span className="truncate text-[13px] text-tprimary">{name}</span>
+            <span className="shrink-0 font-mono text-[10.5px] tabular-nums text-ttertiary">
+              {index + 1} / {queue.length}
+            </span>
+          </div>
         </div>
 
-        {/* close */}
+        {/* close — P2: for a file this window was OPENED with (and before the
+            gallery has been seen) this closes the whole app window; otherwise
+            it closes just the viewer, exactly like Esc */}
         <button
           type="button"
-          aria-label={t("viewer.close")}
-          title={t("viewer.close")}
-          onClick={() => useViewer.getState().close()}
+          aria-label={t(session === "external" ? "viewer.close_app" : "viewer.close_viewer")}
+          title={t(session === "external" ? "viewer.close_app" : "viewer.close_viewer")}
+          onClick={requestClose}
           className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-pill bg-white/[.06] text-tprimary transition-colors duration-[160ms] hover:bg-white/[.12]"
         >
           <X size={18} />

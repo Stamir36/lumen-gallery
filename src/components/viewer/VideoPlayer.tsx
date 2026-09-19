@@ -169,6 +169,9 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
   const infoOpen = useViewer((s) => s.infoOpen);
   const stripOpen = useViewer((s) => s.stripOpen);
   const toggleInfo = useViewer((s) => s.toggleInfo);
+  // P2: the X closes the app window for an external-file session
+  const session = useViewer((s) => s.session);
+  const requestClose = useViewer((s) => s.requestClose);
   const toggleStrip = useViewer((s) => s.toggleStrip);
   const favoriteOf = useViewer((s) => s.favoriteOf);
   const toggleFavorite = useViewer((s) => s.toggleFavorite);
@@ -742,6 +745,18 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
               className="glass flex h-10 w-10 items-center justify-center rounded-pill text-tprimary"
             >
               <Heart size={17} className={fav ? "fill-accent text-accent" : undefined} />
+            </button>
+            {/* P2: back arrow = always the gallery; the X is context-aware —
+                for a window OPENED with this file (and before the gallery has
+                been seen) it closes the whole app, otherwise just the viewer */}
+            <button
+              type="button"
+              aria-label={t(session === "external" ? "viewer.close_app" : "viewer.close_viewer")}
+              title={t(session === "external" ? "viewer.close_app" : "viewer.close_viewer")}
+              onClick={requestClose}
+              className="glass flex h-10 w-10 items-center justify-center rounded-pill text-tprimary transition-colors duration-[160ms] hover:bg-white/[.12]"
+            >
+              <X size={17} />
             </button>
           </motion.div>
         )}

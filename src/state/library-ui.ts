@@ -1,5 +1,15 @@
 import { create } from "zustand";
 import type { MediaFilter } from "@/lib/api";
+import { useViewer } from "@/state/viewer";
+
+/**
+ * P2 — any user-driven navigation INSIDE the library means the gallery has been
+ * seen: the "external file" session ends, and the viewer's X goes back to
+ * closing only the viewer. Every route action funnels through here.
+ */
+function seenGallery() {
+  useViewer.getState().visitGallery();
+}
 
 export type ViewMode = "justified" | "masonry" | "square" | "list";
 /** gallery = the library as one stream · explorer = the library as a disk tree */
@@ -147,7 +157,8 @@ export const useLibraryUi = create<LibraryUiState>((set, get) => ({
   selected: [],
   dataVersion: 0,
 
-  setRoute: (route) =>
+  setRoute: (route) => {
+    seenGallery();
     set({
       route,
       q: "",
@@ -155,17 +166,20 @@ export const useLibraryUi = create<LibraryUiState>((set, get) => ({
       selectionMode: false,
       selected: [],
       foldersView: route.kind === "root",
-    }),
+    });
+  },
 
   openRoot: (rootId) => get().setRoute({ kind: "root", rootId, dir: null }),
 
   openFolder: (dir) => {
     const route = get().route;
     if (route.kind !== "root") return;
+    seenGallery();
     set({ route: { ...route, dir }, selectionMode: false, selected: [] });
   },
 
   goUp: (rootPath) => {
+    seenGallery();
     const route = get().route;
     if (route.kind !== "root" || !route.dir) return;
     const sep = route.dir.includes("\\") ? "\\" : "/";
@@ -193,6 +207,7 @@ export const useLibraryUi = create<LibraryUiState>((set, get) => ({
   setBrowse: (browse) =>
     set((s) => {
       if (s.browse === browse) return {};
+      seenGallery();
       try {
         localStorage.setItem(BROWSE_KEY, browse);
       } catch {

@@ -109,6 +109,14 @@
   "thumbs": {
     "noPreview": "no preview"
   },
+  "mini": {
+    "title": "Mini player",
+    "return": "Back to main window",
+    "close": "Close",
+    "loading": "Loading…",
+    "play": "Play",
+    "pause": "Pause"
+  },
   "browse": {
     "mode": "Browse mode",
     "explorer": "Folders",
@@ -173,6 +181,9 @@
   "viewer": {
     "controls": "Viewer controls",
     "close": "Close",
+    "back": "Back to gallery",
+    "close_app": "Close app",
+    "close_viewer": "Close viewer",
     "prev": "Previous",
     "next": "Next",
     "fit": "Fit",
@@ -262,6 +273,8 @@
     "nav_libraries": "Libraries",
     "nav_appearance": "Appearance",
     "nav_playback": "Playback",
+    "direct_playback": "Direct playback",
+    "direct_playback_hint": "Bypass the media server and read files straight from disk. Disables frame screenshots; the server is the default.",
     "scrub_speed": "Hover preview speed",
     "scrub_rate": "{{rate}}× speed",
     "scrub_hint": "How fast a video under the cursor plays in the grid. 1.5× is almost real time, 9× is a quick scan.",
