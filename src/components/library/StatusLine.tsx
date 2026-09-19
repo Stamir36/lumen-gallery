@@ -39,7 +39,7 @@ export function StatusLine({
   const longTasks = usePerf((s) => s.longTasks);
 
   return (
-    <div className="flex h-9 shrink-0 items-center gap-3 border-t border-hairline bg-surface-1 px-9 font-mono text-[11px] tracking-[0.04em] text-ttertiary">
+    <div className="mx-3 mb-2 flex h-9 shrink-0 items-center gap-3 rounded-[16px] bg-surface-1/80 px-5 font-mono text-[11px] tracking-[0.04em] text-ttertiary">
       {scanning ? (
         <span className="text-tsecondary">{scanText}</span>
       ) : (

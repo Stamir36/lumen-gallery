@@ -609,10 +609,6 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
         crossOrigin="anonymous"
         playsInline
         loop={loop}
-        /* poster: the cached thumb paints the frame the decoder hasn't produced
-           yet — paging between videos used to flash black for the metadata
-           round-trip (same staged idea as the lightbox underlay) */
-        poster={row.thumbPath ? thumbSrc(row.thumbPath) : undefined}
         className="relative z-10 h-full w-full object-contain"
         style={{ filter: "var(--video-filter, none)" }}
         onLoadedMetadata={(e) => {

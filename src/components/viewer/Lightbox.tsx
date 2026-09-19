@@ -75,6 +75,10 @@ export function Lightbox({ row }: { row: MediaRow }) {
   /** offset of the in-flight swipe (px) — feedback while the finger moves */
   const [swipeDx, setSwipeDx] = useState(0);
   const swipeStart = useRef<{ x: number; y: number } | null>(null);
+  /** the gesture's live dx, coalesced to one update per frame (freeze fix) */
+  const swipeTarget = useRef<number | null>(null);
+  /** the off-stage position a committed swipe springs from (slide animation) */
+  const springBack = useRef<number | null>(null);
   const swipeNavigate = useAppSettings((s) => s.swipeNavigate);
   const pillAlign = useAppSettings((s) => s.pillAlign);
 
@@ -290,17 +294,32 @@ export function Lightbox({ row }: { row: MediaRow }) {
     const dy = e.clientY - s.y;
     // only claim the gesture once it is clearly horizontal, so selecting text or
     // a vertical wobble never drags the photo sideways
-    if (Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy)) setSwipeDx(dx);
+    if (Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy)) {
+      // coalesce to one setState per frame: a mouse can emit >100 move events
+      // per swipe, and each one re-rendered the whole 8MP layer — that storm
+      // was the second half of the mid-swipe freeze
+      swipeTarget.current = dx;
+      if (!panRaf.current) {
+        panRaf.current = requestAnimationFrame(() => {
+          panRaf.current = 0;
+          if (swipeTarget.current !== null) setSwipeDx(swipeTarget.current);
+        });
+      }
+    }
   };
   const endDrag = () => {
     drag.current = null;
     setDragging(false);
     swipeStart.current = null;
     // a quarter of the stage (or a decisive flick) turns the page
-    const dx = swipeDx;
+    const dx = swipeTarget.current ?? swipeDx;
+    swipeTarget.current = null;
     if (dx === 0) return;
     setSwipeDx(0);
     if (Math.abs(dx) > Math.min(140, Math.max(60, stage.w * 0.14))) {
+      // spring the card the rest of the way instead of teleporting: the exit
+      // animation below plays from where the finger left it
+      springBack.current = dx < 0 ? stage.w : -stage.w;
       useViewer.getState().step(dx < 0 ? 1 : -1);
     }
   };
@@ -337,6 +356,22 @@ export function Lightbox({ row }: { row: MediaRow }) {
   const name = baseName(row.path);
   const fav = favoriteOf(row);
   const canPrev = index > 0;
+
+  // paging direction for the slide animation: where the cursor moved in the
+  // queue. Swipe-committed navigation sets springBack (enter from the finger);
+  // arrows/keys/wheel just derive the side from the index delta.
+  const prevIndexRef = useRef(index);
+  const direction = (() => {
+    if (springBack.current !== null) {
+      const d = springBack.current > 0 ? 1 : -1;
+      springBack.current = null;
+      return d;
+    }
+    const d = index - prevIndexRef.current;
+    prevIndexRef.current = index;
+    // wrap-around (end → start) reads as "next"
+    return d >= 0 ? 1 : -1;
+  })();
   const canNext = index < queue.length - 1;
 
   const zoomPercent = Math.round(zoom * fit.scale * 100);
@@ -368,12 +403,32 @@ export function Lightbox({ row }: { row: MediaRow }) {
           <div className="shimmer-bg absolute inset-0 opacity-60" aria-hidden />
         )}
 
+        {/* AMBIENT — the glow behind letterboxed photos (parity with the video
+            player, which always had it): the cached thumb, scaled past the
+            stage and blurred 60px. The thumb is the RIGHT source here — it is
+            blurred beyond recognition anyway, so its 480w is invisible. */}
+        {underlaySrc && !failed && (
+          <img
+            key={`ambient-${row.id}`}
+            src={thumbSrc(underlaySrc)}
+            alt=""
+            aria-hidden
+            draggable={false}
+            className="pointer-events-none absolute inset-0 h-full w-full scale-110 object-cover"
+            style={{
+              filter: "blur(60px) saturate(1.4)",
+              opacity: loaded ? 0.5 : 0.35,
+              transition: "opacity 400ms ease-out",
+            }}
+          />
+        )}
+
         {/* instant underlay: the cached thumb, underneath the original.
-            GEOMETRY BUG (user screenshot): `max-h/max-w` let it paint at its
-            NATURAL 480px size in the top-left corner for a frame before the
-            original took over. It must share the stage box from the very first
-            paint — absolute inset-0 + object-contain — so the only difference
-            from the original is sharpness, never position or scale. */}
+            GEOMETRY: shares the stage box from the very first paint
+            (absolute inset-0 + object-contain), so position and scale never
+            jump. BLUR-UP: a 480w thumb stretched to 4K reads as «шакал» —
+            blurred it reads as the standard progressive-load idiom instead,
+            and the blur lifts as the original fades in over it. */}
         {!failed && underlaySrc && (
           <img
             key={`thumb-${row.id}`}
@@ -381,20 +436,39 @@ export function Lightbox({ row }: { row: MediaRow }) {
             alt=""
             aria-hidden
             draggable={false}
+            decoding="async"
             className={cn(
-              "pointer-events-none absolute inset-0 h-full w-full select-none object-contain transition-opacity duration-200 ease-out",
-              loaded ? "opacity-0" : "opacity-100",
+              "pointer-events-none absolute inset-0 h-full w-full select-none object-contain transition-[opacity,filter] duration-300 ease-out",
+              loaded ? "opacity-0 blur-[2px]" : "opacity-100 blur-[18px]",
             )}
+            style={{ transform: "scale(1.02)" }}
           />
         )}
 
-        <AnimatePresence mode="popLayout" initial={false}>
+        <AnimatePresence mode="popLayout" initial={false} custom={direction}>
           <motion.div
             key={row.id}
-            initial={reduced ? false : { opacity: 0, scale: 0.985 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={reduced ? { opacity: 0 } : { opacity: 0, scale: 1.01 }}
-            transition={{ duration: reduced ? 0 : 0.18, ease: "easeOut" }}
+            custom={direction}
+            /* THE paging animation (user: раньше заезжала и исчезала): the new
+               picture SLIDES IN from the side you are walking towards while the
+               old one slides out the opposite edge; a committed swipe enters
+               from where the finger left it. Reduced motion = plain crossfade. */
+            initial={
+              reduced
+                ? { opacity: 0 }
+                : {
+                    opacity: 0,
+                    x: springBack.current ?? (direction >= 0 ? stage.w * 0.18 : -stage.w * 0.18),
+                    scale: 0.985,
+                  }
+            }
+            animate={{ opacity: 1, x: 0, scale: 1 }}
+            exit={
+              reduced
+                ? { opacity: 0 }
+                : { opacity: 0, x: direction >= 0 ? -stage.w * 0.12 : stage.w * 0.12 }
+            }
+            transition={{ duration: reduced ? 0 : 0.22, ease: [0.22, 1, 0.36, 1] }}
             className="absolute inset-0 flex items-center justify-center"
           >
             {failed ? (
@@ -422,6 +496,10 @@ export function Lightbox({ row }: { row: MediaRow }) {
                 src={tauriAvailable() ? fileSrc(row.path) : (row.thumbPath ? thumbSrc(row.thumbPath) : "")}
                 alt={name}
                 draggable={false}
+                // decode OFF the main thread: a huge PNG decoded synchronously
+                // on paint froze the WHOLE interface mid-swipe (user: "виснет
+                // намертво, только перезапуск")
+                decoding="async"
                 onLoad={(e) => {
                   const el = e.currentTarget;
                   setNatural({ w: el.naturalWidth, h: el.naturalHeight });
@@ -444,7 +522,11 @@ export function Lightbox({ row }: { row: MediaRow }) {
                   opacity: swipeDx ? Math.max(0.3, 1 - Math.abs(swipeDx) / 520) : 1,
                   transition:
                     dragging || reduced || swipeDx !== 0 ? "none" : "transform 120ms ease-out",
-                  imageRendering: zoom * fit.scale > 2 ? "pixelated" : "auto",
+                  // pixelated is for DEEP ZOOM only (you are reading pixels on
+                  // purpose). A small photo upscaled to fit used to open fully
+                  // pixelated — fit.scale > 2 the moment a 800px image hits a
+                  // 4K stage. Smoothing costs nothing at these ratios.
+                  imageRendering: zoom > 2.5 ? "pixelated" : "auto",
                 }}
               />
             )}

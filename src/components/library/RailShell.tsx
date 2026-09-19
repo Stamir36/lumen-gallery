@@ -141,19 +141,9 @@ export function RailShell({
         </nav>
 
         <div className="flex min-w-0 flex-1 flex-col gap-3">
-          {/* chips panel: the fast filter, plus the editorial "where am I" line */}
+          {/* chips panel: the editorial "where am I" line leads, the fast
+              filter sits at the FAR RIGHT edge (user request) */}
           <div className="flex h-14 shrink-0 items-center gap-4 rounded-[20px] bg-surface-1 px-4">
-            <Segmented<SmartView>
-              aria-label={t("topbar.filters")}
-              // null is never equal to a segment value, so nothing is active
-              value={activeChip ?? ("" as SmartView)}
-              onChange={(v) => setRoute({ kind: "smart", id: v })}
-              options={CHIPS.map((c) => ({
-                value: c.id,
-                label: t(c.labelKey),
-                icon: c.icon,
-              }))}
-            />
             <div className="flex min-w-0 flex-1 items-center gap-3">
               {root ? (
                 <Breadcrumbs
@@ -171,6 +161,17 @@ export function RailShell({
                 </span>
               )}
             </div>
+            <Segmented<SmartView>
+              aria-label={t("topbar.filters")}
+              // null is never equal to a segment value, so nothing is active
+              value={activeChip ?? ("" as SmartView)}
+              onChange={(v) => setRoute({ kind: "smart", id: v })}
+              options={CHIPS.map((c) => ({
+                value: c.id,
+                label: t(c.labelKey),
+                icon: c.icon,
+              }))}
+            />
           </div>
 
           <div className="relative flex min-h-0 flex-1 overflow-hidden rounded-[20px]">
