@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
@@ -102,6 +102,8 @@ export function MediaGrid({
   const revealId = useViewer((s) => s.revealId);
   const clearReveal = useViewer((s) => s.clearReveal);
   const [rangeStart, setRangeStart] = useState(0);
+  /** the Virtuoso scroller element, in STATE so effects can clean up (B13) */
+  const [scroller, setScroller] = useState<HTMLElement | null>(null);
 
   // ---------- return to the grid (STEP 3) ----------
   // Closing the viewer drops the id we were looking at into the store; the grid
@@ -152,6 +154,22 @@ export function MediaGrid({
   }, [rows]);
 
   /**
+   * B6: `rows` is a fresh array on every query refetch, so a closure over it
+   * made `onActivate` fresh per render and re-rendered every mounted card. The
+   * ref keeps the callback identity stable while still seeing current rows.
+   */
+  const rowsRef = useRef(rows);
+  rowsRef.current = rows;
+  const openViewerAt = useCallback(
+    (id: number) => {
+      const list = rowsRef.current;
+      const at = list.findIndex((r) => r.id === id);
+      openViewer(list, at < 0 ? 0 : at);
+    },
+    [openViewer],
+  );
+
+  /**
    * Visible-first thumbnail priming (S1.2): the range decides what is generated
    * next, and its ids are the queue's priority for the next flush. The margin of
    * two rows keeps a small prefetch window warm without a decoder storm.
@@ -181,6 +199,16 @@ export function MediaGrid({
   // once per browse-mode mount
   const browse = useLibraryUi((s) => s.browse);
   const saveScroll = useLibraryUi((s) => s.saveScroll);
+
+  // B13: scroll-offset persistence — one passive listener, correctly torn down
+  useEffect(() => {
+    if (!scroller) return;
+    const onScroll = () => {
+      if (scroller.scrollTop > 0) saveScroll(scroller.scrollTop);
+    };
+    scroller.addEventListener("scroll", onScroll, { passive: true });
+    return () => scroller.removeEventListener("scroll", onScroll);
+  }, [scroller, saveScroll]);
   const savedOffset = useLibraryUi((s) => s.scrollOffsets[browse]);
   const restored = useRef(false);
   useEffect(() => {
@@ -332,16 +360,11 @@ export function MediaGrid({
           primeThumbs(range.startIndex, range.endIndex);
           restoreSoon();
         }}
-        scrollerRef={(el) => {
-          // scroll-offset persistence (FIX 3): attach one passive listener
-          const scroller = el instanceof HTMLElement ? el : null;
-          if (!scroller) return;
-          const onScroll = () => {
-            if (scroller.scrollTop > 0) saveScroll(scroller.scrollTop);
-          };
-          scroller.addEventListener("scroll", onScroll, { passive: true });
-          return () => scroller.removeEventListener("scroll", onScroll);
-        }}
+        // B13: react-virtuoso accepts a ref callback but never calls its return
+        // value, so the returned cleanup below was dead code and StrictMode
+        // attached the listener twice. Hold the element in state and attach it
+        // from an effect, where cleanup is guaranteed.
+        scrollerRef={(el) => setScroller(el instanceof HTMLElement ? el : null)}
         components={{ Footer: () => <div style={{ height: 104 }} /> }}
         itemContent={(index) => (
           <GridRow
@@ -354,10 +377,7 @@ export function MediaGrid({
             // STEP 1: a click on the card (not the checkbox) opens the viewer at
             // that index; the queue is the CURRENT view order, so arrows and the
             // filmstrip walk exactly what the grid is showing
-            onActivate={(id) => {
-              const at = rows.findIndex((r) => r.id === id);
-              openViewer(rows, at < 0 ? 0 : at);
-            }}
+            onActivate={openViewerAt}
           />
         )}
       />
@@ -583,7 +603,12 @@ function BarAction({
   );
 }
 
-function GridRow({
+/**
+ * B6: memoized. It was plain, so any MediaGrid state change re-rendered every
+ * visible row; a fresh `onActivate` closure per render also defeated the memo
+ * on MediaCard. Both ends are fixed — stable callback here, memo below.
+ */
+const GridRow = memo(function GridRow({
   item,
   view,
   focusId,
@@ -709,4 +734,4 @@ function GridRow({
       <div className="relative h-full">{cells}</div>
     </div>
   );
-}
+});
