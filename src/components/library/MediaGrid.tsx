@@ -403,6 +403,9 @@ export function MediaGrid({
       ref={hostRef}
       tabIndex={0}
       onKeyDown={onKeyDown}
+      // keyboard host: it takes focus so the arrows work, but the ring belongs
+      // to the focused CARD (see .focused in MediaCard), not to the whole grid
+      data-no-ring
       className="relative h-full min-h-0 outline-none"
       aria-label={t("grid.aria_grid")}
     >

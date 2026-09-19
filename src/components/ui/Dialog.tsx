@@ -21,6 +21,8 @@ export const DialogContent = forwardRef<
       <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px]" />
       <DialogPrimitive.Content
         ref={ref}
+        // the dialog takes focus when it opens — no ring on the panel itself
+        data-no-ring
         className={cn(
           // solid surface-2 chrome, radius 20, border white/6, deep shadow (v2.2 §3.2)
           "fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2",

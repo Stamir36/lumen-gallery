@@ -116,6 +116,9 @@ export function ViewerOverlay() {
           aria-label={baseName(row.path)}
           tabIndex={-1}
           onKeyDown={trapTab}
+          // the dialog takes focus on open; a ring around the whole overlay is
+          // noise, not feedback (its controls keep theirs)
+          data-no-ring
           initial={reduced ? false : { opacity: 0, scale: 0.96 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={reduced ? { opacity: 0 } : { opacity: 0, scale: 0.96 }}

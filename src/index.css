@@ -113,12 +113,23 @@ body::after {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
-/* Focus ring: 2px accent/40 offset 2 (follows the accent preset) */
+/* ---------- Focus ring audit (P9) ----------
+   ONE ring for the whole app: 2px accent, offset 2. This lives unlayered, so it
+   wins over every Tailwind `outline-none` utility — a control cannot silently
+   opt out of keyboard feedback by copying a class list.
+   It must NOT set border-radius: the outline follows the element's own radius
+   already, and forcing the control radius here squared off every pill and
+   circle the moment it received focus.
+   The single escape hatch is [data-no-ring] for CONTAINERS that take focus
+   programmatically (dialog, viewer overlay, grid host): the ring marks the
+   control the user is ON, not the surface they are inside. */
 :focus-visible {
   outline: 2px solid var(--accent-strong);
   outline-offset: 2px;
-  border-radius: var(--radius-control);
 }
+[data-no-ring]:focus-visible {
+  outline: none;
+} /* on the container itself only — its controls keep their ring */
 
 ::selection { background: var(--accent-soft); }
 

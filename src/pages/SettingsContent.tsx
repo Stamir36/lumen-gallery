@@ -845,7 +845,9 @@ export function SettingsContent() {
                       (e) => toast.error(String(e)),
                     )
                   }
-                  className="rounded-pill px-1 font-mono text-[13px] text-accent underline decoration-accent/40 underline-offset-2 transition-colors hover:decoration-accent focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+                  // the app-wide :focus-visible ring (index.css) already applies;
+                  // a second white ring here was off-token
+                  className="rounded-pill px-1 font-mono text-[13px] text-accent underline decoration-accent/40 underline-offset-2 transition-colors hover:decoration-accent"
                 >
                   github.com/Stamir36
                 </button>
