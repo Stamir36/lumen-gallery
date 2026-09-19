@@ -385,5 +385,36 @@
   },
   "rail": {
     "nav": "Library sections"
+  },
+  "hotkeys": {
+    "title": "Keyboard shortcuts",
+    "hint": "? opens and closes this sheet, Esc closes it",
+    "help": "This sheet",
+    "favorite": "Add to favourites",
+    "info": "Info",
+    "group_grid": "Gallery",
+    "grid_move": "Move across tiles",
+    "grid_ends": "First or last tile",
+    "grid_open": "Open the file",
+    "grid_select": "Mark for selection",
+    "grid_search": "Search",
+    "grid_up": "Up one folder",
+    "group_viewer": "Photo viewer",
+    "viewer_step": "Previous or next item",
+    "viewer_fit": "Fit to screen",
+    "viewer_one_to_one": "Actual size 1:1",
+    "viewer_close": "Close the viewer",
+    "group_player": "Player",
+    "player_play": "Play or pause",
+    "player_jump10": "-10 or +10 seconds",
+    "player_seek5": "-5 or +5 seconds",
+    "player_volume": "Volume",
+    "player_mute": "Mute or unmute",
+    "player_frame": "Step one frame",
+    "player_percent": "Jump to 0-90% of the duration",
+    "player_hide_ui": "Hide the interface",
+    "player_exit": "Back to gallery or close",
+    "group_collage": "Collage",
+    "collage_close": "Close the collage"
   }
 }
