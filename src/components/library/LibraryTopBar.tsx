@@ -169,7 +169,8 @@ export function LibraryTopBar({
   );
 }
 
-function SortMenu() {
+/** Exported for the rail layout (P4): one sort control, two shells. */
+export function SortMenu() {
   const { t } = useTranslation();
   const sort = useLibraryUi((s) => s.sort);
   const setSort = useLibraryUi((s) => s.setSort);

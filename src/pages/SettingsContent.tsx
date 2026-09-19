@@ -15,12 +15,13 @@ import {
   Play,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { DENSITY_PARAMS, SCRUB_RATES, THUMB_WORKER_OPTIONS, useAppSettings, type GridDensity } from "@/lib/settings";
+import { DENSITY_PARAMS, SCRUB_RATES, THUMB_WORKER_OPTIONS, useAppSettings, type GridDensity, type MainLayout } from "@/lib/settings";
 import { ACCENTS } from "@/lib/accent";
 import { ExcludedFolders } from "@/components/settings/ExcludedFolders";
 import { FileAssociations } from "@/components/settings/FileAssociations";
 import { LanguageDropdown } from "@/components/LanguageSwitcher";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { Segmented } from "@/components/ui/Segmented";
 import { PillButton } from "@/components/ui/PillButton";
 import { IconButton } from "@/components/ui/IconButton";
 import { api, formatBytes, type RootRow } from "@/lib/api";
@@ -38,6 +39,31 @@ import {
 
 /** Density presets in the order the segmented control shows them (FIX 4b). */
 const DENSITY_ORDER: GridDensity[] = ["comfort", "medium", "compact"];
+
+/**
+ * P4 — mini glyph preview for the layout segmented: a 18×14 diagram of the
+ * chrome. The previews are DIAGRAMS, not screenshots, so they stay legible at
+ * 18px and cost nothing to render.
+ */
+function LayoutGlyph({ kind }: { kind: MainLayout }) {
+  return (
+    <svg width="18" height="14" viewBox="0 0 18 14" aria-hidden focusable="false">
+      {kind === "classic" ? (
+        <>
+          <rect x="0" y="0" width="5" height="14" rx="1.5" className="fill-white/35" />
+          <rect x="7" y="0" width="11" height="2.5" rx="1" className="fill-white/20" />
+          <rect x="7" y="4.5" width="11" height="9.5" rx="1.5" className="fill-white/12" />
+        </>
+      ) : (
+        <>
+          <rect x="0" y="0" width="18" height="2.5" rx="1" className="fill-white/20" />
+          <rect x="0" y="4.5" width="4" height="9.5" rx="1.5" className="fill-white/35" />
+          <rect x="6.5" y="4.5" width="11.5" height="9.5" rx="1.5" className="fill-white/12" />
+        </>
+      )}
+    </svg>
+  );
+}
 
 /** Editorial numbered section header per DESIGN.md v2.2 §6. */
 function Section({
@@ -83,6 +109,8 @@ export function SettingsContent() {
   const setAccent = useAppSettings((s) => s.setAccent);
   const gridDensity = useAppSettings((s) => s.gridDensity);
   const setGridDensity = useAppSettings((s) => s.setGridDensity);
+  const mainLayout = useAppSettings((s) => s.mainLayout);
+  const setMainLayout = useAppSettings((s) => s.setMainLayout);
   const videoAutoplay = useAppSettings((s) => s.videoAutoplay);
   const setVideoAutoplay = useAppSettings((s) => s.setVideoAutoplay);
   const directPlayback = useAppSettings((s) => s.directPlayback);
@@ -576,6 +604,34 @@ export function SettingsContent() {
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* P4: main-screen layout — classic sidebar vs permanent icon rail.
+                MAIN SCREEN ONLY: viewers/player/collage are untouched. */}
+            <div className="flex items-center justify-between border-t border-hairline py-4">
+              <span className="flex flex-col gap-0.5">
+                <span className="text-sm text-tprimary">{t("settings.main_layout")}</span>
+                <span className="text-[12px] text-ttertiary">
+                  {t("settings.main_layout_hint")}
+                </span>
+              </span>
+              <Segmented<MainLayout>
+                aria-label={t("settings.main_layout")}
+                value={mainLayout}
+                onChange={(v) => void setMainLayout(v)}
+                options={[
+                  {
+                    value: "classic",
+                    label: t("settings.main_layout_classic"),
+                    icon: <LayoutGlyph kind="classic" />,
+                  },
+                  {
+                    value: "rail",
+                    label: t("settings.main_layout_rail"),
+                    icon: <LayoutGlyph kind="rail" />,
+                  },
+                ]}
+              />
             </div>
           </GlassCard>
         </Section>

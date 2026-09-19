@@ -48,6 +48,7 @@
   },
   "topbar": {
     "search_placeholder": "Поиск по имени файла…",
+    "filters": "Быстрые фильтры",
     "clear_search": "Очистить",
     "sort_by": "Сортировка",
     "view_mode": "Вид",
@@ -319,6 +320,10 @@
     "clear_cache": "Очистить кэш",
     "version": "Версия",
     "nav_about": "О программе",
+    "main_layout": "Разметка главного экрана",
+    "main_layout_hint": "Классика: боковая панель. Рельс: заголовок во всю ширину и иконочный рельс.",
+    "main_layout_classic": "Классика",
+    "main_layout_rail": "Рельс",
     "about_dev_build": "dev-сборка",
     "about_author": "Автор",
     "about_github": "GitHub",
@@ -384,5 +389,8 @@
     "cancel": "Отмена",
     "restored": "Восстановлено: {{count}}",
     "deleted": "Удалено навсегда: {{count}}"
+  },
+  "rail": {
+    "nav": "Разделы медиатеки"
   }
 }

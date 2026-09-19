@@ -27,9 +27,27 @@ export const DEFAULT_DENSITY: GridDensity = "medium";
 /** P7 F4 — global video color correction (applies to every video surface). */
 export const VIDEO_SATURATION_KEY = "video_saturation";
 export const VIDEO_SHARPNESS_KEY = "video_sharpness";
+/**
+ * Loopback media server for video playback. ON by default: with the
+ * multi-threaded worker pool it streams fine and keeps frames canvas-clean
+ * (frame screenshots, VR dome). Opt-out is "direct playback" — the asset
+ * protocol serves the file without the server hop.
+ */
+/** Direct playback (Settings › Playback): bypass the media server, default OFF. */
+export const DIRECT_PLAYBACK_KEY = "direct_playback";
 /** C1 — collage tile fit: contain (default) | cover (fill the tile). */
 export const COLLAGE_FIT_KEY = "collage_fit";
 export type CollageFit = "contain" | "cover";
+
+/**
+ * P4 — main-screen layout (Settings › Appearance).
+ *  - `classic`: sidebar + one library bar (default);
+ *  - `rail`:    full-width header + permanent 64px icon rail + chips row.
+ * The main screen ONLY: the viewer, player and collage are unaffected.
+ */
+export const MAIN_LAYOUT_KEY = "appearance.main_layout";
+export type MainLayout = "classic" | "rail";
+export const DEFAULT_MAIN_LAYOUT: MainLayout = "classic";
 
 /**
  * Density → grid metrics. `targetH` is the justified target row height, `gap`
@@ -89,6 +107,10 @@ interface AppSettingsState {
   videoSharpness: number;
   /** collage tiles: contain or cover (C1, global default) */
   collageFit: CollageFit;
+  /** stream video DIRECTLY via the asset protocol (off = loopback media server) */
+  directPlayback: boolean;
+  /** main-screen layout: classic sidebar vs permanent icon rail */
+  mainLayout: MainLayout;
   loaded: boolean;
   load: () => Promise<void>;
   setVideoScrubRate: (rate: number) => Promise<void>;
@@ -104,6 +126,8 @@ interface AppSettingsState {
   setVideoSaturation: (v: number) => Promise<void>;
   setVideoSharpness: (v: number) => Promise<void>;
   setCollageFit: (fit: CollageFit) => Promise<void>;
+  setDirectPlayback: (on: boolean) => Promise<void>;
+  setMainLayout: (layout: MainLayout) => Promise<void>;
 }
 
 export const useAppSettings = create<AppSettingsState>((set) => ({
@@ -120,13 +144,15 @@ export const useAppSettings = create<AppSettingsState>((set) => ({
   videoSaturation: 1,
   videoSharpness: 0,
   collageFit: "contain",
+  directPlayback: false,
+  mainLayout: DEFAULT_MAIN_LAYOUT,
   loaded: false,
 
   load: async () => {
     try {
       const db = await getDb();
       const rows = await db.select<{ key: string; value: string }[]>(
-        "SELECT key, value FROM settings WHERE key IN ('video_scrub_rate', 'hover_captions', 'video_autoplay', 'viewer_swipe', 'viewer_pill_align', 'perf_show_fps', 'show_excluded', 'thumb_workers', 'accent', 'grid_density', 'video_saturation', 'video_sharpness', 'collage_fit')",
+        "SELECT key, value FROM settings WHERE key IN ('video_scrub_rate', 'hover_captions', 'video_autoplay', 'viewer_swipe', 'viewer_pill_align', 'perf_show_fps', 'show_excluded', 'thumb_workers', 'accent', 'grid_density', 'video_saturation', 'video_sharpness', 'collage_fit', 'direct_playback', 'appearance.main_layout')",
       );
       const byKey = new Map(rows.map((r) => [r.key, r.value]));
       const raw = Number(byKey.get(SCRUB_RATE_KEY));
@@ -146,6 +172,10 @@ export const useAppSettings = create<AppSettingsState>((set) => ({
         videoSaturation: readFilterNumber(byKey.get(VIDEO_SATURATION_KEY), 1, 0.5, 2),
         videoSharpness: readFilterNumber(byKey.get(VIDEO_SHARPNESS_KEY), 0, 0, 1),
         collageFit: byKey.get(COLLAGE_FIT_KEY) === "cover" ? "cover" : "contain",
+        // ABSENT = OFF: the media server is the default source
+        directPlayback: byKey.get(DIRECT_PLAYBACK_KEY) === "true",
+        // ABSENT = classic: the rail is an opt-in layout
+        mainLayout: byKey.get(MAIN_LAYOUT_KEY) === "rail" ? "rail" : DEFAULT_MAIN_LAYOUT,
         loaded: true,
       });
       // the stored accent wins over the pre-paint cache
@@ -289,6 +319,26 @@ export const useAppSettings = create<AppSettingsState>((set) => ({
       await writeSetting(COLLAGE_FIT_KEY, collageFit);
     } catch (e) {
       console.error("collage fit save failed", e);
+      toast.error(i18n.t("errors.action_failed"));
+    }
+  },
+
+  setDirectPlayback: async (directPlayback) => {
+    set({ directPlayback }); // optimistic: the next opened video follows at once
+    try {
+      await writeSetting(DIRECT_PLAYBACK_KEY, String(directPlayback));
+    } catch (e) {
+      console.error("direct playback setting save failed", e);
+      toast.error(i18n.t("errors.action_failed"));
+    }
+  },
+
+  setMainLayout: async (mainLayout) => {
+    set({ mainLayout }); // optimistic: the shell re-renders live, no reload
+    try {
+      await writeSetting(MAIN_LAYOUT_KEY, mainLayout);
+    } catch (e) {
+      console.error("main layout save failed", e);
       toast.error(i18n.t("errors.action_failed"));
     }
   },

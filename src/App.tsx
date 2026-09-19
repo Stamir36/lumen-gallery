@@ -22,6 +22,7 @@ import { NavTooltip } from "@/components/ui/NavTooltip";
 import { IconButton } from "@/components/ui/IconButton";
 import { Onboarding } from "@/pages/Onboarding";
 import { LibraryTopBar } from "@/components/library/LibraryTopBar";
+import { RailShell } from "@/components/library/RailShell";
 import { MediaGrid } from "@/components/library/MediaGrid";
 import { FolderGrid } from "@/components/library/FolderCards";
 import { ExplorerLayoutSwitch } from "@/components/library/ExplorerLayoutSwitch";
@@ -84,6 +85,9 @@ export default function App() {
   const foldersView = useLibraryUi((s) => s.foldersView);
   const browse = useLibraryUi((s) => s.browse);
   const explorerLayout = useLibraryUi((s) => s.explorerLayout);
+  // P4: classic (sidebar + library bar) or rail (header + 64px icon rail)
+  const mainLayout = useAppSettings((s) => s.mainLayout);
+  const rail = mainLayout === "rail";
   /** explorer = file manager: folder tree + only the open folder's contents */
   const explorer = browse === "explorer";
 
@@ -263,6 +267,71 @@ export default function App() {
     added: formatCount(added),
   })}`;
 
+  /** The grid area is IDENTICAL in both layouts — one query, one engine. */
+  const gridArea = (
+    <div className="relative flex min-h-0 flex-1">
+      {explorer && explorerLayout === "tree" && route.kind === "root" && root && (
+        <FolderTree
+          rootId={root.id}
+          rootPath={root.path}
+          rootLabel={root.label || root.path}
+          className="w-[264px] shrink-0 border-r border-hairline bg-surface-1"
+        />
+      )}
+      <div className="relative min-h-0 min-w-0 flex-1">
+        <MediaGrid
+          rows={rows}
+          pending={media.isPending}
+          error={media.error}
+          query={q}
+          emptyKind={emptyKind}
+          onRetry={() => void media.refetch()}
+          onAddLibrary={onboarding.open}
+          /* gallery = PURE flat date-grouped feed (no folder cards —
+             the explorer owns folders). In the explorer the two
+             sub-layouts are mutually exclusive (S1.9): TREE renders
+             the tree on the left and nothing above the contents,
+             GRID renders wrapping folder cards and no tree. */
+          folderZone={
+            explorer && explorerLayout === "grid" && route.kind === "root" && root ? (
+              <FolderGrid
+                rootId={root.id}
+                dir={route.dir}
+                enabled={route.dir !== null || root.path.length > 0}
+              />
+            ) : undefined
+          }
+        />
+      </div>
+    </div>
+  );
+
+  /** icon-only footer shared by the classic rail and the rail layout */
+  const railBottom = (
+    <>
+      <LanguageDropdownIcon />
+      <NavTooltip label={t("sidebar.add_library")}>
+        <IconButton label={t("sidebar.add_library")} onClick={onboarding.open}>
+          <Plus size={18} />
+        </IconButton>
+      </NavTooltip>
+      <NavTooltip label={t("sidebar.settings")}>
+        <IconButton label={t("sidebar.settings")} onClick={() => navigate("/settings")}>
+          <Settings size={18} />
+        </IconButton>
+      </NavTooltip>
+    </>
+  );
+
+  const statusBar = (
+    <StatusLine
+      summary={summary.data}
+      lastScanAt={lastScanAt}
+      scanning={scanningRootId !== null}
+      scanText={scanText}
+    />
+  );
+
   return (
     <div className="flex h-full flex-col">
       <WindowTitleBar
@@ -279,7 +348,7 @@ export default function App() {
         }
       />
       <div className="flex min-h-0 flex-1">
-        {!noRoots && (
+        {!noRoots && !rail && (
           <SidebarRail
             items={items}
             bottom={
@@ -309,30 +378,24 @@ export default function App() {
                 </div>
               </div>
             }
-            railBottom={
-              <>
-                <LanguageDropdownIcon />
-                <NavTooltip label={t("sidebar.add_library")}>
-                  <IconButton label={t("sidebar.add_library")} onClick={onboarding.open}>
-                    <Plus size={18} />
-                  </IconButton>
-                </NavTooltip>
-                <NavTooltip label={t("sidebar.settings")}>
-                  <IconButton
-                    label={t("sidebar.settings")}
-                    onClick={() => navigate("/settings")}
-                  >
-                    <Settings size={18} />
-                  </IconButton>
-                </NavTooltip>
-              </>
-            }
+            railBottom={railBottom}
           />
         )}
 
         <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
           {noRoots || onboarding.show ? (
             <Onboarding onDone={onboarding.close} />
+          ) : rail ? (
+            <RailShell
+              title={title}
+              count={rows.length}
+              items={items}
+              railBottom={railBottom}
+              extra={explorer && route.kind === "root" ? <ExplorerLayoutSwitch /> : undefined}
+              status={statusBar}
+            >
+              {gridArea}
+            </RailShell>
           ) : (
             <>
               <LibraryTopBar
@@ -348,47 +411,8 @@ export default function App() {
                   ) : undefined
                 }
               />
-              <div className="relative flex min-h-0 flex-1">
-                {explorer && explorerLayout === "tree" && route.kind === "root" && root && (
-                  <FolderTree
-                    rootId={root.id}
-                    rootPath={root.path}
-                    rootLabel={root.label || root.path}
-                    className="w-[264px] shrink-0 border-r border-hairline bg-surface-1"
-                  />
-                )}
-                <div className="relative min-h-0 min-w-0 flex-1">
-                  <MediaGrid
-                    rows={rows}
-                    pending={media.isPending}
-                    error={media.error}
-                    query={q}
-                    emptyKind={emptyKind}
-                    onRetry={() => void media.refetch()}
-                    onAddLibrary={onboarding.open}
-                    /* gallery = PURE flat date-grouped feed (no folder cards —
-                       the explorer owns folders). In the explorer the two
-                       sub-layouts are mutually exclusive (S1.9): TREE renders
-                       the tree on the left and nothing above the contents,
-                       GRID renders wrapping folder cards and no tree. */
-                    folderZone={
-                      explorer && explorerLayout === "grid" && route.kind === "root" && root ? (
-                        <FolderGrid
-                          rootId={root.id}
-                          dir={route.dir}
-                          enabled={route.dir !== null || root.path.length > 0}
-                        />
-                      ) : undefined
-                    }
-                  />
-                </div>
-              </div>
-              <StatusLine
-                summary={summary.data}
-                lastScanAt={lastScanAt}
-                scanning={scanningRootId !== null}
-                scanText={scanText}
-              />
+              {gridArea}
+              {statusBar}
             </>
           )}
         </main>
