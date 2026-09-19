@@ -55,12 +55,18 @@ export const useThumbStore = create<ThumbStore>((set) => ({
   thumbs: {},
   attempts: {},
   set: (id, s) => set((st) => ({ thumbs: { ...st.thumbs, [id]: s } })),
-  forget: (id) =>
+  forget: (id) => {
+    // B1: `asked` (id -> version) is what stops duplicate work, but it also made
+    // a tile's retry path DEAD CODE — `enqueueRows` skipped the row forever and
+    // the tile shimmered until the app restarted. Forgetting a row must clear
+    // its request marker too, or "forget + enqueue" is a no-op.
+    asked.delete(id);
     set((st) => {
       const thumbs = { ...st.thumbs };
       delete thumbs[id];
       return { thumbs, attempts: { ...st.attempts, [id]: (st.attempts[id] ?? 0) + 1 } };
-    }),
+    });
+  },
   ingest: (rows) =>
     set((st) => {
       const next = { ...st.thumbs };
