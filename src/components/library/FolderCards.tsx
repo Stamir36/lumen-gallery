@@ -111,7 +111,9 @@ function FolderCard({
               icon: <FolderOpen size={15} />,
               disabled: !tauriAvailable(),
               onSelect: () => {
-                void invoke("open_external", { path: folder.path }).catch((err) =>
+                // same bug as the media card: "show in Explorer" must not be
+                // routed through the external player (open_external)
+                void invoke("reveal_path", { path: folder.path }).catch((err) =>
                   toast.error(String(err)),
                 );
               },

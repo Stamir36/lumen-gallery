@@ -116,7 +116,6 @@ export const MediaCard = memo(function MediaCard({
    */
   const onContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
-    const dir = media.path.slice(0, media.path.length - name.length - 1);
     openMenu({
       x: e.clientX,
       y: e.clientY,
@@ -173,7 +172,11 @@ export const MediaCard = memo(function MediaCard({
               icon: <FolderOpen size={15} />,
               disabled: !tauriAvailable(),
               onSelect: () => {
-                void invoke("open_external", { path: dir }).catch((err) =>
+                // BUG: this used to call open_external with the DIRECTORY, and
+                // open_external hands any path to the configured external
+                // player — so "open the file's folder" launched that player.
+                // reveal_path /select's the FILE in Explorer instead.
+                void invoke("reveal_path", { path: media.path }).catch((err) =>
                   toast.error(String(err)),
                 );
               },
