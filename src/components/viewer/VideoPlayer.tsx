@@ -23,6 +23,7 @@ import {
   Repeat,
   RotateCcw,
   RotateCw,
+  Shuffle,
   SquareArrowOutUpRight,
   Volume2,
   VolumeX,
@@ -174,6 +175,9 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
   // P2: the X closes the app window for an external-file session
   const session = useViewer((s) => s.session);
   const requestClose = useViewer((s) => s.requestClose);
+  // P6: session queue order — randomise, or restore the grid order exactly
+  const shuffled = useViewer((s) => s.order === "shuffle");
+  const toggleShuffle = useViewer((s) => s.toggleShuffle);
   const toggleStrip = useViewer((s) => s.toggleStrip);
   const favoriteOf = useViewer((s) => s.favoriteOf);
   const toggleFavorite = useViewer((s) => s.toggleFavorite);
@@ -733,6 +737,19 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
                 </span>
               ))}
             </div>
+            <button
+              type="button"
+              aria-label={t("viewer.shuffle")}
+              title={t(shuffled ? "viewer.shuffle_off" : "viewer.shuffle")}
+              aria-pressed={shuffled}
+              onClick={toggleShuffle}
+              className={cn(
+                "glass flex h-10 w-10 items-center justify-center rounded-pill transition-colors duration-[160ms]",
+                shuffled ? "text-accent" : "text-tsecondary hover:text-tprimary",
+              )}
+            >
+              <Shuffle size={17} />
+            </button>
             <button
               type="button"
               aria-label={t("viewer.info")}

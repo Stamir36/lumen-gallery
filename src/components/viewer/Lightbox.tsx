@@ -12,6 +12,7 @@ import {
   PanelBottom,
   RotateCw,
   Scan,
+  Shuffle,
   Trash2,
   X,
 } from "lucide-react";
@@ -87,6 +88,9 @@ export function Lightbox({ row }: { row: MediaRow }) {
   // P2: the back arrow always lands in the gallery; the X depends on the session
   const session = useViewer((s) => s.session);
   const requestClose = useViewer((s) => s.requestClose);
+  // P6: session queue order — randomise, or restore the grid order exactly
+  const shuffled = useViewer((s) => s.order === "shuffle");
+  const toggleShuffle = useViewer((s) => s.toggleShuffle);
 
   /**
    * STAGED DECODE (P0-0c). The stage used to wait for the FULL-RESOLUTION decode
@@ -478,6 +482,19 @@ export function Lightbox({ row }: { row: MediaRow }) {
               {index + 1} / {queue.length}
             </span>
           </div>
+          <button
+            type="button"
+            aria-label={t("viewer.shuffle")}
+            title={t(shuffled ? "viewer.shuffle_off" : "viewer.shuffle")}
+            aria-pressed={shuffled}
+            onClick={toggleShuffle}
+            className={cn(
+              "glass flex h-10 w-10 items-center justify-center rounded-pill transition-colors duration-[160ms]",
+              shuffled ? "text-accent" : "text-tsecondary hover:text-tprimary",
+            )}
+          >
+            <Shuffle size={17} />
+          </button>
         </div>
 
         {/* close — P2: for a file this window was OPENED with (and before the

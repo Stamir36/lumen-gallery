@@ -183,6 +183,8 @@
     "controls": "Viewer controls",
     "close": "Close",
     "back": "Back to gallery",
+    "shuffle": "Shuffle order",
+    "shuffle_off": "Restore original order",
     "close_app": "Close app",
     "close_viewer": "Close viewer",
     "prev": "Previous",

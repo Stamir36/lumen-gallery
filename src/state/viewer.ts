@@ -13,6 +13,14 @@ interface ViewerState {
   /** the media the arrows / filmstrip walk through, in grid order */
   queue: MediaRow[];
   index: number;
+  /**
+   * P6 — session queue ORDER. "view" walks the grid order; "shuffle" walks a
+   * randomised queue whose first item is whatever was on screen when the user
+   * flipped the switch. `baseQueue` keeps the untouched grid order so turning it
+   * OFF restores the original queue (and the cursor position) exactly.
+   */
+  order: "view" | "shuffle";
+  baseQueue: MediaRow[];
   /** mono info panel (image + video) */
   infoOpen: boolean;
   /** bottom filmstrip (image) / right "up next" rail (video) */
@@ -42,6 +50,8 @@ interface ViewerState {
   setIndex: (index: number) => void;
   toggleInfo: () => void;
   toggleStrip: () => void;
+  /** P6: randomise the queue · restore the view order */
+  toggleShuffle: () => void;
   /** optimistic favourite for the current media + persistence through db_exec */
   toggleFavorite: (row: MediaRow) => void;
   favoriteOf: (row: MediaRow) => boolean;
@@ -52,6 +62,8 @@ export const useViewer = create<ViewerState>((set, get) => ({
   open: false,
   queue: [],
   index: 0,
+  order: "view",
+  baseQueue: [],
   infoOpen: false,
   stripOpen: false,
   favorites: {},
@@ -67,6 +79,9 @@ export const useViewer = create<ViewerState>((set, get) => ({
       revealId: null,
       fsByUser: false,
       session,
+      // a fresh open always starts in view order
+      order: "view",
+      baseQueue: [],
     }),
 
   close: () => {
@@ -101,6 +116,31 @@ export const useViewer = create<ViewerState>((set, get) => ({
   setIndex: (index) => set({ index }),
   toggleInfo: () => set((s) => ({ infoOpen: !s.infoOpen })),
   toggleStrip: () => set((s) => ({ stripOpen: !s.stripOpen })),
+
+  toggleShuffle: () => {
+    const { queue, index, order, baseQueue } = get();
+    if (queue.length < 2) return;
+    const current = queue[index];
+    if (order === "view") {
+      const rest = queue.filter((r) => r.id !== current?.id);
+      // Fisher–Yates: an unbiased shuffle (sort(() => Math.random() - 0.5) is not)
+      for (let i = rest.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [rest[i], rest[j]] = [rest[j], rest[i]];
+      }
+      // the item you were looking at stays first, so switching never jumps
+      set({
+        order: "shuffle",
+        queue: current ? [current, ...rest] : rest,
+        index: 0,
+        baseQueue: queue,
+      });
+      return;
+    }
+    const restored = baseQueue.length > 0 ? baseQueue : queue;
+    const at = current ? restored.findIndex((r) => r.id === current.id) : -1;
+    set({ order: "view", queue: restored, index: at < 0 ? 0 : at, baseQueue: [] });
+  },
 
   toggleFavorite: (row) => {
     const now = get().favoriteOf(row);
