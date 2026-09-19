@@ -13,6 +13,23 @@
 - [ ] REMAINING — acceptance numbers only the GUI can produce: fps chip ≥45 arrowing through a cold lightbox, zero `[perf] long task` >300 ms, and no statement over 1 s in the logs during rescan + scroll.
 - Resume line: `P8 resume: B4 context-menu keyboard navigation → then the On-this-day shelf / list columns → then capture the acceptance numbers.`
 
+## P9 batch (2026-09-19) — five reported bugs + shine pass
+User-reported bugs (fixed first, in report order):
+- [x] Viewer X did the same thing as back (`6a8c988`): the X is now rendered ONLY for a `session === "external"` open (Explorer / association / drag-drop), where it closes the app; an internal session shows the back arrow alone. Both viewers.
+- [x] Colour correction popover (`6a8c988`): now the PILL'S OWN MATERIAL — glass, radius 20, width-matched to the pill; sliders use the new glass variant (white/14 track, glowing accent fill, 18px thumb, focus ring) with a detent at the neutral point and a mono value chip. Opening it still closes the overflow, so nothing overlaps.
+- [x] Top-left name bar felt overloaded (`6a8c988`): res/size/duration chips removed from the bar (the info panel owns them), name centred in one quiet pill, actions moved to the right edge.
+- [x] Rail layout looked nothing like the sketch (`4f90ef1`): rebuilt as three floating rounded panels — glass header pill, 26px icon rail (48px circles), 22px chips panel over the grid.
+- [x] "Open the file's folder" launched the external player (`b68f737`): both call sites passed a DIRECTORY to `open_external`; now `reveal_path` (Explorer `/select`).
+- [ ] Not yet reported/fixed: mini-player window still shows alongside the main window (the F5 child window is intentional; "looks like a second app" is a design question).
+
+P9 shine pass:
+- [x] B4 part 2 (`4b734bf`) context-menu keyboard navigation: roving tabindex, ArrowUp/Down wrap, Home/End, Enter/Space, Esc, first-letter typeahead, focus on open + restore to the invoker, `aria-activedescendant`.
+- [x] Motion micro-pass + DESIGN v2.5 (`d7fd2f5`): viewer opens/closes at scale .96 from the clicked point (180ms viewer-spring, queue navigation unaffected); library entry stagger (20ms step, first 12 rows, route change only); toast stack capped at 3; named motion scale fast 120 / base 160 / slow 240 / viewer-spring 180 in `docs/DESIGN.md` §8.
+- [x] Focus-visible ring audit (`7494e42`): the unlayered ring rule now beats every `outline-none` utility, no longer forces border-radius, and containers opt out via `[data-no-ring]`.
+- [ ] REMAINING — acceptance numbers only the GUI can produce (fps ≥45 cold lightbox, no `[perf] long task` >300 ms, no >1 s statement during rescan + scroll).
+- [ ] REMAINING — P6 items not taken (approval required): "On this day" shelf; list-view metadata columns.
+- Resume line: `P9 resume: capture the acceptance numbers → then the On-this-day shelf / list columns (approval) → then the mini-player window review.`
+
 ## Phase 4.1 — user-reported fixes (2026-09-18) — DONE
 - [x] `fix: watch_progress rebuilt in milliseconds` — v1 had already created the table with `position_s`,
       so v6's `CREATE TABLE IF NOT EXISTS` never added the ms columns and every save failed every 5s.
