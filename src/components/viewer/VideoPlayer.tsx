@@ -47,6 +47,8 @@ import { Filmstrip } from "./Filmstrip";
 import { VrView } from "./VrView";
 
 const HIDE_AFTER_MS = 2_000;
+/** MediaError code for "the source stopped delivering bytes" (B15). */
+const MEDIA_ERR_NETWORK = 2;
 const SAVE_EVERY_MS = 5_000;
 /** blob fallback ceiling: beyond this the bytes do not belong in one Blob */
 const VR_BLOB_MAX = 256 * 1024 * 1024;
@@ -645,7 +647,14 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
           saveNow();
           ambient.current?.pause();
         }}
-        onError={() => setError("codec")}
+        onError={(e) => {
+          // B15: a pulled USB drive or a dropped network share is NOT a codec
+          // problem. Chromium gives both as a bare error event, but the code
+          // distinguishes "the bytes stopped arriving" from "I cannot decode
+          // this", and the copy must match what actually happened.
+          const code = e.currentTarget.error?.code;
+          setError(code === MEDIA_ERR_NETWORK ? "io" : "codec");
+        }}
       />
 
       {/* ---------- VR immersion (SBS 180): mono 180° projection. Draws from
@@ -790,9 +799,11 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
       {error && (
         <div className="absolute inset-0 z-50 flex items-center justify-center">
           <div className="w-[min(440px,88vw)] rounded-viewer bg-surface-2/95 p-6 text-center shadow-[0_16px_48px_rgba(0,0,0,.5)]">
-            <p className="text-[15px] text-tprimary">{t("player.error_title")}</p>
+            <p className="text-[15px] text-tprimary">
+              {t(error === "io" ? "player.error_io_title" : "player.error_title")}
+            </p>
             <p className="mt-2 font-mono text-[11px] text-ttertiary">
-              {t("player.error_hint")}
+              {t(error === "io" ? "player.error_io_hint" : "player.error_hint")}
             </p>
             <div className="mt-5 flex items-center justify-center gap-3">
               <button

@@ -237,6 +237,8 @@
     "up_next": "Up next",
     "resume": "Continue from {{time}}",
     "error_title": "This file cannot play in the app",
+    "error_io_title": "The source stopped delivering data",
+    "error_io_hint": "the file became unreadable — the drive or network share may have disconnected. Reconnect it and try again.",
     "error_hint": "the Windows engine does not support this codec — open it in an external player",
     "external": "Open in external player",
     "next_file": "Next file",
