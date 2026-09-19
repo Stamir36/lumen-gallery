@@ -71,7 +71,12 @@ export default function App() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { roots, loaded, load, rescan } = useRootsStore();
-  const { scanningRootId, done, added, lastScanAt } = useScanStore();
+  // B2: individual selectors — the whole-store subscription re-rendered the entire
+  // shell (grid included) on EVERY scan-progress event, i.e. per walked file.
+  const scanningRootId = useScanStore((s) => s.scanningRootId);
+  const done = useScanStore((s) => s.done);
+  const added = useScanStore((s) => s.added);
+  const lastScanAt = useScanStore((s) => s.lastScanAt);
   const onboarding = useOpenOnboarding();
   const [ready, setReady] = useState(false);
 
