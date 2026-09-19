@@ -1289,7 +1289,20 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
                       transition={{ duration: reduced ? 0 : 0.14, ease: "easeOut" }}
                       role="menu"
                       aria-label={t("player.more")}
-                      className="glass absolute bottom-12 right-0 z-50 w-[252px] rounded-[16px] p-1.5"
+                      className="absolute bottom-[60px] right-0 z-50 w-[252px] overflow-hidden rounded-[20px] p-1.5"
+                      style={{
+                        /* dark-glass v2.3 recipe (the ContextMenu material):
+                           tinted gradient + blur + saturate, hairline border,
+                           inner top highlight. Over a bright frame the plain
+                           `glass` wash was too light for white text. */
+                        background:
+                          "linear-gradient(180deg, rgba(14,14,18,.68), rgba(14,14,18,.55))",
+                        backdropFilter: "blur(28px) saturate(1.4)",
+                        WebkitBackdropFilter: "blur(28px) saturate(1.4)",
+                        border: "1px solid rgba(255,255,255,.08)",
+                        boxShadow:
+                          "inset 0 1px 0 rgba(255,255,255,.06), 0 16px 48px rgba(0,0,0,.55)",
+                      }}
                     >
                       {/* snapshot needs canvas-clean frames — only the opt-in
                           media server provides them; asset frames are tainted */}
@@ -1563,7 +1576,7 @@ function OverflowItem({
       role="menuitem"
       onClick={onClick}
       className={cn(
-        "flex h-9 w-full items-center gap-3 rounded-[10px] px-2.5 text-left text-[13px] transition-colors duration-[120ms]",
+        "flex h-10 w-full items-center gap-3 rounded-[10px] px-2.5 text-left text-[13px] transition-colors duration-[120ms]",
         active
           ? "bg-white/[.10] text-tprimary"
           : "text-tsecondary hover:bg-white/[.08] hover:text-tprimary",
