@@ -386,6 +386,9 @@
   "rail": {
     "nav": "Library sections"
   },
+  "fab": {
+    "scroll_top": "Scroll to top"
+  },
   "hotkeys": {
     "title": "Keyboard shortcuts",
     "hint": "? opens and closes this sheet, Esc closes it",
