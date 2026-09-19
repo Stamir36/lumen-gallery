@@ -14,11 +14,16 @@ export function WindowTitleBar({
   title = "LUMEN",
   leftAction,
   right,
+  /** F4: rail mode hosts the library controls HERE, so the screen carries
+   *  exactly one header; classic mode leaves it undefined */
+  center,
 }: {
   title?: string;
   leftAction?: ReactNode;
   /** slot rendered before the window controls (e.g. the view-mode switcher) */
   right?: ReactNode;
+  /** slot between the wordmark and the drag spacer (library controls, rail) */
+  center?: ReactNode;
 }) {
   const { t } = useTranslation();
   const [maximized, setMaximized] = useState(false);
@@ -59,6 +64,15 @@ export function WindowTitleBar({
           {title}
         </span>
       </div>
+
+      {/* F4: in rail mode the library search + sort/view/selection live in the
+          titlebar — one header for the whole screen. Swallowed mousedown so
+          the controls never start a window drag. */}
+      {center && (
+        <div className="flex h-full min-w-0 flex-1 items-center gap-2 px-4" onMouseDown={stop}>
+          {center}
+        </div>
+      )}
 
       {/* drag spacer — empty area only; drags the window via startDragging() */}
       <div

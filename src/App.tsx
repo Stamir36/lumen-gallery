@@ -21,7 +21,7 @@ import { LanguageDropdown, LanguageDropdownIcon } from "@/components/LanguageSwi
 import { NavTooltip } from "@/components/ui/NavTooltip";
 import { IconButton } from "@/components/ui/IconButton";
 import { Onboarding } from "@/pages/Onboarding";
-import { LibraryTopBar } from "@/components/library/LibraryTopBar";
+import { LibraryTopBar, RailTitlebarCenter } from "@/components/library/LibraryTopBar";
 import { RailShell } from "@/components/library/RailShell";
 import { MediaGrid } from "@/components/library/MediaGrid";
 import { FolderGrid } from "@/components/library/FolderCards";
@@ -342,6 +342,15 @@ export default function App() {
     <div className="flex h-full flex-col">
       <WindowTitleBar
         leftAction={<span className="font-mono text-xs text-ttertiary">v0.1</span>}
+        // F4 — rail mode: the library controls live IN the titlebar so the
+        // screen shows exactly ONE header. Classic keeps the full GlassTopBar.
+        center={
+          rail && !noRoots && !onboarding.show ? (
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              <RailTitlebarCenter />
+            </div>
+          ) : undefined
+        }
         // only on library routes: the onboarding shell has no grid to switch
         /* titlebar right (FIX 5): mode toggle FIRST, then view-mode icons */
         right={
@@ -397,8 +406,10 @@ export default function App() {
               count={rows.length}
               items={items}
               railBottom={railBottom}
-              extra={explorer && route.kind === "root" ? <ExplorerLayoutSwitch /> : undefined}
               status={statusBar}
+              search={
+                explorer && route.kind === "root" ? <ExplorerLayoutSwitch /> : null
+              }
             >
               {gridArea}
             </RailShell>

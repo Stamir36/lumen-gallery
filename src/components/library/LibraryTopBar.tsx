@@ -226,3 +226,82 @@ export function SortMenu() {
     </DropdownMenu.Root>
   );
 }
+
+/**
+ * F4 — the rail layout's titlebar CENTER slot: compact search (flex-1) plus
+ * the sort / selection controls. Rendered inside WindowTitleBar, so rail mode
+ * carries exactly ONE header on screen. The classic layout keeps its own full
+ * GlassTopBar and never mounts this.
+ */
+export function RailTitlebarCenter() {
+  const { t } = useTranslation();
+  const q = useLibraryUi((s) => s.q);
+  const setQ = useLibraryUi((s) => s.setQ);
+  const selectionMode = useLibraryUi((s) => s.selectionMode);
+  const toggleSelectionMode = useLibraryUi((s) => s.toggleSelectionMode);
+
+  // "/" focuses search from anywhere in the library (SPEC §6)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const el = document.activeElement;
+      const typing =
+        el instanceof HTMLInputElement ||
+        el instanceof HTMLTextAreaElement ||
+        (el instanceof HTMLElement && el.isContentEditable);
+      if (e.key === "/" && !typing) {
+        e.preventDefault();
+        document.querySelector<HTMLInputElement>("input[data-rail-search]")?.focus();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  return (
+    <>
+      <div className="relative min-w-0 flex-1">
+        <Search
+          size={15}
+          className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-ttertiary"
+        />
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") {
+              setQ("");
+              e.currentTarget.blur();
+            }
+          }}
+          data-rail-search=""
+          placeholder={t("topbar.search_placeholder")}
+          aria-label={t("topbar.search_placeholder")}
+          className="h-10 w-full rounded-pill bg-surface-2 pl-10 pr-10 text-sm text-tprimary outline-none transition-colors duration-[160ms] placeholder:text-ttertiary hover:bg-surface-3 focus:bg-surface-3"
+        />
+        {q ? (
+          <button
+            type="button"
+            aria-label={t("topbar.clear_search")}
+            onClick={() => setQ("")}
+            className="absolute right-3 top-1/2 -translate-y-1/2 font-mono text-[11px] text-ttertiary hover:text-tprimary"
+          >
+            esc
+          </button>
+        ) : (
+          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded-[6px] bg-white/[.06] px-1.5 font-mono text-[11px] text-ttertiary">
+            /
+          </span>
+        )}
+      </div>
+      <SortMenu />
+      <IconButton
+        label={t("topbar.selection_mode")}
+        aria-pressed={selectionMode}
+        onClick={toggleSelectionMode}
+        className={cn(selectionMode && "bg-surface-2 text-tprimary")}
+      >
+        <SquareCheck size={18} />
+      </IconButton>
+    </>
+  );
+}
