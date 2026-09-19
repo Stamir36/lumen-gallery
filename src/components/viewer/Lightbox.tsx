@@ -125,15 +125,25 @@ export function Lightbox({ row }: { row: MediaRow }) {
     return { w: nw * scale, h: nh * scale, scale };
   }, [natural, stage, rotated]);
 
-  // every item starts contained, unrotated
-  useEffect(() => {
+  // every item starts contained, unrotated — and the reset must land WITH the
+  // first render of the new row, not one paint later. This used to be a
+  // useEffect, and the one-frame gap was a visible glitch: the new original
+  // mounted while `loaded` was still true from the PREVIOUS image and `fit`
+  // was still zero (width: undefined → intrinsic size), so for a frame the
+  // undecoded picture painted huge across the stage before the effect hid it.
+  // Render-phase reset (React's adjust-state-on-prop-change pattern) closes
+  // the gap: React re-renders immediately, before anything paints.
+  const [renderedId, setRenderedId] = useState(row.id);
+  if (renderedId !== row.id) {
+    setRenderedId(row.id);
     commitZoom(1);
     setPan({ x: 0, y: 0 });
     setRotate(0);
     setLoaded(false);
     setFailed(false);
     setNatural({ w: 0, h: 0 });
-  }, [row.id, commitZoom]);
+    setSwipeDx(0);
+  }
 
   /**
    * Neighbour prefetch — THUMBS ONLY (P0-0c). Pre-decoding the next original is
@@ -419,7 +429,11 @@ export function Lightbox({ row }: { row: MediaRow }) {
                 }}
                 onError={() => setFailed(true)}
                 className={cn(
-                  "pointer-events-none select-none object-contain transition-opacity duration-[180ms] ease-out",
+                  // max-h/max-w: insurance — if a paint ever raced the fit
+                  // computation, an intrinsic-size original could overflow the
+                  // stage; with the render-phase reset it never should, but the
+                  // cap costs nothing and cannot distort (object-contain)
+                  "pointer-events-none max-h-full max-w-full select-none object-contain transition-opacity duration-[180ms] ease-out",
                   loaded ? "opacity-100" : "opacity-0",
                 )}
                 style={{
