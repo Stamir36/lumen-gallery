@@ -114,9 +114,21 @@ pub async fn whitelist(pool: &SqlitePool) -> HashSet<String> {
         .collect()
 }
 
-/// Batched upsert: chunks of 500 rows per transaction, conditional on a real
-/// change (missing row, or mtime/size differ) so rescans only count writes.
-const UPSERT_CHUNK: usize = 500;
+/// Batched upsert: rows per transaction, conditional on a real change (missing
+/// row, or mtime/size differ) so rescans only count writes.
+///
+/// P0-0e: the chunk size is only a STARTING point. SQLite has ONE write lock, so
+/// a long upsert transaction makes the single writer's thumbnail flush wait for
+/// it — that wait is what the user saw as a 1.2 s `UPDATE thumb_path` statement
+/// and a frozen app while scrolling during generation. Every commit now feeds
+/// the next chunk size, keeping each transaction inside [`UPSERT_BUDGET_MS`].
+const UPSERT_CHUNK: usize = 200;
+/// Never smaller than this (per-statement overhead dominates below it).
+const UPSERT_MIN_CHUNK: usize = 16;
+/// Never larger than this, however fast the disk is.
+const UPSERT_MAX_CHUNK: usize = 500;
+/// A chunk slower than this budget halves the next one (target <= 200 ms).
+const UPSERT_BUDGET_MS: u128 = 150;
 
 /// The REAL upsert statement, as a const so the regression test runs exactly
 /// what production runs (a copy inside the test would prove nothing).
@@ -318,12 +330,17 @@ pub async fn scan_root(
     if is_cancelled(root_id) {
         cancelled = true;
     }
-    for chunk in candidates.chunks(UPSERT_CHUNK) {
+    let mut chunk_size = UPSERT_CHUNK;
+    let mut start = 0usize;
+    while start < candidates.len() {
         if is_cancelled(root_id) {
             cancelled = true;
             log::info!("scan of root {root_id} cancelled during upsert");
             break;
         }
+        let end = (start + chunk_size).min(candidates.len());
+        let chunk = &candidates[start..end];
+        let t0 = std::time::Instant::now();
         let mut tx = conn
             .begin()
             .await
@@ -335,10 +352,19 @@ pub async fn scan_root(
         if let Some(last) = chunk.last() {
             emit_progress(app, root_id, "walk", done, total, last.path.clone(), added);
         }
+        // retune for the next transaction: hold the write lock for ~150 ms, not
+        // for however long 500 rows happen to take on this machine
+        let spent = t0.elapsed().as_millis();
+        if spent > UPSERT_BUDGET_MS {
+            chunk_size = (chunk_size / 2).max(UPSERT_MIN_CHUNK);
+        } else if spent * 2 < UPSERT_BUDGET_MS {
+            chunk_size = (chunk_size * 2).min(UPSERT_MAX_CHUNK);
+        }
+        start = end;
     }
     drop(conn);
     log::info!(
-        "scan of {root_id} ({} files) took {:.2}s ({} changed{})",
+        "scan of {root_id} ({} files, chunk {chunk_size}) took {:.2}s ({} changed{})",
         total,
         started.elapsed().as_secs_f32(),
         added,

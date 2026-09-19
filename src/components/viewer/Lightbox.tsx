@@ -21,7 +21,7 @@ import { baseName, formatResolution } from "@/lib/format";
 import { trashMedia } from "@/lib/mediaActions";
 import { useViewer } from "@/state/viewer";
 import { useAppSettings } from "@/lib/settings";
-import { thumbSrc } from "@/lib/thumbs";
+import { thumbSrc, useThumbStore } from "@/lib/thumbs";
 import { Filmstrip } from "./Filmstrip";
 
 /** relative to the fit size: 1 = contain, MAX = deep zoom */
@@ -84,6 +84,16 @@ export function Lightbox({ row }: { row: MediaRow }) {
   const queue = useViewer((s) => s.queue);
   const index = useViewer((s) => s.index);
 
+  /**
+   * STAGED DECODE (P0-0c). The stage used to wait for the FULL-RESOLUTION decode
+   * of every file, so arrowing through a cold queue showed black for as long as
+   * the original took — worse while thumbnails were generating. The cached 480w
+   * thumbnail now paints immediately underneath and the original fades in over
+   * it. The live thumb-store value wins over the DB column (a thumb produced
+   * this session is already on disk).
+   */
+  const underlaySrc = useThumbStore((s) => s.thumbs[row.id]?.path ?? row.thumbPath);
+
   const rotated = Math.abs(rotate % 180) === 90;
 
   // stage size (kept in state so fit can be recomputed on window resize)
@@ -115,6 +125,30 @@ export function Lightbox({ row }: { row: MediaRow }) {
     setFailed(false);
     setNatural({ w: 0, h: 0 });
   }, [row.id, commitZoom]);
+
+  /**
+   * Neighbour prefetch — THUMBS ONLY (P0-0c). Pre-decoding the next original is
+   * what made paging hitch: two full-size decodes compete with the one the user
+   * is looking at. A 480w webp is a few KB, already on disk, and is exactly what
+   * the underlay needs on the next arrow press.
+   */
+  useEffect(() => {
+    if (!tauriAvailable()) return;
+    const pre: HTMLImageElement[] = [];
+    for (const d of [-1, 1]) {
+      const n = queue[index + d];
+      if (!n) continue;
+      const p = useThumbStore.getState().thumbs[n.id]?.path ?? n.thumbPath;
+      if (!p) continue;
+      const img = new Image();
+      img.decoding = "async";
+      img.src = thumbSrc(p);
+      pre.push(img);
+    }
+    return () => {
+      for (const img of pre) img.src = "";
+    };
+  }, [queue, index]);
 
   const clampPan = useCallback(
     (x: number, y: number, z: number) => {
@@ -311,8 +345,23 @@ export function Lightbox({ row }: { row: MediaRow }) {
           zoom > MIN_ZOOM ? (dragging ? "cursor-grabbing" : "cursor-grab") : "cursor-default",
         )}
       >
-        {!loaded && !failed && (
+        {!loaded && !failed && !underlaySrc && (
           <div className="shimmer-bg absolute inset-0 opacity-60" aria-hidden />
+        )}
+
+        {/* instant underlay: the cached thumb, underneath the original */}
+        {!failed && underlaySrc && (
+          <img
+            key={`thumb-${row.id}`}
+            src={thumbSrc(underlaySrc)}
+            alt=""
+            aria-hidden
+            draggable={false}
+            className={cn(
+              "pointer-events-none absolute max-h-full max-w-full select-none object-contain transition-opacity duration-200 ease-out",
+              loaded ? "opacity-0" : "opacity-100",
+            )}
+          />
         )}
 
         <AnimatePresence mode="popLayout" initial={false}>
@@ -339,6 +388,10 @@ export function Lightbox({ row }: { row: MediaRow }) {
               </div>
             ) : (
               <img
+                // keyed by row: navigating unmounts the previous element, which
+                // CANCELS its in-flight decode instead of letting a queue of
+                // abandoned originals compete with the item on screen (P0-0c)
+                key={row.id}
                 // In the app this is the ORIGINAL file through the asset protocol.
                 // The browser QA route has no such protocol, so it shows the
                 // generated thumbnail instead of an unloadable path.

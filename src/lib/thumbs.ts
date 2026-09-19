@@ -105,6 +105,18 @@ let flushTimer: number | null = null;
 const FLUSH_MS = 60;
 /** sub-batch size (S1.2): the first cold tiles must land under ~1 s */
 const MAX_BATCH = 24;
+/**
+ * Above this many queued ids a flush DROPS offscreen work instead of deferring
+ * it (B7/P0-0d). Flinging through the library used to enqueue every row ever
+ * mounted; since video capture is serialized that became minutes of background
+ * decoding competing with the tile the user is looking at. A dropped id clears
+ * its `asked` entry, so it is simply asked again the moment it scrolls back into
+ * the visible range — dropping is safe, not lossy.
+ */
+const QUEUE_DROP_THRESHOLD = 200;
+/** one log line per storm, not per flush */
+let droppedSinceLog = 0;
+let lastDropLogAt = 0;
 
 /** The grid publishes its visible range so on-screen tiles are served first. */
 export function setViewportIds(ids: number[]) {
@@ -146,6 +158,33 @@ async function flush() {
     if (viewportIds.size === 0 || viewportIds.has(id)) onScreen.push(id);
     else offscreen.push(id);
   }
+
+  // P0-0d: a scroll storm must not queue minutes of background work. Above the
+  // threshold offscreen ids are dropped (and un-asked so they come back).
+  if (queued.size > QUEUE_DROP_THRESHOLD && offscreen.length > 0) {
+    let dropped = 0;
+    for (const id of offscreen) {
+      if (queued.delete(id)) {
+        asked.delete(id);
+        dropped++;
+      }
+    }
+    if (dropped > 0) {
+      droppedSinceLog += dropped;
+      const now = Date.now();
+      if (now - lastDropLogAt > 3_000) {
+        console.info(
+          `[perf] thumb queue dropped ${droppedSinceLog} offscreen ids (visible-first kept)`,
+        );
+        droppedSinceLog = 0;
+        lastDropLogAt = now;
+      }
+      // keep the visible ones in this same pass; the first loop already
+      // collected them, so nothing to re-add — just stop deferring the rest
+      offscreen.length = 0;
+    }
+  }
+
   const ids = [...onScreen, ...offscreen].slice(0, MAX_BATCH);
   if (ids.length === 0) return;
   for (const id of ids) {
@@ -197,6 +236,13 @@ export function resetThumbs() {
   queued.clear();
   asked.clear();
   videoQueue.length = 0;
+  if (readyTimer !== null) {
+    window.clearTimeout(readyTimer);
+    readyTimer = null;
+  }
+  readyBuf = new Set();
+  droppedSinceLog = 0;
+  lastDropLogAt = 0;
 }
 
 /** Ready-to-use <img src> for a cached thumbnail file. */
@@ -208,25 +254,68 @@ export function thumbSrc(path: string) {
  * The writer tells us a thumbnail row is DURABLE (S1.3): patch the cached
  * MediaRow so a later mount renders from data (warm path) instead of waiting
  * for a refetch.
+ *
+ * P0-0b: this used to spread EVERY cached row on every flush. During a cold
+ * generation storm that is the main-thread cost the user felt as a freeze.
+ * Two guards now: (1) a per-query PROBE — a cached query that shares no id with
+ * the batch (folder views, other filters, the other layout) returns untouched
+ * without allocating anything; (2) a size cap, so one pass never maps an
+ * unbounded row set.
  */
+const PATCH_MAX_ROWS = 4_000;
+
 function patchCachedRows(ids: number[]) {
+  if (ids.length === 0) return;
   const thumbs = useThumbStore.getState().thumbs;
   const wanted = new Set(ids);
   queryClient.setQueriesData<MediaRow[]>({ queryKey: ["media"] }, (rows) => {
-    if (!Array.isArray(rows)) return rows;
+    if (!Array.isArray(rows) || rows.length === 0) return rows;
+
+    // cheap probe first: a Set lookup per row, no allocation
+    const probe = Math.min(rows.length, PATCH_MAX_ROWS);
+    let hits = 0;
+    for (let i = 0; i < probe; i++) {
+      if (wanted.has(rows[i].id)) hits++;
+    }
+    if (hits === 0) return rows;
+
     let touched = false;
-    const next = rows.map((r) => {
-      if (!wanted.has(r.id)) return r;
+    const next = rows.slice();
+    for (let i = 0; i < next.length; i++) {
+      const r = next[i];
+      if (!wanted.has(r.id)) continue;
       const t = thumbs[r.id];
-      if (!t?.path || r.thumbPath === t.path) return r;
+      if (!t?.path || r.thumbPath === t.path) continue;
+      next[i] = { ...r, thumbPath: t.path, dominantColor: t.color ?? r.dominantColor };
       touched = true;
-      return { ...r, thumbPath: t.path, dominantColor: t.color ?? r.dominantColor };
-    });
+    }
     return touched ? next : rows;
   });
 }
 
 let bridgeStarted = false;
+
+/**
+ * P0-0a: `thumbs-ready` arrives once per WRITER flush (64 items / 200 ms), and
+ * a cold generation storm produces dozens of flushes back to back — one patch
+ * pass each, all on the main thread while the user is paging the lightbox.
+ * Buffer the ids and apply ONE pass per coalesced window instead.
+ */
+const READY_COALESCE_MS = 120;
+let readyBuf = new Set<number>();
+let readyTimer: number | null = null;
+
+function scheduleReadyPatch(ids: number[]) {
+  for (const id of ids) readyBuf.add(id);
+  if (readyTimer !== null) return;
+  readyTimer = window.setTimeout(() => {
+    readyTimer = null;
+    const batch = [...readyBuf];
+    readyBuf = new Set();
+    if (batch.length > 0) patchCachedRows(batch);
+  }, READY_COALESCE_MS);
+}
+
 /**
  * ONE subscription for the whole app: `thumb-result` streams per-row results as
  * they are rendered, `thumbs-ready` (emitted after the writer's transaction
@@ -239,7 +328,7 @@ export function startThumbBridge() {
     useThumbStore.getState().ingest([e.payload]);
   });
   void listen<{ ids: number[] }>("thumbs-ready", (e) => {
-    patchCachedRows(e.payload.ids ?? []);
+    scheduleReadyPatch(e.payload.ids ?? []);
   });
 }
 
