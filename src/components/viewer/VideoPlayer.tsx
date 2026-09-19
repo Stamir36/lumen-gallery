@@ -26,18 +26,22 @@ import {
   SquareArrowOutUpRight,
   Volume2,
   VolumeX,
+  X,
 } from "lucide-react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { cn } from "@/lib/utils";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { fileSrc, tauriAvailable } from "@/lib/assets";
+import { mediaUrl } from "@/lib/api";
+import { tauriAvailable } from "@/lib/assets";
 import { thumbSrc } from "@/lib/thumbs";
-import { formatBytes, mediaUrl, type MediaRow } from "@/lib/api";
+import { formatBytes, type MediaRow } from "@/lib/api";
+import { useMediaSource } from "@/lib/mediaSource";
 import { baseName } from "@/lib/format";
 import { readFile } from "@tauri-apps/plugin-fs";
 import { useAppSettings } from "@/lib/settings";
 import { useViewer } from "@/state/viewer";
+import { Slider } from "@/components/ui/Slider";
 import { NavTooltip } from "@/components/ui/NavTooltip";
 import { Filmstrip } from "./Filmstrip";
 import { VrView } from "./VrView";
@@ -171,35 +175,14 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
   const pillAlign = useAppSettings((s) => s.pillAlign);
   const videoAutoplay = useAppSettings((s) => s.videoAutoplay);
 
-  // P7 F3: the MAIN video source comes from the loopback media server. With
-  // crossOrigin="anonymous" + ACAO:* the frames stay CORS-clean, so canvas
-  // drawImage/toBlob works — this is exactly what the snapshot needed. The
-  // asset:// protocol stays for <img> thumbnails only; if the server is down
-  // we fall back to it for PLAYBACK (frames become tainted: playback fine,
-  // snapshot unavailable — surfaced once in the console).
-  const [mediaSrc, setMediaSrc] = useState<string | null>(null);
-  const [mediaSrcTainted, setMediaSrcTainted] = useState(false);
-  useEffect(() => {
-    if (!tauriAvailable()) return;
-    let cancelled = false;
-    setMediaSrc(null);
-    setMediaSrcTainted(false);
-    mediaUrl(row.path)
-      .then((u) => {
-        if (!cancelled) setMediaSrc(u);
-      })
-      .catch((e) => {
-        console.warn("media server unavailable — asset fallback (snapshot disabled)", e);
-        if (!cancelled) {
-          setMediaSrcTainted(true);
-          setMediaSrc(fileSrc(row.path));
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [row.path]);
-  const src = mediaSrc ?? "";
+  // The MAIN video source follows ONE app-wide policy (src/lib/mediaSource.ts):
+  // the asset protocol by default — it answers instantly, while the loopback
+  // media server adds a hop that delays first frame and seeks (user report).
+  // Opt-in "use media server" (Settings › Playback) restores CORS-clean frames
+  // for the snapshot; with the asset protocol frames are tainted: playback
+  // fine, snapshot hidden (the button is simply not rendered).
+  const { src, clean: srcClean } = useMediaSource(row.path);
+  const mediaSrcTainted = !srcClean;
   // VR sources are name-driven (the library encodes it in file names): a
   // standalone "VR" token ("… 8K VR.mkv", "VR180 …"), or "SBS 180" PLUS an
   // actual stereo-pair frame — two 1:1 halves side by side, aspect ≈ 2:1
@@ -227,10 +210,10 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
     vrResumeAt.current = video.current ? video.current.currentTime : 0;
 
     const resolve = async () => {
-      // F3: the main source is already CORS-clean — the dome reuses it
-      if (mediaSrc && !mediaSrcTainted) {
+      // F3: a CORS-clean main source is reused directly
+      if (src && !mediaSrcTainted) {
         setVrError(false);
-        setVrSrc(mediaSrc);
+        setVrSrc(src);
         return;
       }
       try {
@@ -265,7 +248,7 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
       cancelled = true;
       if (blobUrl) URL.revokeObjectURL(blobUrl);
     };
-  }, [vrMode, row.path, row.size, mediaSrc, mediaSrcTainted]);
+  }, [vrMode, row.path, row.size, src, mediaSrcTainted]);
   const ambience = useMemo(
     () => !reduced && (row.width ?? 0) * (row.height ?? 0) <= AMBIENT_MAX_PIXELS,
     [reduced, row.width, row.height],
@@ -468,6 +451,19 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [applyVolume, row, seekBy, toggle, toggleFavorite, toggleInfo, volume, muted, revealControls, vrMode, exitVr]);
 
+  // P1: the color sheet is its own surface — Esc closes IT, not the viewer.
+  useEffect(() => {
+    if (!colorOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      setColorOpen(false);
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [colorOpen]);
+
   // P7 F3: the overflow closes on outside click / Esc; stopImmediatePropagation
   // keeps the viewer's own Esc handler from closing the whole viewer.
   useEffect(() => {
@@ -608,7 +604,18 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
         style={{ filter: "var(--video-filter, none)" }}
         onLoadedMetadata={(e) => {
           setDuration(e.currentTarget.duration || 0);
-          setNat({ w: e.currentTarget.videoWidth, h: e.currentTarget.videoHeight });
+          const vw = e.currentTarget.videoWidth;
+          const vh = e.currentTarget.videoHeight;
+          setNat({ w: vw, h: vh });
+          // the info panel reads row.width/height, which stay NULL until the
+          // thumbnail pipeline fills them — persist the decoder's own values
+          // (single writer; whitelisted COALESCE keeps scanned values intact)
+          if (vw > 0 && vh > 0 && (!row.width || !row.height)) {
+            void invoke("db_exec", {
+              sql: "UPDATE media SET width = COALESCE(width, NULLIF(?1, 0)), height = COALESCE(height, NULLIF(?2, 0)) WHERE id = ?3",
+              params: [String(vw), String(vh), String(row.id)],
+            }).catch(() => undefined);
+          }
           e.currentTarget.volume = volume;
           // Settings › Appearance: play at once (the click that opened the
           // viewer is the user activation WebView2 requires for sound)
@@ -1011,6 +1018,24 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
             onPointerEnter={() => setPillHover(true)}
             onPointerLeave={() => setPillHover(false)}
           >
+            {/* P1 — COLOR SHEET: a standalone surface anchored directly ABOVE
+                the pill (inset-x-0 = the pill's own width, capped at 420). Solid
+                surface-2, radius 20: no glass, so nothing bleeds through it and
+                it can never overlap a menu — opening it CLOSES the overflow. */}
+            <AnimatePresence>
+              {colorOpen && (
+                <motion.div
+                  initial={reduced ? false : { opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={reduced ? { opacity: 0 } : { opacity: 0, y: 10 }}
+                  transition={{ duration: reduced ? 0 : 0.16, ease: "easeOut" }}
+                  className="absolute inset-x-0 bottom-[80px] z-50 mx-auto max-w-[420px] rounded-[20px] bg-surface-2 shadow-[0_16px_48px_rgba(0,0,0,.5)] outline outline-1 outline-white/[.06]"
+                >
+                  <ColorSheet onClose={() => setColorOpen(false)} />
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             <div className="glass flex h-14 items-center gap-1 rounded-pill px-2">
               <IconBtn label={t("player.back10")} onClick={() => seekBy(-10)}>
                 <RotateCcw size={18} />
@@ -1192,14 +1217,18 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
                       aria-label={t("player.more")}
                       className="glass absolute bottom-12 right-0 z-50 w-[252px] rounded-[16px] p-1.5"
                     >
-                      <OverflowItem
-                        icon={<Camera size={15} />}
-                        label={t("player.snapshot_clipboard")}
-                        onClick={() => {
-                          setOverflowOpen(false);
-                          void onSnapshot();
-                        }}
-                      />
+                      {/* snapshot needs canvas-clean frames — only the opt-in
+                          media server provides them; asset frames are tainted */}
+                      {srcClean && (
+                        <OverflowItem
+                          icon={<Camera size={15} />}
+                          label={t("player.snapshot_clipboard")}
+                          onClick={() => {
+                            setOverflowOpen(false);
+                            void onSnapshot();
+                          }}
+                        />
+                      )}
                       <OverflowItem
                         icon={<ExternalLink size={15} />}
                         label={t("player.open_external")}
@@ -1229,16 +1258,17 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
                           });
                         }}
                       />
-                      {/* P7 F4: nested color-correction popover */}
-                      <div className="relative">
-                        <OverflowItem
-                          icon={<Palette size={15} />}
-                          label={t("player.color")}
-                          active={colorOpen}
-                          onClick={() => setColorOpen((o) => !o)}
-                        />
-                        {colorOpen && <ColorPopover />}
-                      </div>
+                      {/* P1: the sheet lives OUTSIDE this menu — opening it
+                          closes the menu instead of stacking two surfaces */}
+                      <OverflowItem
+                        icon={<Palette size={15} />}
+                        label={t("player.color")}
+                        active={colorOpen}
+                        onClick={() => {
+                          setOverflowOpen(false);
+                          setColorOpen((o) => !o);
+                        }}
+                      />
                       {/* loop stays open so the check state is visible live */}
                       <OverflowItem
                         icon={<Repeat size={15} />}
@@ -1272,7 +1302,12 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
             <dl className="flex flex-col gap-2 font-mono text-[11px]">
               {[
                 [t("viewer.info_path"), row.path],
-                [t("viewer.info_res"), row.width && row.height ? `${row.width}×${row.height}` : "—"],
+                [
+                  t("viewer.info_res"),
+                  (row.width && row.height) || (nat.w && nat.h)
+                    ? `${row.width || nat.w}×${row.height || nat.h}`
+                    : "—",
+                ],
                 [t("viewer.info_size"), formatBytes(row.size)],
                 [t("viewer.info_date"), new Date(row.mtime).toLocaleString()],
                 [t("viewer.info_ext"), row.ext.toUpperCase()],
@@ -1301,10 +1336,18 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
 }
 
 /**
- * P7 F4 — color-correction popover: two sliders writing global settings via
- * the store; the CSS var updates live for every video surface in the app.
+ * P1 — COLOR CORRECTION SHEET. Two global filters written through the settings
+ * store; the CSS var updates live, so the picture changes while you drag.
+ *
+ * DESIGN v2.4 contract: this is a menu-grade surface, and glass is FORBIDDEN on
+ * menus (§3.3) — the old translucent panel sat inside the overflow menu and the
+ * menu's own rows bled straight through the sliders. Now: solid surface-2,
+ * radius 20, one editorial hairline before the reset row, sliders at spec
+ * (4px track, accent fill, 18px white thumb) with a mono value chip.
+ * It is rendered ABOVE the pill so the pill stays visible and clickable — the
+ * user adjusts the filters while the video is playing.
  */
-function ColorPopover() {
+function ColorSheet({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation();
   const saturation = useAppSettings((s) => s.videoSaturation);
   const sharpness = useAppSettings((s) => s.videoSharpness);
@@ -1313,11 +1356,20 @@ function ColorPopover() {
   const dirty = saturation !== 1 || sharpness !== 0;
 
   return (
-    <div
-      role="group"
-      aria-label={t("player.color")}
-      className="glass absolute bottom-11 right-1 z-50 w-[240px] rounded-[16px] p-3.5"
-    >
+    <div role="group" aria-label={t("player.color")} className="px-4 pb-3 pt-4">
+      <header className="mb-4 flex items-center justify-between">
+        <h3 className="text-[14px] font-semibold text-tprimary">{t("player.color")}</h3>
+        <button
+          type="button"
+          aria-label={t("viewer.close")}
+          title={t("viewer.close")}
+          onClick={onClose}
+          className="flex h-7 w-7 items-center justify-center rounded-control text-tsecondary transition-colors duration-[120ms] hover:bg-white/[.08] hover:text-tprimary"
+        >
+          <X size={15} />
+        </button>
+      </header>
+
       <FilterSlider
         label={t("player.color_saturation")}
         value={Math.round(saturation * 100)}
@@ -1336,6 +1388,10 @@ function ColorPopover() {
         suffix="%"
         onChange={(pct) => void setSharpness(pct / 100)}
       />
+
+      {/* editorial hairline divider (DESIGN §1: the only place borders live) */}
+      <div className="my-3 h-px bg-white/[.06]" />
+
       <button
         type="button"
         disabled={!dirty}
@@ -1344,13 +1400,13 @@ function ColorPopover() {
           void setSharpness(0);
         }}
         className={cn(
-          "mt-1 flex h-8 w-full items-center justify-center gap-1.5 rounded-[10px] font-mono text-[11px] tracking-[0.06em] transition-colors duration-[120ms]",
+          "flex h-10 w-full items-center justify-center gap-2 rounded-control text-[13px] transition-colors duration-[120ms]",
           dirty
             ? "text-tsecondary hover:bg-white/[.08] hover:text-tprimary"
             : "cursor-default text-white/25",
         )}
       >
-        <RotateCcw size={12} />
+        <RotateCcw size={14} />
         {t("player.color_reset")}
       </button>
     </div>
@@ -1375,22 +1431,24 @@ function FilterSlider({
   onChange: (v: number) => void;
 }) {
   return (
-    <label className="mb-2 block last:mb-0">
-      <span className="mb-1.5 flex items-center justify-between text-[12px] text-tsecondary">
+    <label className="mb-3 block last:mb-0">
+      <span className="mb-2 flex items-center justify-between text-[12px] text-tsecondary">
         <span>{label}</span>
-        <span className="font-mono text-[11px] text-tprimary">
+        {/* mono value chip (DESIGN §7/§10 Slider) — tabular figures, never a
+            jumping label while the thumb is dragged */}
+        <span className="rounded-[8px] bg-white/[.06] px-1.5 py-0.5 font-mono text-[10.5px] tabular-nums text-tprimary">
           {value}
           {suffix}
         </span>
       </span>
-      <input
-        type="range"
+      <Slider
+        value={value}
         min={min}
         max={max}
         step={step}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full cursor-pointer accent-[var(--accent)]"
+        aria-label={label}
+        onChange={onChange}
+        className="mt-1"
       />
     </label>
   );
