@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import {
+  AnimatePresence,
+  motion,
+  useMotionValue,
+  useReducedMotion,
+  useSpring,
+} from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import {
@@ -80,6 +86,12 @@ export function Lightbox({ row }: { row: MediaRow }) {
   /** the off-stage position a committed swipe springs from (slide animation) */
   const springBack = useRef<number | null>(null);
   const swipeNavigate = useAppSettings((s) => s.swipeNavigate);
+
+  /** parallax drift of the ambient backdrop (motion values: no re-renders) */
+  const ambX = useMotionValue(0);
+  const ambY = useMotionValue(0);
+  const ambSX = useSpring(ambX, { stiffness: 40, damping: 20 });
+  const ambSY = useSpring(ambY, { stiffness: 40, damping: 20 });
   const pillAlign = useAppSettings((s) => s.pillAlign);
 
   const infoOpen = useViewer((s) => s.infoOpen);
@@ -138,6 +150,13 @@ export function Lightbox({ row }: { row: MediaRow }) {
   // Render-phase reset (React's adjust-state-on-prop-change pattern) closes
   // the gap: React re-renders immediately, before anything paints.
   const [renderedId, setRenderedId] = useState(row.id);
+  // direction + enter offset of the CURRENT row's slide, decided ONCE per row
+  // change (in the reset below — StrictMode renders twice, and a render-phase
+  // IIFE flipped the direction on the second pass). +1 = "next": enters from
+  // the RIGHT edge, exits LEFT; -1 = "back": mirrors it.
+  const prevIndexRef = useRef(index);
+  const directionRef = useRef(1);
+  const enterXRef = useRef(0);
   if (renderedId !== row.id) {
     setRenderedId(row.id);
     commitZoom(1);
@@ -147,6 +166,23 @@ export function Lightbox({ row }: { row: MediaRow }) {
     setFailed(false);
     setNatural({ w: 0, h: 0 });
     setSwipeDx(0);
+    // direction of THIS step, decided ONCE per row change (not per render —
+    // StrictMode renders twice and a render-phase IIFE flipped it): "next"
+    // slides right→left, "back" slides left→right. A committed swipe enters
+    // from where the finger left it (springBack was set by endDrag).
+    if (springBack.current !== null) {
+      directionRef.current = springBack.current > 0 ? 1 : -1;
+      enterXRef.current = springBack.current;
+      springBack.current = null;
+    } else {
+      const d = index - prevIndexRef.current;
+      directionRef.current = d >= 0 ? 1 : -1; // wrap-around reads as "next"
+      enterXRef.current = directionRef.current * stage.w * 0.18;
+    }
+    prevIndexRef.current = index;
+    // the backdrop recentres on every new picture
+    ambX.set(0);
+    ambY.set(0);
   }
 
   /**
@@ -356,22 +392,6 @@ export function Lightbox({ row }: { row: MediaRow }) {
   const name = baseName(row.path);
   const fav = favoriteOf(row);
   const canPrev = index > 0;
-
-  // paging direction for the slide animation: where the cursor moved in the
-  // queue. Swipe-committed navigation sets springBack (enter from the finger);
-  // arrows/keys/wheel just derive the side from the index delta.
-  const prevIndexRef = useRef(index);
-  const direction = (() => {
-    if (springBack.current !== null) {
-      const d = springBack.current > 0 ? 1 : -1;
-      springBack.current = null;
-      return d;
-    }
-    const d = index - prevIndexRef.current;
-    prevIndexRef.current = index;
-    // wrap-around (end → start) reads as "next"
-    return d >= 0 ? 1 : -1;
-  })();
   const canNext = index < queue.length - 1;
 
   const zoomPercent = Math.round(zoom * fit.scale * 100);
@@ -408,14 +428,30 @@ export function Lightbox({ row }: { row: MediaRow }) {
             stage and blurred 60px. The thumb is the RIGHT source here — it is
             blurred beyond recognition anyway, so its 480w is invisible. */}
         {underlaySrc && !failed && (
-          <img
+          <motion.img
             key={`ambient-${row.id}`}
             src={thumbSrc(underlaySrc)}
             alt=""
             aria-hidden
             draggable={false}
-            className="pointer-events-none absolute inset-0 h-full w-full scale-110 object-cover"
+            /* PARALLAX: the backdrop drifts a little against the cursor — a
+               slow, damped follow (stiffness 40) that never tracks 1:1. Motion
+               values drive the transform directly, so the drift costs zero
+               React renders. Reset to centre on every new picture. */
+            onMouseMove={(e) => {
+              if (reduced || zoomRef.current > MIN_ZOOM) return;
+              const r = e.currentTarget.getBoundingClientRect();
+              ambX.set(((e.clientX - r.left) / r.width - 0.5) * -26);
+              ambY.set(((e.clientY - r.top) / r.height - 0.5) * -18);
+            }}
+            onMouseLeave={() => {
+              ambX.set(0);
+              ambY.set(0);
+            }}
+            className="pointer-events-auto absolute inset-0 h-full w-full scale-110 object-cover"
             style={{
+              x: ambSX,
+              y: ambSY,
               filter: "blur(60px) saturate(1.4)",
               opacity: loaded ? 0.5 : 0.35,
               transition: "opacity 400ms ease-out",
@@ -445,20 +481,21 @@ export function Lightbox({ row }: { row: MediaRow }) {
           />
         )}
 
-        <AnimatePresence mode="popLayout" initial={false} custom={direction}>
+        <AnimatePresence mode="popLayout" initial={false}>
           <motion.div
             key={row.id}
-            custom={direction}
-            /* THE paging animation (user: раньше заезжала и исчезала): the new
-               picture SLIDES IN from the side you are walking towards while the
-               old one slides out the opposite edge; a committed swipe enters
-               from where the finger left it. Reduced motion = plain crossfade. */
+            /* THE paging animation, direction-fixed: "next" enters from the
+               RIGHT edge and exits LEFT; "back" mirrors it. The direction is
+               decided once per row change (see the reset above), so the exit
+               of the outgoing picture and the enter of the incoming one always
+               agree. A committed swipe enters from where the finger left it.
+               Reduced motion = plain crossfade. */
             initial={
               reduced
                 ? { opacity: 0 }
                 : {
                     opacity: 0,
-                    x: springBack.current ?? (direction >= 0 ? stage.w * 0.18 : -stage.w * 0.18),
+                    x: enterXRef.current || directionRef.current * stage.w * 0.18,
                     scale: 0.985,
                   }
             }
@@ -466,9 +503,12 @@ export function Lightbox({ row }: { row: MediaRow }) {
             exit={
               reduced
                 ? { opacity: 0 }
-                : { opacity: 0, x: direction >= 0 ? -stage.w * 0.12 : stage.w * 0.12 }
+                : {
+                    opacity: 0,
+                    x: -directionRef.current * stage.w * 0.12,
+                  }
             }
-            transition={{ duration: reduced ? 0 : 0.22, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: reduced ? 0 : 0.24, ease: [0.22, 1, 0.36, 1] }}
             className="absolute inset-0 flex items-center justify-center"
           >
             {failed ? (
