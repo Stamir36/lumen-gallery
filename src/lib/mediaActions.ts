@@ -102,7 +102,12 @@ export async function setFavorite(ids: number[], favorite: boolean) {
  * back and toasts. Uses the LOCAL row cache (no full refetch needed to see
  * the change), invalidated queries update the DB copy in the background.
  */
-export async function toggleFavorite(id: number) {
+/**
+ * Returns whether the write actually landed, so optimistic OVERRIDES held
+ * outside the query cache (the viewer's session favourites, B9) can be dropped
+ * on rollback instead of keeping a heart the database never took.
+ */
+export async function toggleFavorite(id: number): Promise<boolean> {
   let rollback: (() => void) | undefined;
   try {
     // optimistic: flip the heart in every cached "media" payload NOW
@@ -126,10 +131,12 @@ export async function toggleFavorite(id: number) {
     );
     if (affected === 0) throw new Error("row not found");
     await invalidateAfterWrite();
+    return true;
   } catch (e) {
     console.error("toggle favorite failed", e);
     rollback?.();
     toast.error(i18n.t("errors.action_failed"));
+    return false;
   }
 }
 

@@ -105,7 +105,17 @@ export const useViewer = create<ViewerState>((set, get) => ({
   toggleFavorite: (row) => {
     const now = get().favoriteOf(row);
     set((s) => ({ favorites: { ...s.favorites, [row.id]: !now } }));
-    void persistFavorite(row.id);
+    // B9: the optimistic flip here is SEPARATE from the query cache, so a failed
+    // write used to roll the grid back but leave the viewer's heart flipped —
+    // heart and DB disagreed until restart. Drop the override with the cache.
+    void persistFavorite(row.id).then((ok) => {
+      if (ok) return;
+      set((s) => {
+        const favorites = { ...s.favorites };
+        delete favorites[row.id];
+        return { favorites };
+      });
+    });
   },
 
   favoriteOf: (row) => get().favorites[row.id] ?? row.favorite,
