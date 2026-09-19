@@ -106,6 +106,7 @@ pub async fn mini_note_position(
 #[tauri::command]
 pub async fn open_mini_player(app: AppHandle, payload: MiniPayload) -> Result<(), String> {
     use tauri::{WebviewUrl, WebviewWindowBuilder};
+    use tauri::Manager;
 
     let payload_json = serde_json::to_string(&payload).map_err(|e| e.to_string())?;
     if let Some(existing) = app.get_webview_window("mini") {
@@ -114,6 +115,11 @@ pub async fn open_mini_player(app: AppHandle, payload: MiniPayload) -> Result<()
             .eval(format!("window.__LUMEN_MINI__ = {payload_json};"))
             .map_err(|e| e.to_string())?;
         let _ = existing.set_focus();
+        // F5: the mini player REPLACES the main window on screen — hide the
+        // main window again in case it was re-shown while the mini was open
+        if let Some(main) = app.get_webview_window("main") {
+            let _ = main.hide();
+        }
         return Ok(());
     }
     let window = WebviewWindowBuilder::new(
@@ -134,6 +140,11 @@ pub async fn open_mini_player(app: AppHandle, payload: MiniPayload) -> Result<()
     window
         .eval(format!("window.__LUMEN_MINI__ = {payload_json};"))
         .map_err(|e| e.to_string())?;
+    // F5: hide the main window ONLY after the mini exists — if the builder
+    // failed, the user keeps their window instead of losing the app
+    if let Some(main) = app.get_webview_window("main") {
+        let _ = main.hide();
+    }
     Ok(())
 }
 
@@ -157,6 +168,13 @@ pub async fn mini_return(
         if let Some(mini) = app.get_webview_window("mini") {
             mini.close().map_err(|e| e.to_string())?;
         }
+    }
+    // F5: the mini window was REPLACING the main one on screen — bring the
+    // main window back exactly when the mini goes away
+    use tauri::Manager;
+    if let Some(main) = app.get_webview_window("main") {
+        let _ = main.show();
+        let _ = main.set_focus();
     }
     Ok(())
 }
