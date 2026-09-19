@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useTranslation } from "react-i18next";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import {
   ArrowLeft,
   ChevronLeft,
@@ -357,7 +358,12 @@ export function Lightbox({ row }: { row: MediaRow }) {
           <div className="shimmer-bg absolute inset-0 opacity-60" aria-hidden />
         )}
 
-        {/* instant underlay: the cached thumb, underneath the original */}
+        {/* instant underlay: the cached thumb, underneath the original.
+            GEOMETRY BUG (user screenshot): `max-h/max-w` let it paint at its
+            NATURAL 480px size in the top-left corner for a frame before the
+            original took over. It must share the stage box from the very first
+            paint — absolute inset-0 + object-contain — so the only difference
+            from the original is sharpness, never position or scale. */}
         {!failed && underlaySrc && (
           <img
             key={`thumb-${row.id}`}
@@ -366,7 +372,7 @@ export function Lightbox({ row }: { row: MediaRow }) {
             aria-hidden
             draggable={false}
             className={cn(
-              "pointer-events-none absolute max-h-full max-w-full select-none object-contain transition-opacity duration-200 ease-out",
+              "pointer-events-none absolute inset-0 h-full w-full select-none object-contain transition-opacity duration-200 ease-out",
               loaded ? "opacity-0" : "opacity-100",
             )}
           />
@@ -465,11 +471,35 @@ export function Lightbox({ row }: { row: MediaRow }) {
           <ChevronRight size={22} />
         </button>
 
+        {/* ---------- top letterbox band: drags the window ----------
+            The window is frameless; with the viewer open the ONLY chrome is
+            this bar, so the band above the image (and the bar's own empty
+            stretches) must drag the window. Interactive children sit on top
+            and swallow their own mousedown, so they stay clickable. */}
+        <div
+          data-tauri-drag-region="true"
+          onMouseDown={(e) => {
+            if (e.buttons === 1) void getCurrentWindow().startDragging();
+          }}
+          className="absolute inset-x-0 top-0 z-30 h-16 cursor-default"
+        />
+
         {/* ---------- one balanced top bar: back (· X) · name · shuffle ----------
             The X exists ONLY for a file this window was OPENED with — in an
             internal session it does the same thing as the back arrow, so it is
-            not rendered (bug: two controls, one action). */}
-        <div className="absolute inset-x-4 top-4 z-40 flex items-center gap-2">
+            not rendered (bug: two controls, one action). The bar background
+            between the clusters drags the window (F1). */}
+        <div
+          data-tauri-drag-region="true"
+          onMouseDown={(e) => {
+            // only the bar's own background drags; every control (and the
+            // name pill) is a child that becomes the event target itself
+            if (e.target === e.currentTarget && e.buttons === 1) {
+              void getCurrentWindow().startDragging();
+            }
+          }}
+          className="absolute inset-x-4 top-4 z-40 flex items-center gap-2"
+        >
           <div className="flex min-w-0 items-center gap-2">
             <button
               type="button"

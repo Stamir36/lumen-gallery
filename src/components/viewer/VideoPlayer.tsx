@@ -34,6 +34,7 @@ import {
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { cn } from "@/lib/utils";
 import { invoke } from "@tauri-apps/api/core";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { listen } from "@tauri-apps/api/event";
 import { mediaUrl } from "@/lib/api";
 import { tauriAvailable } from "@/lib/assets";
@@ -704,6 +705,18 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
         </div>
       )}
 
+      {/* ---------- top window-drag band ----------
+            Frameless window + fullscreen-ish video: without this band there is
+            NOWHERE to grab the window while the viewer is open (F1). It sits
+            UNDER the chrome bar; the bar's own background drags too. */}
+      <div
+        data-tauri-drag-region="true"
+        onMouseDown={(e) => {
+          if (e.buttons === 1) void getCurrentWindow().startDragging();
+        }}
+        className="absolute inset-x-0 top-0 z-30 h-16 cursor-default"
+      />
+
       {/* ---------- top-left glass chip row ---------- */}
       <AnimatePresence>
         {showChrome && !error && (
@@ -714,6 +727,14 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
             animate={{ y: 0 }}
             exit={reduced ? { opacity: 0 } : { y: -12 }}
             transition={{ type: "spring", stiffness: 260, damping: 26 }}
+            data-tauri-drag-region="true"
+            onMouseDown={(e) => {
+              // only the bar's own background drags; every control (and the
+              // name pill) is a child that becomes the event target itself
+              if (e.target === e.currentTarget && e.buttons === 1) {
+                void getCurrentWindow().startDragging();
+              }
+            }}
             className="absolute inset-x-4 top-4 z-40 flex items-center gap-2"
           >
             {/* LEFT — back to the gallery, and the X ONLY when this window was
