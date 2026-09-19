@@ -94,15 +94,24 @@ async function bootstrap() {
             <Route path="/miniplayer" element={<MiniPlayer />} />
           </Routes>
         </HashRouter>
+        {/* P9 motion/density: three toasts is a stack, four is a wall. Older
+            ones collapse behind the newest (sonner's own spring), and the panel
+            matches the app's control tokens instead of the library default. */}
         <Toaster
           position="bottom-right"
+          visibleToasts={3}
+          gap={10}
+          offset={18}
+          closeButton={false}
           toastOptions={{
             style: {
-              background: "var(--surface-1)",
+              background: "var(--surface-2)",
               border: "1px solid var(--border)",
               color: "var(--text-primary)",
               borderRadius: "var(--radius-control)",
               boxShadow: "var(--shadow-popover)",
+              padding: "12px 14px",
+              fontSize: "13px",
             },
           }}
         />

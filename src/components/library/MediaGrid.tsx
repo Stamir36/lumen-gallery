@@ -98,6 +98,18 @@ export function MediaGrid({
   }, [collageOpen, collageRows.length]);
 
   // ---------- sticky date header ----------
+  // ---------- P9 motion: one entry stagger per route change ----------
+  // Keyed on the ROUTE (not on the rows): a favourite toggle refetches the
+  // query and must not replay the animation under the user's cursor.
+  const route = useLibraryUi((s) => s.route);
+  const routeKey = useMemo(() => JSON.stringify(route), [route]);
+  const [stagger, setStagger] = useState(false);
+  useEffect(() => {
+    setStagger(true);
+    const id = window.setTimeout(() => setStagger(false), 460);
+    return () => window.clearTimeout(id);
+  }, [routeKey]);
+
   const openViewer = useViewer((s) => s.openAt);
   const revealId = useViewer((s) => s.revealId);
   const clearReveal = useViewer((s) => s.clearReveal);
@@ -373,6 +385,8 @@ export function MediaGrid({
             focusId={focusId}
             selectionMode={selectionMode}
             selected={selectedSet}
+            // P9: 20ms per row, first 12 only (see index.css)
+            staggerMs={stagger && index < 12 ? index * 20 : undefined}
             onToggleSelect={toggleSelected}
             // STEP 1: a click on the card (not the checkbox) opens the viewer at
             // that index; the queue is the CURRENT view order, so arrows and the
@@ -614,6 +628,7 @@ const GridRow = memo(function GridRow({
   focusId,
   selectionMode,
   selected,
+  staggerMs,
   onToggleSelect,
   onActivate,
 }: {
@@ -622,6 +637,8 @@ const GridRow = memo(function GridRow({
   focusId: number | null;
   selectionMode: boolean;
   selected: Set<number>;
+  /** P9 entry stagger: animation delay in ms, undefined = settled */
+  staggerMs?: number;
   onToggleSelect: (id: number) => void;
   onActivate: (id: number) => void;
 }) {
@@ -728,8 +745,17 @@ const GridRow = memo(function GridRow({
   // gutter must live on a wrapper and the cells inside a positioned box.
   return (
     <div
-      className={cn("h-full", view === "square" && "overflow-visible")}
-      style={{ height: row.height, paddingLeft: GUTTER, paddingRight: GUTTER }}
+      className={cn(
+        "h-full",
+        view === "square" && "overflow-visible",
+        staggerMs !== undefined && "stagger-in",
+      )}
+      style={{
+        height: row.height,
+        paddingLeft: GUTTER,
+        paddingRight: GUTTER,
+        animationDelay: staggerMs !== undefined ? `${staggerMs}ms` : undefined,
+      }}
     >
       <div className="relative h-full">{cells}</div>
     </div>

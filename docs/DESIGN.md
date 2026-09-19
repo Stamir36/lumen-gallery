@@ -1,4 +1,4 @@
-# LUMEN — Design System v2 «Soft Glass Editorial»
+# LUMEN — Design System v2.5 «Soft Glass Editorial»
 
 > **READ THIS FILE BEFORE ANY UI WORK.** Every UI decision must trace back to a
 > token or rule here. Feel: Material You softness + matte frosted glass +
@@ -139,12 +139,30 @@ Two families plus one narrow exception, all bundled locally via @fontsource:
 | Menu item | 40 |
 | FAB | 56, radius 20 |
 
-## 8. Motion
+## 8. Motion — v2.5 (motion scale)
 
-- framer-motion springs 260/26; hover 160ms ease-out.
-- Hover: lift −2px (translateY) + soft shadow + faint accent glow.
+**The scale (v2.5).** Every animation picks one of these four, by name:
+
+| Token | Value | What it is for |
+|---|---|---|
+| `fast` | 120ms | hover / colour / state tint on a control already on screen |
+| `base` | 160ms | the default: menus, popovers, chrome fade, hover lift |
+| `slow` | 240ms | panels that change the layout — sheets, filmstrip, info rail |
+| `viewer-spring` | 180ms, `cubic-bezier(.22,1,.36,1)` | the viewer opening and closing |
+
+- Hover: lift −2px (translateY) + soft shadow + faint accent glow — `base`.
 - Pressed: scale .97. Route cross-fade 180ms.
-- Honor `prefers-reduced-motion`.
+- **Viewer:** opens at scale .96 + opacity from `transform-origin` = the point
+  the user clicked (the last pointer-down, inside the card); closes back toward
+  the same origin. Arrow navigation through the queue does NOT re-run it: the
+  overlay's AnimatePresence key is constant, so only open and close animate.
+- **Library entry:** rows fade + rise 4px, 20ms apart, first 12 rows only, for
+  460ms after a route change (`.stagger-in`, index.css). Never on refetch, never
+  on scroll.
+- **Toasts:** max 3 visible; newest in front, older collapse behind it (sonner).
+- framer-motion springs 260/26 for anything the scale does not name.
+- Honor `prefers-reduced-motion` — every one of the above collapses to a fade
+  or to nothing.
 
 ## 9. Focus & Scrollbars
 

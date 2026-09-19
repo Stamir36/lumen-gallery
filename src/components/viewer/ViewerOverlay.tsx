@@ -1,5 +1,6 @@
 import { useEffect, useRef, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { createPortal } from "react-dom";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { baseName } from "@/lib/format";
 import { stopCardPreviews } from "@/components/library/MediaCard";
@@ -21,6 +22,31 @@ export function ViewerOverlay() {
   const rootRef = useRef<HTMLDivElement>(null);
   /** where the keyboard was before the viewer took over (B4) */
   const restoreRef = useRef<HTMLElement | null>(null);
+  const reduced = useReducedMotion();
+
+  /**
+   * P9 motion — the viewer grows OUT OF THE POINT THE USER CLICKED.
+   *
+   * The activation callbacks are deliberately id-only (`onActivate(id)`, B6) so
+   * the grid's rows stay memoizable; rather than widen that contract, the last
+   * pointer-down is recorded here. It is the click that opened the viewer, and
+   * it is inside the card — the same thing a rect lookup would give, for every
+   * activation path (grid, list, filmstrip, collage) at once. Older than 800ms
+   * means the open came from somewhere else (external file, keyboard Enter) and
+   * the viewer grows from the centre instead.
+   */
+  const pointerAt = useRef<{ x: number; y: number; t: number } | null>(null);
+  useEffect(() => {
+    const onDown = (e: PointerEvent) => {
+      pointerAt.current = { x: e.clientX, y: e.clientY, t: performance.now() };
+    };
+    window.addEventListener("pointerdown", onDown, true);
+    return () => window.removeEventListener("pointerdown", onDown, true);
+  }, []);
+  const origin = (() => {
+    const p = pointerAt.current;
+    return p && performance.now() - p.t < 800 ? `${p.x}px ${p.y}px` : "center";
+  })();
 
   /**
    * B4 — FOCUS CONTRACT for a modal overlay:
@@ -75,27 +101,41 @@ export function ViewerOverlay() {
   }, [open]);
 
   const row = queue[index];
-  if (!open || !row) return null;
 
   return createPortal(
-    <div
-      ref={rootRef}
-      role="dialog"
-      aria-modal="true"
-      aria-label={baseName(row.path)}
-      tabIndex={-1}
-      onKeyDown={trapTab}
-      className="fixed inset-0 z-[120] bg-black outline-none"
-    >
-      {row.kind === "video" ? (
-        // key: a new item gets a fresh <video> (no stale decoder state)
-        <VideoPlayer key={row.id} row={row} />
-      ) : (
-        <Lightbox row={row} />
-      )}
-      {/* screen-reader hint: the queue position (mono counter contract) */}
-      <span className="sr-only">{t("viewer.position", { index: index + 1, total: queue.length })}</span>
-    </div>,
+    // AnimatePresence keeps the overlay mounted for the exit beat. The key is
+    // CONSTANT ("viewer"), so walking the queue with the arrows never re-runs
+    // the open animation — only opening and closing do.
+    <AnimatePresence>
+      {open && row ? (
+        <motion.div
+          key="viewer"
+          ref={rootRef}
+          role="dialog"
+          aria-modal="true"
+          aria-label={baseName(row.path)}
+          tabIndex={-1}
+          onKeyDown={trapTab}
+          initial={reduced ? false : { opacity: 0, scale: 0.96 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={reduced ? { opacity: 0 } : { opacity: 0, scale: 0.96 }}
+          transition={{ duration: reduced ? 0 : 0.18, ease: [0.22, 1, 0.36, 1] }}
+          style={{ transformOrigin: origin }}
+          className="fixed inset-0 z-[120] bg-black outline-none"
+        >
+          {row.kind === "video" ? (
+            // key: a new item gets a fresh <video> (no stale decoder state)
+            <VideoPlayer key={row.id} row={row} />
+          ) : (
+            <Lightbox row={row} />
+          )}
+          {/* screen-reader hint: the queue position (mono counter contract) */}
+          <span className="sr-only">
+            {t("viewer.position", { index: index + 1, total: queue.length })}
+          </span>
+        </motion.div>
+      ) : null}
+    </AnimatePresence>,
     document.body,
   );
 }
