@@ -31,7 +31,7 @@ import { baseName, formatResolution } from "@/lib/format";
 import { trashMedia } from "@/lib/mediaActions";
 import { useViewer } from "@/state/viewer";
 import { useAppSettings } from "@/lib/settings";
-import { thumbSrc, useThumbStore } from "@/lib/thumbs";
+import { thumbSrc, useThumbStore, enqueueRows } from "@/lib/thumbs";
 import { keepWarm, preloadViewerNeighbors } from "@/lib/preload";
 import { Filmstrip } from "./Filmstrip";
 
@@ -240,6 +240,15 @@ export function Lightbox({ row }: { row: MediaRow }) {
   useEffect(() => {
     keepWarm(row.id);
   }, [row.id]);
+
+  // B4 — guarantee the ambient/blur underlay exists: a row that was never in
+  // the grid (shuffle, external open) has no cached thumbnail, which is exactly
+  // when the stage fell to plain black. Asking for one paints the wash within
+  // a moment and also gives the blur-up its source.
+  useEffect(() => {
+    if (row.kind !== "image") return;
+    enqueueRows([row]);
+  }, [row]);
 
   const clampPan = useCallback(
     (x: number, y: number, z: number) => {

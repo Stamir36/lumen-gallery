@@ -410,9 +410,6 @@ export default function App() {
               items={items}
               railBottom={railBottom}
               status={statusBar}
-              // F15: the switch is in the titlebar (App right slot) — the rail
-              // shell used to carry a second copy in its chips panel
-              search={null}
             >
               {gridArea}
             </RailShell>

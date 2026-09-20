@@ -49,7 +49,6 @@ export function RailShell({
   items,
   railBottom,
   status,
-  search,
   children,
 }: {
   title: string;
@@ -59,8 +58,6 @@ export function RailShell({
   railBottom?: React.ReactNode;
   /** the mono status line, pinned under the grid */
   status?: React.ReactNode;
-  /** the search field React node, rendered by App inside the window titlebar */
-  search: React.ReactNode;
   children: React.ReactNode;
 }) {
   const { t } = useTranslation();
@@ -91,7 +88,6 @@ export function RailShell({
     return () => window.removeEventListener("keydown", onKey);
   }, []);
   void searchRef;
-  void search;
 
   const root = route.kind === "root" ? roots.find((r) => r.id === route.rootId) : undefined;
   // no matching chip (a root route, albums, trash) → nothing is highlighted

@@ -145,7 +145,7 @@ interface AppSettingsState {
 export const useAppSettings = create<AppSettingsState>((set) => ({
   videoScrubRate: DEFAULT_SCRUB_RATE,
   hoverCaptions: true,
-  cardHover: true,
+  cardHover: false,
   textSelection: false,
   videoAutoplay: true,
   swipeNavigate: true,
@@ -175,7 +175,7 @@ export const useAppSettings = create<AppSettingsState>((set) => ({
           Number.isFinite(raw) && raw > 0 ? raw : DEFAULT_SCRUB_RATE,
         // absent = first run: captions are ON by default (F2)
         hoverCaptions: byKey.get(HOVER_CAPTIONS_KEY) !== "false",
-        cardHover: byKey.get(CARD_HOVER_KEY) !== "false",
+        cardHover: byKey.get(CARD_HOVER_KEY) === "true",
         textSelection: byKey.get(TEXT_SELECTION_KEY) === "true",
         videoAutoplay: byKey.get(VIDEO_AUTOPLAY_KEY) !== "false",
         swipeNavigate: byKey.get(SWIPE_NAVIGATE_KEY) !== "false",

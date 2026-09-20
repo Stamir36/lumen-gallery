@@ -3,6 +3,7 @@ import type { MediaRow } from "@/lib/api";
 import { computeMasonryColumns, ratioOf } from "@/lib/justified";
 import { DENSITY_PARAMS, useAppSettings } from "@/lib/settings";
 import { useElementWidth, useRafScroll } from "@/lib/hooks";
+import { setViewportIds } from "@/lib/thumbs";
 import { MediaCard } from "./MediaCard";
 
 /**
@@ -103,16 +104,30 @@ export function Masonry({
   }, [revealId, positionOf, onRevealed]);
 
   const columnWidth = packed.colW;
-  const tiles: { media: MediaRow; x: number; y: number; h: number }[] = [];
-  packed.columns.forEach((col, c) => {
-    const x = c * (columnWidth + gap);
-    col.items.forEach((itemIndex, k) => {
-      const y = col.offsets[k];
-      const h = col.heights[k];
-      if (y + h < view.top - pad || y > view.bottom + pad) return;
-      tiles.push({ media: visibleRows[itemIndex], x, y, h });
+  // F8: the same window the render walks — memoised so the viewport broadcast
+  // below is a cheap identity check, not a rebuild per frame
+  const tiles = useMemo(() => {
+    const out: { media: MediaRow; x: number; y: number; h: number }[] = [];
+    packed.columns.forEach((col, c) => {
+      const x = c * (columnWidth + gap);
+      col.items.forEach((itemIndex, k) => {
+        const y = col.offsets[k];
+        const h = col.heights[k];
+        if (y + h < view.top - pad || y > view.bottom + pad) return;
+        out.push({ media: visibleRows[itemIndex], x, y, h });
+      });
     });
-  });
+    return out;
+  }, [packed, columnWidth, gap, view, pad, visibleRows]);
+
+  // F8 — MASONRY HAD NO VIEWPORT PRIORITY AT ALL: `setViewportIds` was only
+  // ever fed by the virtualized (Virtuoso) path, so in this mode the thumbnail
+  // queue had no idea what was on screen and served tiles roughly in mount
+  // order. Publishing the window here is what makes a fast masonry scroll look
+  // like the other views instead of like "nothing ever loads".
+  useEffect(() => {
+    setViewportIds(tiles.map((t) => t.media.id));
+  }, [tiles]);
 
   return (
     <div className="flex h-full min-h-0 flex-col">
