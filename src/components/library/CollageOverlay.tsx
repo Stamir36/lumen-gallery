@@ -192,7 +192,7 @@ export function CollageOverlay({ rows, onClose }: { rows: MediaRow[]; onClose: (
     >
       <div
         className="grid min-h-0 min-w-0 flex-1"
-        style={{ gap: 12, gridTemplateColumns: layout.cols, gridTemplateRows: layout.rows }}
+        style={{ gap: 10, gridTemplateColumns: layout.cols, gridTemplateRows: layout.rows }}
       >
         {rows.slice(0, layout.tiles.length).map((row, i) => (
           <CollageTile
