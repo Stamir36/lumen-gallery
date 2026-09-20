@@ -196,6 +196,11 @@ export const useAppSettings = create<AppSettingsState>((set) => ({
       });
       // the stored accent wins over the pre-paint cache
       applyAccent(readAccent(byKey.get(ACCENT_SETTING_KEY)));
+      // F13: restore the text-selection preference (default OFF = native feel)
+      document.documentElement.classList.toggle(
+        "allow-select",
+        byKey.get(TEXT_SELECTION_KEY) === "true",
+      );
     } catch (e) {
       console.error("settings load failed", e);
       set({ loaded: true });

@@ -111,6 +111,11 @@ let flushTimer: number | null = null;
 const FLUSH_MS = 60;
 /** sub-batch size (S1.2): the first cold tiles must land under ~1 s */
 const MAX_BATCH = 24;
+/** …but a FAST SCROLL changes the arithmetic (F8): a fling paints dozens of
+ *  new tiles at once; at 24/flush they were visibly late. 48/flush halves the
+ *  latency for the visible range — the engine decodes in parallel anyway, so
+ *  the wall-clock cost is ≈ the slowest image, not the sum. */
+const MAX_BATCH_SCROLL = 48;
 /**
  * Above this many queued ids a flush DROPS offscreen work instead of deferring
  * it (B7/P0-0d). Flinging through the library used to enqueue every row ever
@@ -191,7 +196,10 @@ async function flush() {
     }
   }
 
-  const ids = [...onScreen, ...offscreen].slice(0, MAX_BATCH);
+  // F8: under a scroll storm (queue above the drop threshold) take the bigger
+  // batch — the visible range must be served in ONE pass, not two
+  const cap = queued.size > QUEUE_DROP_THRESHOLD ? MAX_BATCH_SCROLL : MAX_BATCH;
+  const ids = [...onScreen, ...offscreen].slice(0, cap);
   if (ids.length === 0) return;
   for (const id of ids) {
     queued.delete(id);

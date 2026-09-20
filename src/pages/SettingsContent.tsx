@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { invoke } from "@tauri-apps/api/core";
 import { appCacheDir, appLogDir, join } from "@tauri-apps/api/path";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import {
-  Check,
   FolderOpen,
   Languages,
   Palette,
@@ -17,12 +17,13 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DENSITY_PARAMS, SCRUB_RATES, THUMB_WORKER_OPTIONS, useAppSettings, type GridDensity, type MainLayout } from "@/lib/settings";
-import { ACCENTS, DEFAULT_ACCENT, isPresetAccent } from "@/lib/accent";
+import { ACCENTS } from "@/lib/accent";
 import { ExcludedFolders } from "@/components/settings/ExcludedFolders";
 import { FileAssociations } from "@/components/settings/FileAssociations";
 import { LanguageDropdown } from "@/components/LanguageSwitcher";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Segmented } from "@/components/ui/Segmented";
+import { AccentPicker } from "@/components/ui/AccentPicker";
 import { PillButton } from "@/components/ui/PillButton";
 import { IconButton } from "@/components/ui/IconButton";
 import { api, formatBytes, type RootRow } from "@/lib/api";
@@ -79,14 +80,23 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section id={id} className="scroll-mt-6">
+    // F11: each section rises in as it scrolls into view — the page used to be
+    // one static slab. `whileInView` + once, so scrolling back up is quiet.
+    <motion.section
+      id={id}
+      className="scroll-mt-6"
+      initial={{ opacity: 0, y: 14 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.06 }}
+      transition={{ type: "spring", stiffness: 260, damping: 26 }}
+    >
       <div className="mb-6 flex items-center gap-4">
         <span className="text-3xl font-extralight tracking-tight text-accent">{index}</span>
         <h2 className="text-xl font-semibold text-tprimary">{title}</h2>
         <div className="divider mt-4 flex-1" />
       </div>
       {children}
-    </section>
+    </motion.section>
   );
 }
 
@@ -106,6 +116,10 @@ export function SettingsContent() {
   const setScrubRate = useAppSettings((s) => s.setVideoScrubRate);
   const hoverCaptions = useAppSettings((s) => s.hoverCaptions);
   const setHoverCaptions = useAppSettings((s) => s.setHoverCaptions);
+  const cardHover = useAppSettings((s) => s.cardHover);
+  const setCardHover = useAppSettings((s) => s.setCardHover);
+  const textSelection = useAppSettings((s) => s.textSelection);
+  const setTextSelection = useAppSettings((s) => s.setTextSelection);
   const accent = useAppSettings((s) => s.accent);
   const setAccent = useAppSettings((s) => s.setAccent);
   const gridDensity = useAppSettings((s) => s.gridDensity);
@@ -464,6 +478,60 @@ export function SettingsContent() {
               </button>
             </div>
             <div className="flex min-h-16 items-center justify-between border-t border-hairline py-4">
+              <span className="flex flex-col gap-0.5">
+                <span className="text-sm text-tprimary">
+                  {t("settings.card_hover")}
+                </span>
+                <span className="text-[12px] text-ttertiary">
+                  {t("settings.card_hover_hint")}
+                </span>
+              </span>
+              <button
+                role="switch"
+                aria-checked={cardHover}
+                aria-label={t("settings.card_hover")}
+                onClick={() => void setCardHover(!cardHover)}
+                className={
+                  "relative h-6 w-11 rounded-pill transition-colors duration-[160ms] ease-out " +
+                  (cardHover ? "bg-accent" : "bg-surface-3")
+                }
+              >
+                <span
+                  className={
+                    "absolute top-0.5 h-5 w-5 rounded-pill bg-white transition-all duration-[160ms] ease-out " +
+                    (cardHover ? "left-[22px]" : "left-0.5")
+                  }
+                />
+              </button>
+            </div>
+            <div className="flex min-h-16 items-center justify-between border-t border-hairline py-4">
+              <span className="flex flex-col gap-0.5">
+                <span className="text-sm text-tprimary">
+                  {t("settings.text_selection")}
+                </span>
+                <span className="text-[12px] text-ttertiary">
+                  {t("settings.text_selection_hint")}
+                </span>
+              </span>
+              <button
+                role="switch"
+                aria-checked={textSelection}
+                aria-label={t("settings.text_selection")}
+                onClick={() => void setTextSelection(!textSelection)}
+                className={
+                  "relative h-6 w-11 rounded-pill transition-colors duration-[160ms] ease-out " +
+                  (textSelection ? "bg-accent" : "bg-surface-3")
+                }
+              >
+                <span
+                  className={
+                    "absolute top-0.5 h-5 w-5 rounded-pill bg-white transition-all duration-[160ms] ease-out " +
+                    (textSelection ? "left-[22px]" : "left-0.5")
+                  }
+                />
+              </button>
+            </div>
+            <div className="flex min-h-16 items-center justify-between border-t border-hairline py-4">
               <span className="text-sm text-tprimary">
                 {t("settings.video_autoplay")}
               </span>
@@ -575,31 +643,10 @@ export function SettingsContent() {
                     />
                   );
                 })}
-                {/* custom swatch (Material You): any hex flows through the same
-                    CSS vars — the active ring marks a NON-preset colour */}
-                <label
-                  title={t("settings.accent_custom")}
-                  aria-label={t("settings.accent_custom")}
-                  className={cn(
-                    "relative flex h-8 w-8 cursor-pointer items-center justify-center overflow-hidden rounded-pill transition-all duration-[160ms] ease-out hover:scale-105 active:scale-[.94]",
-                    isPresetAccent(accent)
-                      ? "opacity-90 hover:opacity-100"
-                      : "ring-2 ring-white/85 ring-offset-2 ring-offset-surface-1",
-                  )}
-                  style={{
-                    background: isPresetAccent(accent)
-                      ? "conic-gradient(from 200deg, #8A7CFF, #F45BD8, #FF7A59, #AEE64B, #45E3E0, #6EC1FF, #8A7CFF)"
-                      : accent,
-                  }}
-                >
-                  {!isPresetAccent(accent) && <Check size={13} strokeWidth={3} className="text-[#0A0A0C]" />}
-                  <input
-                    type="color"
-                    value={/^#[0-9a-fA-F]{6}$/.test(accent) ? accent : DEFAULT_ACCENT}
-                    onChange={(e) => void setAccent(e.target.value)}
-                    className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                  />
-                </label>
+                {/* F12: the in-app HSV picker (hue strip + saturation field +
+                    hex field). The OS colour dialog was the one piece of chrome
+                    that screamed "web page" */}
+                <AccentPicker accent={accent} onPick={(hex) => void setAccent(hex)} />
               </div>
             </div>
 

@@ -9,7 +9,6 @@ import {
   Heart,
   Image as ImageIcon,
   Images,
-  Layers,
   Plus,
   RefreshCw,
   Settings,
@@ -59,7 +58,8 @@ const SMART_ITEMS: { id: SmartView; labelKey: string; icon: React.ReactNode }[] 
   { id: "images", labelKey: "sidebar.images", icon: <ImageIcon /> },
   { id: "videos", labelKey: "sidebar.videos", icon: <Film /> },
   { id: "favorites", labelKey: "sidebar.favorites", icon: <Heart /> },
-  { id: "albums", labelKey: "sidebar.albums", icon: <Layers /> },
+  // F7: Albums stay out of the sidebar until Phase 5 ships real collections —
+  // a smart view that silently re-lists "All media" reads as a bug, not a feature
   { id: "recents", labelKey: "sidebar.recents", icon: <Clock /> },
   { id: "trash", labelKey: "sidebar.trash", icon: <Trash2 /> },
 ];

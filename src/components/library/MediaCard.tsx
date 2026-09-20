@@ -70,6 +70,9 @@ export const MediaCard = memo(function MediaCard({
   const scrubRate = useAppSettings((s) => s.videoScrubRate);
   // Settings › Appearance: filename caption over the hover gradient (F2)
   const hoverCaptions = useAppSettings((s) => s.hoverCaptions);
+  // Settings › Interface (F14): card lift + inner scale on hover, default ON.
+  // OFF = a still grid — only the gradient/chips reveal (no millimetre jump).
+  const cardHover = useAppSettings((s) => s.cardHover);
   const isVideo = media.kind === "video";
   const [preview, setPreview] = useState(false);
   const [scrubFailed, setScrubFailed] = useState(false);
@@ -233,7 +236,9 @@ export const MediaCard = memo(function MediaCard({
         }}
         className={cn(
           "absolute inset-0 overflow-hidden transition-[transform,box-shadow] duration-[160ms] ease-out",
-          "hover:-translate-y-0.5 hover:z-10",
+          // F14: the lift + inner zoom are one setting — OFF = the card stays
+          // put, only the gradient/caption reveal (a still grid, no jiggle)
+          cardHover && "hover:-translate-y-0.5 hover:z-10",
           "hover:shadow-[0_12px_28px_rgba(0,0,0,.4),0_0_0_1px_var(--accent-soft)]",
           "active:scale-[.97]",
           selected && "ring-2 ring-accent/60",
@@ -252,7 +257,12 @@ export const MediaCard = memo(function MediaCard({
             </span>
           </div>
         ) : (
-          <div className="absolute inset-0 transition-transform duration-[160ms] ease-out group-hover:scale-[1.03]">
+          <div
+            className={cn(
+              "absolute inset-0 transition-transform duration-[160ms] ease-out",
+              cardHover && "group-hover:scale-[1.03]",
+            )}
+          >
             <ThumbTile media={media} />
           </div>
         )}
@@ -285,7 +295,7 @@ export const MediaCard = memo(function MediaCard({
           </span>
         )}
 
-        {isVideo && !media.offline && (
+                {isVideo && !media.offline && !selectionMode && (
           // small corner chip, not a centre glyph: the preview belongs to the
           // photo, not to the badge. Hides on hover — the caption + chips own
           // the card then; hides while the scrub preview plays.
