@@ -4,3 +4,9 @@ src-tauri/target/
 src-tauri/gen/schemas/
 *.local
 .DS_Store
+
+# playwright
+e2e/__screenshots__/
+e2e/.results/
+e2e/.report/
+test-results/
