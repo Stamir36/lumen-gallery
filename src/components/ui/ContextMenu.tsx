@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { type MenuItem, runItem, useContextMenu } from "@/state/contextMenu";
 
@@ -178,28 +178,34 @@ export function ContextMenuHost() {
     };
   }, [open, close, active, flat, reachable, move]);
 
-  if (!open) return null;
-
+  // F3: an EXPLICIT close (Esc, outside click) keeps a 120ms fade via the
+  // AnimatePresence exit below. Opening B while A is open never unmounts the
+  // host (same store, open stays true), so the swap itself stays instant with
+  // zero crossfade overlap.
   const activeItem = active >= 0 ? flat[active] : undefined;
 
   return createPortal(
-    <motion.div
-      ref={panel}
-      role="menu"
-      aria-label={title ?? "menu"}
-      aria-activedescendant={activeItem ? `ctx-menu-${activeItem.id}` : undefined}
-      initial={reduced ? false : { opacity: 0, scale: 0.97, y: -4 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      transition={{ duration: reduced ? 0 : 0.12, ease: "easeOut" }}
-      style={{
-        position: "fixed",
-        left: pos.left,
-        top: pos.top,
-        minWidth: MIN_WIDTH,
-        transformOrigin: "top left",
-      }}
-      className="glass z-[200] overflow-hidden rounded-[16px] p-1.5"
-    >
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          key="ctx-menu"
+          ref={panel}
+          role="menu"
+          aria-label={title ?? "menu"}
+          aria-activedescendant={activeItem ? `ctx-menu-${activeItem.id}` : undefined}
+          initial={reduced ? false : { opacity: 0, scale: 0.97, y: -4 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={reduced ? { opacity: 0 } : { opacity: 0, transition: { duration: 0.12, ease: "easeOut" } }}
+          transition={{ duration: reduced ? 0 : 0.12, ease: "easeOut" }}
+          style={{
+            position: "fixed",
+            left: pos.left,
+            top: pos.top,
+            minWidth: MIN_WIDTH,
+            transformOrigin: "top left",
+          }}
+          className="glass z-[200] overflow-hidden rounded-[16px] p-1.5"
+        >
       {(title || mono) && (
         <div className="px-2.5 pb-1.5 pt-1">
           {title && (
@@ -236,7 +242,9 @@ export function ContextMenuHost() {
           })}
         </div>
       ))}
-    </motion.div>,
+        </motion.div>
+      )}
+    </AnimatePresence>,
     document.body,
   );
 }
