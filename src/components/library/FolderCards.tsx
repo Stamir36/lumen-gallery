@@ -155,9 +155,12 @@ function FolderCard({
       aria-label={folder.name}
       className={cn(
         "hover-lift group w-full min-w-0 rounded-card bg-surface-1 p-2.5 text-left",
+        // U6 — accent edge-glow under the card on hover: folders felt dead
+        // next to media cards; the underline glow is one var, not a new color
+        "relative after:pointer-events-none after:absolute after:inset-x-6 after:bottom-0 after:h-px after:rounded-pill after:bg-accent after:opacity-0 after:shadow-[0_0_12px_var(--accent-soft)] after:transition-opacity after:duration-[160ms] hover:after:opacity-100",
       )}
     >
-      <div className="relative aspect-[16/10] w-full overflow-hidden rounded-[14px]">
+      <div className="relative aspect-[16/10] w-full overflow-hidden rounded-[16px]">
         <FolderCover folder={folder} />
       </div>
       <div className="mt-2.5 flex items-center gap-2 px-1 pb-0.5">

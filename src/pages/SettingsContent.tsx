@@ -81,7 +81,7 @@ function Section({
   return (
     <section id={id} className="scroll-mt-6">
       <div className="mb-6 flex items-center gap-4">
-        <span className="text-3xl font-light text-accent">{index}</span>
+        <span className="text-3xl font-extralight tracking-tight text-accent">{index}</span>
         <h2 className="text-xl font-semibold text-tprimary">{title}</h2>
         <div className="divider mt-4 flex-1" />
       </div>

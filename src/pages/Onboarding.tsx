@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { motion, useReducedMotion } from "framer-motion";
 import { toast } from "sonner";
 import { open } from "@tauri-apps/plugin-dialog";
 import {
@@ -21,6 +22,7 @@ import { useRootsStore, useScanStore } from "@/state/library";
  */
 export function Onboarding({ onDone }: { onDone: () => void }) {
   const { t } = useTranslation();
+  const reduced = useReducedMotion();
   const [volumes, setVolumes] = useState<VolumeInfo[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const { refresh } = useRootsStore();
@@ -105,14 +107,31 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
   }
 
   return (
-    <div className="h-full overflow-y-auto px-10 py-12">
-      <div className="mx-auto max-w-4xl">
-        <h1 className="text-4xl font-bold tracking-tight text-tprimary">
-          {t("onboarding.title")}
-        </h1>
-        <p className="mt-2 max-w-xl text-[15px] text-tsecondary">
-          {t("onboarding.subtitle")}
-        </p>
+    <div className="relative h-full overflow-y-auto px-10 py-12">
+      {/* U4 — hero glow: the accent announces itself before any content does.
+          Pure CSS vars, so it follows the user's accent for free. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-[420px]"
+        style={{
+          background:
+            "radial-gradient(60% 70% at 30% 0%, var(--accent-soft), transparent 70%)",
+          opacity: 0.7,
+        }}
+      />
+      <div className="relative mx-auto max-w-4xl">
+        <motion.div
+          initial={reduced ? false : { opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ type: "spring", stiffness: 260, damping: 26 }}
+        >
+          <h1 className="text-4xl font-bold tracking-tight text-tprimary">
+            {t("onboarding.title")}
+          </h1>
+          <p className="mt-2 max-w-xl text-[15px] text-tsecondary">
+            {t("onboarding.subtitle")}
+          </p>
+        </motion.div>
 
         {/* Existing roots first (returning from done view). */}
         <ExistingRoots />
@@ -129,15 +148,25 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
                 </span>
               </div>
             )}
-            {volumes.map((v) => {
+            {volumes.map((v, i) => {
               const used = v.totalBytes - v.availableBytes;
               const ratio = v.totalBytes > 0 ? used / v.totalBytes : 0;
               return (
-                <button
+                // U5 — staggered entry: cards cascade in instead of popping as
+                // one slab (60ms step, capped — 24 drives must not take 1.5 s)
+                <motion.button
                   key={v.mountPoint}
                   disabled={busy === v.mountPoint}
                   onClick={() => add(v.mountPoint, v.kind, v.name || v.mountPoint)}
-                  className="w-[300px] rounded-card bg-surface-1 p-7 text-left shadow-elev1 transition-all duration-[160ms] ease-out hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(0,0,0,.4),0_0_0_1px_rgba(110,193,255,.18)] active:scale-[.97] disabled:opacity-50"
+                  initial={reduced ? false : { opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{
+                    type: "spring",
+                    stiffness: 260,
+                    damping: 26,
+                    delay: reduced ? 0 : Math.min(i, 8) * 0.06,
+                  }}
+                  className="w-[300px] rounded-card bg-surface-1 p-7 text-left shadow-elev1 transition-shadow duration-[160ms] ease-out hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(0,0,0,.4),0_0_0_1px_var(--accent-soft)] active:scale-[.97] disabled:opacity-50"
                 >
                   <div className="flex items-center gap-3">
                     <HardDrive size={22} className="text-tsecondary" />
@@ -160,20 +189,25 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
                       total: formatBytes(v.totalBytes),
                     })}
                   </div>
-                </button>
+                </motion.button>
               );
             })}
           </div>
         </div>
 
-        <div className="mt-12 flex flex-wrap items-center gap-4">
+        <motion.div
+          initial={reduced ? false : { opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ type: "spring", stiffness: 260, damping: 26, delay: reduced ? 0 : 0.24 }}
+          className="mt-12 flex flex-wrap items-center gap-4"
+        >
           <PillButton onClick={chooseFolder}>
             <FolderPlus size={16} /> {t("onboarding.choose_folder")}
           </PillButton>
           <PillButton variant="ghost" onClick={() => api.rescanAll()}>
             <RefreshCw size={16} /> {t("onboarding.rescan_all")}
           </PillButton>
-        </div>
+        </motion.div>
 
         <div
           onDragOver={(e) => e.preventDefault()}

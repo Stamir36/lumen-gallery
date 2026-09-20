@@ -167,7 +167,7 @@ function SidebarRow({ item, wide }: { item: SidebarItem; wide: boolean }) {
         <div className="mb-1 mt-1.5 px-3">
           <div className="h-1.5 w-full overflow-hidden rounded-pill bg-surface-2">
             <div
-              className="h-full rounded-pill bg-accent"
+              className="h-full rounded-pill bg-gradient-to-r from-accent/60 to-accent"
               style={{ width: `${Math.round(item.capacity.ratio * 100)}%` }}
             />
           </div>

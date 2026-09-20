@@ -17,8 +17,8 @@ export function FAB({ label, className, children, ...props }: FABProps) {
       title={label}
       className={cn(
         "glass inline-flex h-14 w-14 items-center justify-center rounded-[20px] " +
-          "text-tprimary transition-all duration-[160ms] ease-out " +
-          "shadow-elev1 hover:-translate-y-1 hover:shadow-[0_12px_28px_rgba(0,0,0,.4),0_0_0_1px_var(--accent-strong)] " +
+          "text-accent transition-all duration-[160ms] ease-out " +
+          "shadow-elev1 hover:-translate-y-1 hover:shadow-[0_12px_28px_rgba(0,0,0,.4),0_0_0_1px_var(--accent-strong),0_0_28px_-4px_var(--accent-soft)] " +
           "active:translate-y-0 active:scale-[.97]",
         className,
       )}

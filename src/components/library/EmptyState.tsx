@@ -21,7 +21,10 @@ export function EmptyState({
   return (
     <div className="flex h-full items-center justify-center px-9 pb-16">
       <div className="flex w-full max-w-[520px] flex-col items-center gap-5 rounded-card border border-dashed border-white/12 px-10 py-14 text-center">
-        <span className="flex h-12 w-12 items-center justify-center rounded-pill bg-surface-3 text-ttertiary">
+        {/* U3 — the bare grey circle read as "broken"; a soft accent halo makes
+            the empty state feel intentional (accent-soft, decorative-safe:
+            it's a ring, not an interactive anchor) */}
+        <span className="flex h-12 w-12 items-center justify-center rounded-pill bg-surface-3 text-ttertiary shadow-[0_0_0_1px_var(--accent-soft),0_0_32px_-6px_var(--accent-soft)]">
           {icon === "error" ? <RefreshCw size={20} /> : <Icon size={20} />}
         </span>
         <div className="text-[15px] font-semibold text-tprimary">{title}</div>
