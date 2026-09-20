@@ -706,7 +706,7 @@ const GridRow = memo(function GridRow({
           <span
             role="button"
             tabIndex={-1}
-            aria-label="select"
+            aria-label={t("actions.select")}
             onClick={(e) => {
               e.stopPropagation();
               onToggleSelect(media.id);
