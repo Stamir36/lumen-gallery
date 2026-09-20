@@ -745,7 +745,9 @@ export function Lightbox({ row }: { row: MediaRow }) {
             <div className="glass pointer-events-none flex h-10 min-w-0 max-w-[52vw] items-center gap-3 rounded-pill px-4">
               {/* leading-none + flex on BOTH halves: the mono counter used to
                   sit on its own baseline a hair above the filename */}
-              <span className="flex items-center truncate text-[13px] leading-none text-tprimary">{name}</span>
+              {/* leading-tight on the NAME only: leading-none clipped glyph
+                  descenders (g/p/y) against truncate's overflow-hidden */}
+              <span className="flex items-center truncate text-[13px] leading-tight text-tprimary">{name}</span>
               <span className="flex shrink-0 items-center font-mono text-[10.5px] leading-none tabular-nums text-ttertiary">
                 {index + 1} / {queue.length}
               </span>

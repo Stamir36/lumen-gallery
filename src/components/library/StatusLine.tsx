@@ -49,7 +49,7 @@ export function StatusLine({
         "flex h-9 shrink-0 items-center gap-3 font-mono text-[11px] tracking-[0.04em] text-ttertiary",
         rail
           ? "mx-3 mb-2 rounded-[16px] bg-surface-1/80 px-5"
-          : "px-9 pb-1.5",
+          : "border-t border-hairline bg-surface-1 px-9",
       )}
     >
       {scanning ? (

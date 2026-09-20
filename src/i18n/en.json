@@ -121,7 +121,9 @@
   "browse": {
     "mode": "Browse mode",
     "explorer": "Folders",
-    "gallery": "Gallery"
+    "gallery": "Gallery",
+    "explorer_tree": "Explorer · folder tree",
+    "explorer_cards": "Explorer · folder cards"
   },
   "explorer": {
     "layout": "Explorer layout",

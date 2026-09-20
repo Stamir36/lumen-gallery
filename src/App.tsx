@@ -24,7 +24,6 @@ import { LibraryTopBar, RailTitlebarCenter } from "@/components/library/LibraryT
 import { RailShell } from "@/components/library/RailShell";
 import { MediaGrid } from "@/components/library/MediaGrid";
 import { FolderGrid } from "@/components/library/FolderCards";
-import { ExplorerLayoutSwitch } from "@/components/library/ExplorerLayoutSwitch";
 import { StatusLine } from "@/components/library/StatusLine";
 import { ViewModeSwitch } from "@/components/library/ViewModeSwitch";
 import { BrowseModeSwitch } from "@/components/library/BrowseModeSwitch";
@@ -356,9 +355,6 @@ export default function App() {
         right={
           !noRoots && !onboarding.show ? (
             <div className="flex items-center gap-2">
-              {/* F15: the explorer tree/cards switch lives HERE — one toggle,
-                  and only where it actually does something (explorer root) */}
-              {explorer && route.kind === "root" && <ExplorerLayoutSwitch />}
               <BrowseModeSwitch />
               <ViewModeSwitch />
             </div>
@@ -370,23 +366,23 @@ export default function App() {
           <SidebarRail
             items={items}
             bottom={
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-0.5">
                 <LanguageDropdown />
                 <button
                   onClick={onboarding.open}
-                  className="flex h-11 w-full items-center gap-3 rounded-control px-3 text-left text-sm text-tsecondary transition-all duration-[160ms] hover:bg-white/[.06] hover:text-tprimary"
+                  className="flex h-10 w-full items-center gap-3 rounded-control px-3 text-left text-sm text-tsecondary transition-all duration-[160ms] hover:bg-white/[.06] hover:text-tprimary"
                 >
                   <Plus size={18} />
                   {t("sidebar.add_library")}
                 </button>
                 <button
                   onClick={() => navigate("/settings")}
-                  className="flex h-11 w-full items-center gap-3 rounded-control px-3 text-left text-sm text-tsecondary transition-all duration-[160ms] hover:bg-white/[.06] hover:text-tprimary"
+                  className="flex h-10 w-full items-center gap-3 rounded-control px-3 text-left text-sm text-tsecondary transition-all duration-[160ms] hover:bg-white/[.06] hover:text-tprimary"
                 >
                   <Settings size={18} />
                   {t("sidebar.settings")}
                 </button>
-                <div className="px-3 font-mono text-[10px] leading-relaxed text-ttertiary">
+                <div className="px-3 pt-1 font-mono text-[10px] leading-relaxed text-ttertiary">
                   {scanningRootId !== null
                     ? scanText
                     : t("sidebar.items_summary", {

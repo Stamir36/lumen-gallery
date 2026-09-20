@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useTranslation } from "react-i18next";
+import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import {
   ArrowLeft,
@@ -108,6 +109,20 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
   const [pillHover, setPillHover] = useState(false);
   /** P7 F3: the "…" overflow popover (snapshot / external / PiP / loop) */
   const [overflowOpen, setOverflowOpen] = useState(false);
+  /** F2: the popover renders through a PORTAL (a blur surface nested inside
+   *  the glass pill sampled the pill's backdrop root, not the video — the
+   *  frosting vanished). Fixed position, anchored to the "…" button. */
+  const moreAnchorRef = useRef<HTMLSpanElement>(null);
+  const [overflowPos, setOverflowPos] = useState({ left: 0, bottom: 0 });
+  const toggleOverflow = () => {
+    if (overflowOpen) {
+      setOverflowOpen(false);
+      return;
+    }
+    const r = moreAnchorRef.current?.getBoundingClientRect();
+    if (r) setOverflowPos({ left: r.right - 252, bottom: window.innerHeight - r.top + 8 });
+    setOverflowOpen(true);
+  };
   /** P7 F4: color-correction popover inside the overflow */
   const [colorOpen, setColorOpen] = useState(false);
   /** FIX 3: manual interface hide (pill button / H) — wins over the idle timer */
@@ -1271,107 +1286,19 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
               </IconBtn>
 
               {/* P7 F3: the rightmost "…" — the pill stays lean, everything
-                  occasional lives in one dark-glass popover (whitelisted) */}
-              <div className="relative" data-overflow-root>
+                  occasional lives in one popover. F2: the menu itself renders
+                  through a PORTAL (see the bottom of this component): a blur
+                  surface NESTED in the glass pill sampled the pill's backdrop
+                  root, not the video — the frosting vanished */}
+              <span className="relative inline-flex" data-overflow-root ref={moreAnchorRef}>
                 <IconBtn
                   label={t("player.more")}
                   active={overflowOpen}
-                  onClick={() => setOverflowOpen((o) => !o)}
+                  onClick={toggleOverflow}
                 >
                   <MoreHorizontal size={18} />
                 </IconBtn>
-                <AnimatePresence>
-                  {overflowOpen && (
-                    <motion.div
-                      initial={reduced ? false : { opacity: 0, y: 6, scale: 0.97 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={reduced ? { opacity: 0 } : { opacity: 0, y: 6, scale: 0.97 }}
-                      transition={{ duration: reduced ? 0 : 0.14, ease: "easeOut" }}
-                      role="menu"
-                      aria-label={t("player.more")}
-                      className="absolute bottom-[60px] right-0 z-50 w-[252px] overflow-hidden rounded-[20px] p-1.5"
-                      style={{
-                        /* dark-glass v2.3 recipe (the ContextMenu material),
-                           DARKER than plain `glass`: over a bright video frame
-                           the 68→55% tint washed white text out — 84→74% keeps
-                           the frosting readable on ANY frame */
-                        background:
-                          "linear-gradient(180deg, rgba(14,14,18,.84), rgba(14,14,18,.74))",
-                        backdropFilter: "blur(28px) saturate(1.4)",
-                        WebkitBackdropFilter: "blur(28px) saturate(1.4)",
-                        border: "1px solid rgba(255,255,255,.08)",
-                        boxShadow:
-                          "inset 0 1px 0 rgba(255,255,255,.06), 0 16px 48px rgba(0,0,0,.55)",
-                      }}
-                    >
-                      {/* snapshot needs canvas-clean frames — only the opt-in
-                          media server provides them; asset frames are tainted */}
-                      {srcClean && (
-                        <OverflowItem
-                          icon={<Camera size={15} />}
-                          label={t("player.snapshot_clipboard")}
-                          onClick={() => {
-                            setOverflowOpen(false);
-                            void onSnapshot();
-                          }}
-                        />
-                      )}
-                      <OverflowItem
-                        icon={<ExternalLink size={15} />}
-                        label={t("player.open_external")}
-                        onClick={() => {
-                          setOverflowOpen(false);
-                          void invoke("open_external", { path: row.path }).catch(() =>
-                            toast.error(t("errors.action_failed")),
-                          );
-                        }}
-                      />
-                      {/* F5: the OS-painted browser PiP is replaced by a
-                          frameless always-on-top child window; the main
-                          player pauses and resumes at the handed-back time */}
-                      <OverflowItem
-                        icon={<PictureInPicture2 size={15} />}
-                        label={t("player.mini_open")}
-                        onClick={() => {
-                          setOverflowOpen(false);
-                          const el = vrVideo.current ?? video.current;
-                          const positionMs = el ? Math.round(el.currentTime * 1000) : 0;
-                          el?.pause();
-                          void invoke("open_mini_player", {
-                            payload: { row, positionMs },
-                          }).catch((e) => {
-                            console.error("open_mini_player failed", e);
-                            toast.error(t("errors.action_failed"));
-                          });
-                        }}
-                      />
-                      {/* P1: the sheet lives OUTSIDE this menu — opening it
-                          closes the menu instead of stacking two surfaces */}
-                      <OverflowItem
-                        icon={<Palette size={15} />}
-                        label={t("player.color")}
-                        active={colorOpen}
-                        onClick={() => {
-                          setOverflowOpen(false);
-                          setColorOpen((o) => !o);
-                        }}
-                      />
-                      {/* loop stays open so the check state is visible live */}
-                      <OverflowItem
-                        icon={<Repeat size={15} />}
-                        label={t("player.loop")}
-                        active={loop}
-                        onClick={() => {
-                          const el = vrVideo.current ?? video.current;
-                          const next = !loop;
-                          setLoop(next);
-                          if (el) el.loop = next;
-                        }}
-                      />
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
+              </span>
             </div>
           </motion.div>
         )}
@@ -1418,6 +1345,106 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
           </motion.aside>
         )}
       </AnimatePresence>
+
+      {/* ---------- F2: overflow menu — PORTAL to <body> ---------- */}
+      {createPortal(
+        <AnimatePresence>
+          {overflowOpen && (
+            <motion.div
+              initial={reduced ? false : { opacity: 0, y: 6, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={reduced ? { opacity: 0 } : { opacity: 0, y: 6, scale: 0.97 }}
+              transition={{ duration: reduced ? 0 : 0.14, ease: "easeOut" }}
+              role="menu"
+              aria-label={t("player.more")}
+              /* fixed to the VIEWPORT (the portal has no transformed
+                 ancestors) and anchored above the "…" button */
+              data-overflow-root
+              className="fixed z-[130] w-[252px] overflow-hidden rounded-[20px] p-1.5"
+              style={{
+                left: overflowPos.left,
+                bottom: overflowPos.bottom,
+                /* dark-glass v2.3 recipe (the ContextMenu material) — now it
+                   actually frosts, because it is not nested in the pill's
+                   backdrop root any more */
+                background:
+                  "linear-gradient(180deg, rgba(14,14,18,.68), rgba(14,14,18,.55))",
+                backdropFilter: "blur(28px) saturate(1.4)",
+                WebkitBackdropFilter: "blur(28px) saturate(1.4)",
+                border: "1px solid rgba(255,255,255,.08)",
+                boxShadow:
+                  "inset 0 1px 0 rgba(255,255,255,.06), 0 16px 48px rgba(0,0,0,.55)",
+              }}
+            >
+              {/* snapshot needs canvas-clean frames — only the opt-in media
+                  server provides them; asset frames are tainted */}
+              {srcClean && (
+                <OverflowItem
+                  icon={<Camera size={15} />}
+                  label={t("player.snapshot_clipboard")}
+                  onClick={() => {
+                    setOverflowOpen(false);
+                    void onSnapshot();
+                  }}
+                />
+              )}
+              <OverflowItem
+                icon={<ExternalLink size={15} />}
+                label={t("player.open_external")}
+                onClick={() => {
+                  setOverflowOpen(false);
+                  void invoke("open_external", { path: row.path }).catch(() =>
+                    toast.error(t("errors.action_failed")),
+                  );
+                }}
+              />
+              {/* F5: the OS-painted browser PiP is replaced by a frameless
+                  always-on-top child window; the main player pauses and
+                  resumes at the handed-back time */}
+              <OverflowItem
+                icon={<PictureInPicture2 size={15} />}
+                label={t("player.mini_open")}
+                onClick={() => {
+                  setOverflowOpen(false);
+                  const el = vrVideo.current ?? video.current;
+                  const positionMs = el ? Math.round(el.currentTime * 1000) : 0;
+                  el?.pause();
+                  void invoke("open_mini_player", {
+                    payload: { row, positionMs },
+                  }).catch((e) => {
+                    console.error("open_mini_player failed", e);
+                    toast.error(t("errors.action_failed"));
+                  });
+                }}
+              />
+              {/* P1: the sheet lives OUTSIDE this menu — opening it closes the
+                  menu instead of stacking two surfaces */}
+              <OverflowItem
+                icon={<Palette size={15} />}
+                label={t("player.color")}
+                active={colorOpen}
+                onClick={() => {
+                  setOverflowOpen(false);
+                  setColorOpen((o) => !o);
+                }}
+              />
+              {/* loop stays open so the check state is visible live */}
+              <OverflowItem
+                icon={<Repeat size={15} />}
+                label={t("player.loop")}
+                active={loop}
+                onClick={() => {
+                  const el = vrVideo.current ?? video.current;
+                  const next = !loop;
+                  setLoop(next);
+                  if (el) el.loop = next;
+                }}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body,
+      )}
     </div>
   );
 }

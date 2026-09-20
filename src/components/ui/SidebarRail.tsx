@@ -49,7 +49,7 @@ export function SidebarRail({
           className,
         )}
       >
-        <div className="flex h-16 shrink-0 items-center px-4">
+        <div className="flex h-14 shrink-0 items-center px-4">
           {wide ? (
             <>
               <span className="micro-label flex-1 pl-2">{t("sidebar.library")}</span>
@@ -73,8 +73,10 @@ export function SidebarRail({
 
         <div
           className={cn(
-            "flex min-h-0 flex-1 flex-col gap-3 p-4",
-            wide ? "overflow-y-auto" : "overflow-y-hidden",
+            // F5: a tight 2px rhythm between rows (12px swallowed the viewport
+            // and pushed the last items under the footer on short windows)
+            "flex min-h-0 flex-1 flex-col gap-0.5 py-1.5",
+            wide ? "overflow-y-auto px-2.5" : "overflow-y-hidden",
           )}
         >
           {items.map((item) => (
@@ -83,7 +85,7 @@ export function SidebarRail({
         </div>
 
         {wide ? (
-          bottom && <div className="shrink-0 overflow-hidden p-4">{bottom}</div>
+          bottom && <div className="shrink-0 overflow-hidden border-t border-hairline p-2.5">{bottom}</div>
         ) : (
           railBottom && (
             <div className="flex shrink-0 flex-col items-center gap-1 p-2">

@@ -237,15 +237,13 @@ export const MediaCard = memo(function MediaCard({
         className={cn(
           "absolute inset-0 overflow-hidden transition-[transform,box-shadow] duration-[160ms] ease-out",
           // F14: the lift + inner zoom are one setting — OFF = the card stays
-          // put, only the accent glow/caption reveal (a still grid, no jiggle)
+          // put; the sheen + glow below still answer the pointer
           "hover:z-10",
           cardHover && "hover:-translate-y-0.5",
-          "hover:shadow-[0_12px_28px_rgba(0,0,0,.4),0_0_0_1px_var(--accent-soft)]",
+          // F9-hover: a REACTION, not a millimetre jump — soft accent glow
+          // outside + a hairline accent edge, visible on any thumbnail
+          "hover:shadow-[0_10px_26px_rgba(0,0,0,.45),0_0_0_1px_var(--accent-strong),0_0_26px_-6px_var(--accent-strong)]",
           "active:scale-[.97]",
-          // F9: ring-INSET — an offset ring overflows the cell and the
-          // virtualized row clips it ("рамка обрезана по краям ленты")
-          selected && "ring-2 ring-inset ring-accent/70",
-          focused && "ring-2 ring-inset ring-accent/50",
         )}
         style={{ borderRadius: radius }}
       >
@@ -302,7 +300,7 @@ export const MediaCard = memo(function MediaCard({
           // the card then; hides while the scrub preview plays.
           <span
             className={cn(
-              "pointer-events-none absolute left-2 top-2 z-10 flex h-6 w-6 items-center justify-center rounded-[8px] bg-black/55 text-white/90 backdrop-blur-sm transition-opacity duration-[160ms] ease-out",
+              "pointer-events-none absolute left-2 top-2 z-10 flex h-6 w-6 items-center justify-center rounded-pill bg-black/55 text-white/90 backdrop-blur-sm transition-opacity duration-[160ms] ease-out",
               preview ? "opacity-0" : "opacity-100 group-hover:opacity-0",
             )}
           >
@@ -423,6 +421,29 @@ export const MediaCard = memo(function MediaCard({
           <Check size={15} strokeWidth={3} />
         </motion.span>
       </button>
+
+      {/* F9-hover sheen: a soft accent wash that sweeps in from the corner on
+          hover — the card "answers" without moving (the lift is opt-in) */}
+      <span
+        aria-hidden
+        className={cn(
+          "pointer-events-none absolute inset-0 z-[15] rounded-[inherit] opacity-0 transition-opacity duration-[180ms] ease-out group-hover:opacity-100",
+          "bg-[linear-gradient(125deg,transparent_45%,var(--accent-soft)_115%)]",
+        )}
+      />
+
+      {/* F9 ring as an OVERLAY: inset box-shadows paint UNDER the children, so
+          the img/video covered the ring and it showed only in patches ("рамка
+          обрезана в ленте"). A top-layer border can never be hidden. */}
+      {(selected || focused) && (
+        <span
+          aria-hidden
+          className={cn(
+            "pointer-events-none absolute inset-0 z-30 rounded-[inherit] border-2",
+            selected ? "border-accent" : "border-accent/60",
+          )}
+        />
+      )}
     </div>
   );
 });

@@ -22,6 +22,7 @@ import { Masonry } from "./Masonry";
 import { ThumbTile } from "./ThumbTile";
 import { SkeletonGrid } from "./Skeletons";
 import { EmptyState } from "./EmptyState";
+import { ScrollTopFab } from "./ScrollTopFab";
 import { CollageOverlay } from "./CollageOverlay";
 
 const CARD_RADIUS = 12;
@@ -367,6 +368,8 @@ export function MediaGrid({
         }}
         revealId={revealId}
         onRevealed={clearReveal}
+        // F11: masonry owns its scroller — hand it up for the scroll-top FAB
+        onScroller={(el) => setScroller(el)}
       />
     );
   } else {
@@ -468,6 +471,10 @@ export function MediaGrid({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* F11 — scroll-top FAB: dead code until now (never mounted anywhere).
+          One instance, whichever scroller the active view mode owns. */}
+      {scroller && <ScrollTopFab target={scroller} />}
 
       <AnimatePresence>
         {selected.length > 0 && (

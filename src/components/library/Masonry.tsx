@@ -3,7 +3,7 @@ import type { MediaRow } from "@/lib/api";
 import { computeMasonryColumns, ratioOf } from "@/lib/justified";
 import { DENSITY_PARAMS, useAppSettings } from "@/lib/settings";
 import { useElementWidth, useRafScroll } from "@/lib/hooks";
-import { setViewportIds } from "@/lib/thumbs";
+import { setViewportIds, enqueueThumbs } from "@/lib/thumbs";
 import { MediaCard } from "./MediaCard";
 
 /**
@@ -30,6 +30,7 @@ export function Masonry({
   revealId,
   onRevealed,
   onPressStart,
+  onScroller,
 }: {
   rows: MediaRow[];
   radius: number;
@@ -43,8 +44,10 @@ export function Masonry({
   onRevealed?: () => void;
   /** U1: card pointerdown — start fetching the original before the click */
   onPressStart?: (id: number) => void;
+  /** F11: report the scroll element up so the scroll-top FAB can mount */
+  onScroller?: (el: HTMLElement | null) => void;
 }) {
-  const scroller = useRef<HTMLDivElement>(null);
+  const scroller = useRef<HTMLDivElement | null>(null);
   const width = useElementWidth(scroller, 1200);
   // 36px gutter each side + the 8px scrollbar (DESIGN.md §9) — mirrors the
   // justified path so all modes share one content column.
@@ -127,6 +130,10 @@ export function Masonry({
   // like the other views instead of like "nothing ever loads".
   useEffect(() => {
     setViewportIds(tiles.map((t) => t.media.id));
+    // F4 belt-and-braces: explicit enqueue of the visible ids (the same thing
+    // primeThumbs does for the Virtuoso views) — per-card mount enqueues too,
+    // but a single batch call is immune to mount-order races
+    enqueueThumbs(tiles.map((t) => t.media.id));
   }, [tiles]);
 
   return (
@@ -134,31 +141,39 @@ export function Masonry({
       {/* F6: the "first 2,000" mono band is gone — a dev-limit banner is not a
           UI element. The cap stays (perf), the apology doesn't. */}
       <div
-        ref={scroller}
+        ref={(el) => {
+          scroller.current = el;
+          onScroller?.(el);
+        }}
         className="relative min-h-0 flex-1 overflow-y-auto overflow-x-hidden"
       >
-        <div className="relative mx-9 pb-24" style={{ height: packed.total }}>
-          {tiles.map(({ media, x, y, h }) => (
-            <div
-              key={media.id}
-              className="absolute left-0 top-0 will-change-transform"
-              style={{
-                width: columnWidth,
-                height: h,
-                transform: `translate3d(${x}px, ${y}px, 0)`,
-              }}
-            >
-              <MediaCard
-                media={media}
-                radius={radius}
-                selectionMode={selectionMode}
-                selected={selected.has(media.id)}
-                onToggleSelect={onToggleSelect}
-                onActivate={() => onActivate(media.id)}
-                onPressStart={onPressStart ? () => onPressStart(media.id) : undefined}
-              />
-            </div>
-          ))}
+        {/* F4 top air: absolute tiles position against the PADDING box, so the
+            padding must live on an OUTER wrapper and the tiles on an inner
+            relative box (same pattern as the justified rows) */}
+        <div className="mx-9 pt-4 pb-24">
+          <div className="relative" style={{ height: packed.total }}>
+            {tiles.map(({ media, x, y, h }) => (
+              <div
+                key={media.id}
+                className="absolute left-0 top-0 will-change-transform"
+                style={{
+                  width: columnWidth,
+                  height: h,
+                  transform: `translate3d(${x}px, ${y}px, 0)`,
+                }}
+              >
+                <MediaCard
+                  media={media}
+                  radius={radius}
+                  selectionMode={selectionMode}
+                  selected={selected.has(media.id)}
+                  onToggleSelect={onToggleSelect}
+                  onActivate={() => onActivate(media.id)}
+                  onPressStart={onPressStart ? () => onPressStart(media.id) : undefined}
+                />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>

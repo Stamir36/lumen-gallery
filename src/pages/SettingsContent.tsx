@@ -273,29 +273,6 @@ export function SettingsContent() {
 
       {/* content cards fill the full column width */}
       <div className="min-w-0 flex-1 space-y-12">
-        {/* F11 — settings hero: the page used to open on a bare first card.
-            An accent wash + display title gives it a front door, and the mono
-            build chip keeps the technical ID in the corner (design §6). */}
-        <header className="relative overflow-hidden rounded-card bg-surface-1 px-8 py-7 shadow-elev1">
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-0"
-            style={{
-              background:
-                "radial-gradient(75% 130% at 12% 0%, var(--accent-soft), transparent 68%)",
-            }}
-          />
-          <div className="relative">
-            <span className="micro-label">{t("settings.title_kicker")}</span>
-            <h1 className="mt-2 text-[30px] leading-[1.1] font-[650] tracking-[-0.02em] text-tprimary">
-              {t("settings.title")}
-            </h1>
-            <p className="mt-2 max-w-2xl text-[14px] text-tsecondary">
-              {t("settings.subtitle")}
-            </p>
-          </div>
-        </header>
-
         {/* 01 Libraries */}
         <Section index="01" id="libraries" title={t("settings.nav_libraries")}>
           <GlassCard>
