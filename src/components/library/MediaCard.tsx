@@ -358,11 +358,21 @@ export const MediaCard = memo(function MediaCard({
             void import("@/lib/mediaActions").then((m) => m.toggleFavorite(media.id));
           }}
         >
-          <Heart
-            size={15}
-            fill={media.favorite ? "currentColor" : "none"}
-            className={media.favorite ? "text-tprimary" : undefined}
-          />
+          <motion.span
+            key={String(media.favorite)}
+            animate={
+              // F6: 240ms scale burst the moment it turns favorite
+              !reduced && media.favorite ? { scale: [1, 1.35, 1] } : { scale: 1 }
+            }
+            transition={{ duration: 0.24, ease: "easeOut" }}
+            className="inline-flex"
+          >
+            <Heart
+              size={15}
+              fill={media.favorite ? "currentColor" : "none"}
+              className={media.favorite ? "text-accent" : undefined}
+            />
+          </motion.span>
         </button>
       </div>
 
@@ -382,7 +392,13 @@ export const MediaCard = memo(function MediaCard({
           selectionMode && "opacity-100",
         )}
       >
-        <Check size={15} strokeWidth={3} />
+        <motion.span
+          animate={selected ? { scale: [0.5, 1.15, 1] } : { scale: 1 }}
+          transition={{ duration: 0.16, ease: "easeOut" }}
+          className="inline-flex"
+        >
+          <Check size={15} strokeWidth={3} />
+        </motion.span>
       </button>
     </div>
   );

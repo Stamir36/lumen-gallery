@@ -129,7 +129,7 @@ export function RailShell({
                     {item.icon}
                   </span>
                   {item.badge && (
-                    <span className="pointer-events-none font-mono text-[8.5px] leading-none tabular-nums text-ttertiary">
+                    <span className="pointer-events-none font-mono text-[10px] leading-none tabular-nums text-ttertiary">
                       {item.badge}
                     </span>
                   )}

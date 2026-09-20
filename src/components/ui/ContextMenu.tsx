@@ -219,7 +219,7 @@ export function ContextMenuHost() {
 
       {sections.map((section, si) => (
         <div key={section.id}>
-          {(si > 0 || title || mono) && <div className="my-1 h-px bg-white/8" />}
+          {(si > 0 || title || mono) && <div className="mx-3 my-1 h-px bg-white/8" />}
           {section.label && (
             <div className="px-2.5 pb-1 pt-1 font-mono text-[10px] uppercase tracking-[0.1em] text-ttertiary">
               {section.label}
@@ -275,7 +275,7 @@ function MenuRow({
       onPointerEnter={onHover}
       onClick={() => runItem(item)}
       className={cn(
-        "flex h-9 w-full items-center gap-3 rounded-[10px] px-2.5 text-left text-[13px] transition-colors duration-[120ms]",
+        "flex h-10 w-full items-center gap-3 rounded-[10px] px-2.5 text-left text-[13px] transition-colors duration-[120ms]",
         item.disabled
           ? "cursor-default text-ttertiary opacity-45"
           : item.danger
@@ -285,7 +285,7 @@ function MenuRow({
         isActive && !item.disabled && "bg-white/[.08] text-tprimary",
       )}
     >
-      <span className="flex h-4 w-4 shrink-0 items-center justify-center opacity-80">
+      <span className="flex h-4 w-4 shrink-0 items-center justify-center opacity-80 [&>svg]:h-4 [&>svg]:w-4">
         {item.icon}
       </span>
       <span className="min-w-0 flex-1 truncate">{item.label}</span>

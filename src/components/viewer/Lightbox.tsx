@@ -828,7 +828,14 @@ export function Lightbox({ row }: { row: MediaRow }) {
             active={fav}
             onClick={() => toggleFavorite(row)}
           >
-            <Heart size={17} className={fav ? "fill-accent text-accent" : undefined} />
+            <motion.span
+              key={String(fav)}
+              animate={!reduced && fav ? { scale: [1, 1.35, 1] } : { scale: 1 }}
+              transition={{ duration: 0.24, ease: "easeOut" }}
+              className="inline-flex"
+            >
+              <Heart size={17} className={fav ? "fill-accent text-accent" : undefined} />
+            </motion.span>
           </PillButton>
           <PillButton label={t("viewer.info")} active={infoOpen} onClick={toggleInfo}>
             <Info size={17} />

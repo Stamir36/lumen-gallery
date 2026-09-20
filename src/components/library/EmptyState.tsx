@@ -21,12 +21,12 @@ export function EmptyState({
   return (
     <div className="flex h-full items-center justify-center px-9 pb-16">
       <div className="flex w-full max-w-[520px] flex-col items-center gap-5 rounded-card border border-dashed border-white/12 px-10 py-14 text-center">
-        <span className="flex h-12 w-12 items-center justify-center rounded-pill bg-surface-2 text-ttertiary">
+        <span className="flex h-12 w-12 items-center justify-center rounded-pill bg-surface-3 text-ttertiary">
           {icon === "error" ? <RefreshCw size={20} /> : <Icon size={20} />}
         </span>
-        <div className="text-lg font-semibold text-tprimary">{title}</div>
+        <div className="text-[15px] font-semibold text-tprimary">{title}</div>
         {mono && (
-          <div className="font-mono text-[11px] uppercase tracking-[0.12em] text-ttertiary">
+          <div className="font-mono text-[12.5px] uppercase tracking-[0.12em] text-ttertiary">
             {mono}
           </div>
         )}

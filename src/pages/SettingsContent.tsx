@@ -329,11 +329,11 @@ export function SettingsContent() {
                 <LanguageDropdown />
               </div>
             </div>
-            <div className="mt-2 flex items-center justify-between border-t border-hairline py-4">
+            <div className="mt-2 flex min-h-16 items-center justify-between border-t border-hairline py-4">
               <span className="text-sm text-tprimary">{t("settings.theme")}</span>
               <span className="text-sm text-tsecondary">{t("settings.dark")}</span>
             </div>
-            <div className="flex items-center justify-between border-t border-hairline py-4">
+            <div className="flex min-h-16 items-center justify-between border-t border-hairline py-4">
               <span className="text-sm text-tprimary">
                 {t("settings.cursor_pointer")}
               </span>
@@ -355,7 +355,7 @@ export function SettingsContent() {
                 />
               </button>
             </div>
-            <div className="flex items-center justify-between border-t border-hairline py-4">
+            <div className="flex min-h-16 items-center justify-between border-t border-hairline py-4">
               <span className="flex flex-col gap-0.5">
                 <span className="text-sm text-tprimary">{t("settings.show_fps")}</span>
                 <span className="text-[12px] text-ttertiary">{t("settings.show_fps_hint")}</span>
@@ -378,7 +378,7 @@ export function SettingsContent() {
                 />
               </button>
             </div>
-            <div className="flex items-center justify-between border-t border-hairline py-4">
+            <div className="flex min-h-16 items-center justify-between border-t border-hairline py-4">
               <span className="flex flex-col gap-0.5">
                 <span className="text-sm text-tprimary">{t("settings.pill_align")}</span>
                 <span className="text-[12px] text-ttertiary">
@@ -417,7 +417,7 @@ export function SettingsContent() {
                 ))}
               </div>
             </div>
-            <div className="flex items-center justify-between border-t border-hairline py-4">
+            <div className="flex min-h-16 items-center justify-between border-t border-hairline py-4">
               <span className="flex flex-col gap-0.5">
                 <span className="text-sm text-tprimary">{t("settings.swipe_navigate")}</span>
                 <span className="text-[12px] text-ttertiary">{t("settings.swipe_hint")}</span>
@@ -440,7 +440,7 @@ export function SettingsContent() {
                 />
               </button>
             </div>
-            <div className="flex items-center justify-between border-t border-hairline py-4">
+            <div className="flex min-h-16 items-center justify-between border-t border-hairline py-4">
               <span className="text-sm text-tprimary">
                 {t("settings.hover_captions")}
               </span>
@@ -462,7 +462,7 @@ export function SettingsContent() {
                 />
               </button>
             </div>
-            <div className="flex items-center justify-between border-t border-hairline py-4">
+            <div className="flex min-h-16 items-center justify-between border-t border-hairline py-4">
               <span className="text-sm text-tprimary">
                 {t("settings.video_autoplay")}
               </span>
@@ -484,7 +484,7 @@ export function SettingsContent() {
                 />
               </button>
             </div>
-            <div className="flex items-center justify-between border-t border-hairline py-4">
+            <div className="flex min-h-16 items-center justify-between border-t border-hairline py-4">
               <span className="flex flex-col gap-0.5">
                 <span className="text-sm text-tprimary">{t("settings.thumb_workers")}</span>
                 <span className="text-[12px] text-ttertiary">
@@ -516,7 +516,7 @@ export function SettingsContent() {
                 ))}
               </div>
             </div>
-            <div className="flex items-center justify-between border-t border-hairline py-4">
+            <div className="flex min-h-16 items-center justify-between border-t border-hairline py-4">
               <span className="flex flex-col gap-0.5">
                 <span className="text-sm text-tprimary">{t("settings.show_excluded")}</span>
                 <span className="text-[12px] text-ttertiary">
@@ -543,7 +543,7 @@ export function SettingsContent() {
             </div>
             {/* FIX 4a: accent presets — the swatch rewrites the CSS vars live,
                 every accent anchor in the app follows it */}
-            <div className="flex items-center justify-between border-t border-hairline py-4">
+            <div className="flex min-h-16 items-center justify-between border-t border-hairline py-4">
               <span className="flex flex-col gap-0.5">
                 <span className="text-sm text-tprimary">
                   {t("settings.accent_color")}
@@ -579,7 +579,7 @@ export function SettingsContent() {
 
             {/* FIX 4b: grid density — target row height, gutter and masonry
                 column width, applied to the grid live (no reload) */}
-            <div className="flex items-center justify-between border-t border-hairline py-4">
+            <div className="flex min-h-16 items-center justify-between border-t border-hairline py-4">
               <span className="flex flex-col gap-0.5">
                 <span className="text-sm text-tprimary">
                   {t("settings.grid_density")}
@@ -615,7 +615,7 @@ export function SettingsContent() {
 
             {/* P4: main-screen layout — classic sidebar vs permanent icon rail.
                 MAIN SCREEN ONLY: viewers/player/collage are untouched. */}
-            <div className="flex items-center justify-between border-t border-hairline py-4">
+            <div className="flex min-h-16 items-center justify-between border-t border-hairline py-4">
               <span className="flex flex-col gap-0.5">
                 <span className="text-sm text-tprimary">{t("settings.main_layout")}</span>
                 <span className="text-[12px] text-ttertiary">
@@ -777,7 +777,7 @@ export function SettingsContent() {
             </form>
             {/* Phase 6 STEP 4: opt-in, reversible, HKCU-only associations */}
             <FileAssociations />
-            <div className="mt-2 flex items-center justify-between border-t border-hairline py-4">
+            <div className="mt-2 flex min-h-16 items-center justify-between border-t border-hairline py-4">
               <span className="text-sm text-tprimary">{t("settings.open_logs")}</span>
               <button
                 type="button"
@@ -791,7 +791,7 @@ export function SettingsContent() {
                 {t("settings.reveal")}
               </button>
             </div>
-            <div className="flex items-center justify-between border-t border-hairline py-4">
+            <div className="flex min-h-16 items-center justify-between border-t border-hairline py-4">
               <span className="text-sm text-tprimary">{t("settings.open_thumbs")}</span>
               <button
                 type="button"
