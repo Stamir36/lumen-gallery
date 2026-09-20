@@ -237,13 +237,14 @@ export const MediaCard = memo(function MediaCard({
         className={cn(
           "absolute inset-0 overflow-hidden transition-[transform,box-shadow] duration-[160ms] ease-out",
           // F14: the lift + inner zoom are one setting — OFF = the card stays
-          // put, only the gradient/caption reveal (a still grid, no jiggle)
-          cardHover && "hover:-translate-y-0.5 hover:z-10",
+          // put, only the accent glow/caption reveal (a still grid, no jiggle)
+          "hover:z-10",
+          cardHover && "hover:-translate-y-0.5",
           "hover:shadow-[0_12px_28px_rgba(0,0,0,.4),0_0_0_1px_var(--accent-soft)]",
           "active:scale-[.97]",
-          selected && "ring-2 ring-accent/60",
-          // F9: ring-INSET, not offset — an offset ring overflows the cell and
-          // the virtualized row clips it ("рамка обрезана по краям ленты")
+          // F9: ring-INSET — an offset ring overflows the cell and the
+          // virtualized row clips it ("рамка обрезана по краям ленты")
+          selected && "ring-2 ring-inset ring-accent/70",
           focused && "ring-2 ring-inset ring-accent/50",
         )}
         style={{ borderRadius: radius }}
