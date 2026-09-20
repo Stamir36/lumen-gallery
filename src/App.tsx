@@ -195,6 +195,15 @@ export default function App() {
   const media = useMediaRows(params);
   const rows = media.data ?? [];
 
+  // FIX: nav rows route change while the "Add library" onboarding was open —
+  // the grid behind it DID switch, but the onboarding sheet stayed on top and
+  // it looked like nothing happened. Any explicit navigation leaves onboarding.
+  const closeOnboarding = onboarding.show ? onboarding.close : undefined;
+  const selectAndLeave = (go: () => void) => {
+    closeOnboarding?.();
+    go();
+  };
+
   const items: SidebarItem[] = [
     ...roots.map((r) => ({
       id: `root-${r.id}`,
@@ -202,7 +211,7 @@ export default function App() {
       icon: <HardDrive />,
       badge: r.itemCount ? formatCount(r.itemCount) : undefined,
       active: route.kind === "root" && route.rootId === r.id,
-      onSelect: () => openRoot(r.id),
+      onSelect: () => selectAndLeave(() => openRoot(r.id)),
       capacity:
         r.totalBytes > 0
           ? {
@@ -227,7 +236,7 @@ export default function App() {
             active: route.kind === "root" && foldersView,
             onSelect: () => {
               const target = route.kind === "root" ? route.rootId : roots[0]?.id;
-              if (target !== undefined) openRoot(target);
+              if (target !== undefined) selectAndLeave(() => openRoot(target));
             },
           } satisfies SidebarItem,
         ]
@@ -249,7 +258,7 @@ export default function App() {
         icon: s.icon,
         badge: badge ? formatCount(badge) : undefined,
         active: route.kind === "smart" && route.id === s.id,
-        onSelect: () => setRoute({ kind: "smart", id: s.id }),
+        onSelect: () => selectAndLeave(() => setRoute({ kind: "smart", id: s.id })),
       };
     }),
   ];

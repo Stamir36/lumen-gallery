@@ -49,7 +49,9 @@ export function SidebarRail({
           className,
         )}
       >
-        <div className="flex h-14 shrink-0 items-center px-4">
+        {/* collapsed rail is 64px: px-4 left only 24px for the 36px toggle —
+            it clipped against the hairline (user screenshot). px-2 fits it. */}
+        <div className={cn("flex h-14 shrink-0 items-center", wide ? "px-4" : "px-2")}>
           {wide ? (
             <>
               <span className="micro-label flex-1 pl-2">{t("sidebar.library")}</span>
@@ -73,10 +75,12 @@ export function SidebarRail({
 
         <div
           className={cn(
-            // F5: a tight 2px rhythm between rows (12px swallowed the viewport
-            // and pushed the last items under the footer on short windows)
-            "flex min-h-0 flex-1 flex-col gap-0.5 py-1.5",
-            wide ? "overflow-y-auto px-2.5" : "overflow-y-hidden",
+            // rows rhythm: 4px between rows (F5 tightened it to 2px, which
+            // read as glued together — user note "друг возле друга"),
+            // 10px side padding in BOTH modes so the collapsed 64px rail
+            // shows a rounded pill, not a full-width bar
+            "flex min-h-0 flex-1 flex-col gap-1 py-1.5 px-2.5",
+            wide ? "overflow-y-auto" : "overflow-y-hidden",
           )}
         >
           {items.map((item) => (
@@ -88,7 +92,7 @@ export function SidebarRail({
           bottom && <div className="shrink-0 overflow-hidden border-t border-hairline p-2.5">{bottom}</div>
         ) : (
           railBottom && (
-            <div className="flex shrink-0 flex-col items-center gap-1 p-2">
+            <div className="flex shrink-0 flex-col items-center gap-1 p-2.5">
               {railBottom}
             </div>
           )
@@ -104,9 +108,11 @@ function SidebarRow({ item, wide }: { item: SidebarItem; wide: boolean }) {
       onClick={item.onSelect}
       className={cn(
         "group flex h-11 w-full items-center gap-3 rounded-control px-3 text-left transition-all duration-[160ms] ease-out",
+        // press feedback: the row answers the click with a small squeeze
+        "active:scale-[.98] active:duration-75",
         item.active
           ? // accent anchor: 14% tinted glass + accent icon + accent counter
-            "bg-accent/[.14] text-tprimary shadow-[inset_0_1px_0_var(--accent-soft)] [&_svg]:text-accent"
+            "bg-accent/[.14] text-tprimary shadow-[inset_0_1px_0_var(--accent-soft),inset_2px_0_0_var(--accent)] [&_svg]:text-accent"
           : // unified hover language: tonal fill + faint accent glow (§2/§11)
             "text-tsecondary hover:bg-white/[.06] hover:text-tprimary hover:shadow-[0_0_0_1px_var(--accent-soft)]",
         !wide && "justify-center px-0",

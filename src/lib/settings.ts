@@ -166,7 +166,7 @@ export const useAppSettings = create<AppSettingsState>((set) => ({
     try {
       const db = await getDb();
       const rows = await db.select<{ key: string; value: string }[]>(
-        "SELECT key, value FROM settings WHERE key IN ('video_scrub_rate', 'hover_captions', 'video_autoplay', 'viewer_swipe', 'viewer_pill_align', 'perf_show_fps', 'show_excluded', 'thumb_workers', 'accent', 'grid_density', 'video_saturation', 'video_sharpness', 'collage_fit', 'direct_playback', 'appearance.main_layout')",
+        "SELECT key, value FROM settings WHERE key IN ('video_scrub_rate', 'hover_captions', 'video_autoplay', 'viewer_swipe', 'viewer_pill_align', 'perf_show_fps', 'show_excluded', 'thumb_workers', 'accent', 'grid_density', 'video_saturation', 'video_sharpness', 'collage_fit', 'direct_playback', 'appearance.main_layout', 'card_hover', 'ui_text_selection')",
       );
       const byKey = new Map(rows.map((r) => [r.key, r.value]));
       const raw = Number(byKey.get(SCRUB_RATE_KEY));

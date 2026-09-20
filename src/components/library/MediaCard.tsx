@@ -228,7 +228,9 @@ export const MediaCard = memo(function MediaCard({
     >
       <button
         type="button"
-        title={name}
+        // no title attribute: the native alt-tooltip on hover distracted from
+        // the card's own hover language (user-reported); names live in the
+        // hover caption and the context menu
         aria-label={media.offline ? `${name} — ${t("offline.chip")}` : name}
         onClick={() => (selectionMode ? onToggleSelect(media.id) : onActivate?.(media))}
         onPointerDown={() => {
@@ -432,15 +434,19 @@ export const MediaCard = memo(function MediaCard({
         )}
       />
 
-      {/* F9 ring as an OVERLAY: inset box-shadows paint UNDER the children, so
-          the img/video covered the ring and it showed only in patches ("рамка
-          обрезана в ленте"). A top-layer border can never be hidden. */}
+      {/* F9 ring: painted as an inset box-shadow on the TOP overlay layer —
+          a border draws at the element edge and got clipped by the rounded
+          overflow-hidden ancestors in the virtualized row ("рамка обрезана
+          в ленте"). An inset shadow is drawn INSIDE this overlay, above the
+          img/video, and physically cannot be covered or clipped. */}
       {(selected || focused) && (
         <span
           aria-hidden
           className={cn(
-            "pointer-events-none absolute inset-0 z-30 rounded-[inherit] border-2",
-            selected ? "border-accent" : "border-accent/60",
+            "pointer-events-none absolute inset-0 z-30 rounded-[inherit]",
+            selected
+              ? "shadow-[inset_0_0_0_2px_var(--accent)]"
+              : "shadow-[inset_0_0_0_2px_var(--accent-soft)]",
           )}
         />
       )}
