@@ -108,35 +108,62 @@ export function ViewerOverlay() {
     // the open animation — only opening and closing do.
     <AnimatePresence>
       {open && row ? (
-        <motion.div
+        // F2 choreography — TWO layers, never one fading tree:
+        //  1. backdrop (bg-black): OPAQUE the instant the viewer mounts, so no
+        //     frame ever shows grid and viewer both semi-transparent; on close
+        //     it fades 100ms only AFTER the content is gone (delay 140ms);
+        //  2. content: scale .96→1 + fade 180ms from the clicked-card origin.
+        //     On close it goes out first, 140ms.
+        <div
           key="viewer"
           ref={rootRef}
+          tabIndex={-1}
           role="dialog"
           aria-modal="true"
           aria-label={baseName(row.path)}
-          tabIndex={-1}
           onKeyDown={trapTab}
           // the dialog takes focus on open; a ring around the whole overlay is
           // noise, not feedback (its controls keep theirs)
           data-no-ring
-          initial={reduced ? false : { opacity: 0, scale: 0.96 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={reduced ? { opacity: 0 } : { opacity: 0, scale: 0.96 }}
-          transition={{ duration: reduced ? 0 : 0.18, ease: [0.22, 1, 0.36, 1] }}
-          style={{ transformOrigin: origin }}
-          className="fixed inset-0 z-[120] bg-black outline-none"
+          className="fixed inset-0 z-[120] outline-none"
         >
-          {row.kind === "video" ? (
-            // key: a new item gets a fresh <video> (no stale decoder state)
-            <VideoPlayer key={row.id} row={row} />
-          ) : (
-            <Lightbox row={row} />
-          )}
-          {/* screen-reader hint: the queue position (mono counter contract) */}
-          <span className="sr-only">
-            {t("viewer.position", { index: index + 1, total: queue.length })}
-          </span>
-        </motion.div>
+          <motion.div
+            className="absolute inset-0 bg-black"
+            initial={{ opacity: 1 }}
+            animate={{ opacity: 1 }}
+            exit={{
+              opacity: 0,
+              transition: { duration: 0.1, delay: 0.14, ease: "easeOut" },
+            }}
+          />
+          <motion.div
+            className="absolute inset-0"
+            initial={reduced ? false : { opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={
+              reduced
+                ? { opacity: 0, transition: { duration: 0.14 } }
+                : {
+                    opacity: 0,
+                    scale: 0.96,
+                    transition: { duration: 0.14, ease: [0.4, 0, 1, 1] },
+                  }
+            }
+            transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+            style={{ transformOrigin: origin }}
+          >
+            {row.kind === "video" ? (
+              // key: a new item gets a fresh <video> (no stale decoder state)
+              <VideoPlayer key={row.id} row={row} />
+            ) : (
+              <Lightbox row={row} />
+            )}
+            {/* screen-reader hint: the queue position (mono counter contract) */}
+            <span className="sr-only">
+              {t("viewer.position", { index: index + 1, total: queue.length })}
+            </span>
+          </motion.div>
+        </div>
       ) : null}
     </AnimatePresence>,
     document.body,
