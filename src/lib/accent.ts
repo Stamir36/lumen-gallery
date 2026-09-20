@@ -20,6 +20,13 @@ export const ACCENTS: AccentPreset[] = [
   { id: "mint", hex: "#7FE0C3", labelKey: "settings.accent_mint" },
   { id: "amber", hex: "#FFC46B", labelKey: "settings.accent_amber" },
   { id: "rose", hex: "#FF8FA3", labelKey: "settings.accent_rose" },
+  // vivid row (user request — "яркие цвета"): saturated, but each still reads
+  // on the #0A0A0C canvas and stays legible as a solid pill with #0A0A0C text
+  { id: "electric", hex: "#8A7CFF", labelKey: "settings.accent_electric" },
+  { id: "coral", hex: "#FF7A59", labelKey: "settings.accent_coral" },
+  { id: "lime", hex: "#AEE64B", labelKey: "settings.accent_lime" },
+  { id: "cyan", hex: "#45E3E0", labelKey: "settings.accent_cyan" },
+  { id: "fuchsia", hex: "#F45BD8", labelKey: "settings.accent_fuchsia" },
 ];
 
 export const ACCENT_KEY = "accent";

@@ -180,6 +180,7 @@
     "open_external": "Open in external player"
   },
   "viewer": {
+    "loading": "Loading",
     "controls": "Viewer controls",
     "close": "Close",
     "back": "Back to gallery",
@@ -298,6 +299,12 @@
     "accent_mint": "Mint",
     "accent_amber": "Amber",
     "accent_rose": "Rose",
+    "accent_electric": "Electric",
+    "accent_coral": "Coral",
+    "accent_lime": "Lime",
+    "accent_cyan": "Cyan",
+    "accent_fuchsia": "Fuchsia",
+    "accent_custom": "Custom color",
     "grid_density_hint": "Row height {{h}} px · gutter {{gap}} px",
     "density_comfort": "Comfort",
     "density_medium": "Medium",

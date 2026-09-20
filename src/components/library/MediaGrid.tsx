@@ -14,6 +14,7 @@ import { DENSITY_PARAMS, useAppSettings } from "@/lib/settings";
 import { useElementWidth } from "@/lib/hooks";
 import { formatDuration, formatResolution, baseName } from "@/lib/format";
 import { enqueueRows, seedThumbs, setViewportIds } from "@/lib/thumbs";
+import { armOpenWarm } from "@/lib/preload";
 import { useViewer } from "@/state/viewer";
 import { useLibraryUi } from "@/state/library-ui";
 import { MediaCard } from "./MediaCard";
@@ -180,6 +181,15 @@ export function MediaGrid({
     },
     [openViewer],
   );
+
+  // U1 — press-start: a card's pointerdown already asks for the ORIGINAL, so
+  // the file is in flight by the time the click opens the viewer (~150 ms of
+  // head start; a press that was actually a selection/context-menu gesture
+  // simply gets evicted by the tiny warm cache — see lib/preload.ts)
+  const warmOpen = useCallback((id: number) => {
+    const row = rowsRef.current.find((r) => r.id === id);
+    if (row) armOpenWarm(row);
+  }, []);
 
   /**
    * Visible-first thumbnail priming (S1.2): the range decides what is generated
@@ -392,6 +402,7 @@ export function MediaGrid({
             // that index; the queue is the CURRENT view order, so arrows and the
             // filmstrip walk exactly what the grid is showing
             onActivate={openViewerAt}
+            onPressStart={warmOpen}
           />
         )}
       />
@@ -634,6 +645,7 @@ const GridRow = memo(function GridRow({
   staggerMs,
   onToggleSelect,
   onActivate,
+  onPressStart,
 }: {
   item: GridItem;
   view: "justified" | "square" | "list" | "masonry";
@@ -644,6 +656,8 @@ const GridRow = memo(function GridRow({
   staggerMs?: number;
   onToggleSelect: (id: number) => void;
   onActivate: (id: number) => void;
+  /** U1: card pointerdown — start fetching the original before the click */
+  onPressStart?: (id: number) => void;
 }) {
   if (item.kind === "header") {
     return (
@@ -739,6 +753,7 @@ const GridRow = memo(function GridRow({
           selected={selected.has(cell.media.id)}
           onToggleSelect={onToggleSelect}
           onActivate={() => onActivate(cell.media.id)}
+          onPressStart={onPressStart ? () => onPressStart(cell.media.id) : undefined}
         />
       </div>,
     );

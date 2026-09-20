@@ -190,6 +190,7 @@
     "open_external": "Открыть во внешнем плеере"
   },
   "viewer": {
+    "loading": "Загрузка",
     "controls": "Управление просмотром",
     "close": "Закрыть",
     "back": "Вернуться в галерею",
@@ -309,6 +310,12 @@
     "accent_mint": "Мята",
     "accent_amber": "Янтарь",
     "accent_rose": "Роза",
+    "accent_electric": "Электрик",
+    "accent_coral": "Коралл",
+    "accent_lime": "Лайм",
+    "accent_cyan": "Циан",
+    "accent_fuchsia": "Фуксия",
+    "accent_custom": "Свой цвет",
     "grid_density_hint": "Высота ряда {{h}} px · отступ {{gap}} px",
     "density_comfort": "Комфорт",
     "density_medium": "Средне",

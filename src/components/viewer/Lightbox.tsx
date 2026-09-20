@@ -15,6 +15,7 @@ import {
   FileWarning,
   Heart,
   Info,
+  Loader2,
   Maximize2,
   PanelBottom,
   RotateCw,
@@ -31,6 +32,7 @@ import { trashMedia } from "@/lib/mediaActions";
 import { useViewer } from "@/state/viewer";
 import { useAppSettings } from "@/lib/settings";
 import { thumbSrc, useThumbStore } from "@/lib/thumbs";
+import { keepWarm, preloadViewerNeighbors } from "@/lib/preload";
 import { Filmstrip } from "./Filmstrip";
 
 /** relative to the fit size: 1 = contain, MAX = deep zoom */
@@ -208,6 +210,22 @@ export function Lightbox({ row }: { row: MediaRow }) {
       for (const img of pre) img.src = "";
     };
   }, [queue, index]);
+
+  // U1 — the thumb prefetch above warms the UNDERLAY; this one warms the
+  // ORIGINALS of the ±2 image neighbours (idle-planned, tiny cache, cancels
+  // on fast paging — see lib/preload.ts). Arrow-stepping through photos goes
+  // from "a second of blurred thumb" to instant for the common case.
+  useEffect(
+    () => preloadViewerNeighbors(queue, index),
+    [queue, index],
+  );
+
+  // U1 — pin the press-started warm entry for the CURRENT row (the grid
+  // warms on pointerdown; without this the next warm cycle could evict the
+  // very image on screen)
+  useEffect(() => {
+    keepWarm(row.id);
+  }, [row.id]);
 
   const clampPan = useCallback(
     (x: number, y: number, z: number) => {
@@ -421,6 +439,22 @@ export function Lightbox({ row }: { row: MediaRow }) {
       >
         {!loaded && !failed && !underlaySrc && (
           <div className="shimmer-bg absolute inset-0 opacity-60" aria-hidden />
+        )}
+
+        {/* U1 — honest progress: a loading photo without a cached thumb used to
+            sit on a silent shimmer for a second; the pill makes the wait READ
+            as work, not as a stall. With an underlay the blur-up already
+            communicates, so the pill shows only when nothing else does. */}
+        {!loaded && !failed && !underlaySrc && (
+          <div
+            className="glass absolute left-1/2 top-1/2 flex h-11 -translate-x-1/2 -translate-y-1/2 items-center gap-2.5 rounded-pill px-5"
+            aria-hidden
+          >
+            <Loader2 size={16} className="animate-spin text-accent" />
+            <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-tsecondary">
+              {t("viewer.loading")}
+            </span>
+          </div>
         )}
 
         {/* AMBIENT — the glow behind letterboxed photos (parity with the video

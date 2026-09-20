@@ -50,6 +50,9 @@ export interface MediaCardProps {
   selected: boolean;
   onToggleSelect: (id: number) => void;
   onActivate?: (media: MediaRow) => void;
+  /** U1 — pointerdown on the card body: start fetching the original before
+   *  the click fires (a selection/context-menu press is evicted harmlessly) */
+  onPressStart?: (media: MediaRow) => void;
 }
 
 export const MediaCard = memo(function MediaCard({
@@ -60,6 +63,7 @@ export const MediaCard = memo(function MediaCard({
   selected,
   onToggleSelect,
   onActivate,
+  onPressStart,
 }: MediaCardProps) {
   const { t } = useTranslation();
   const reduced = useReducedMotion();
@@ -224,6 +228,9 @@ export const MediaCard = memo(function MediaCard({
         title={name}
         aria-label={media.offline ? `${name} — ${t("offline.chip")}` : name}
         onClick={() => (selectionMode ? onToggleSelect(media.id) : onActivate?.(media))}
+        onPointerDown={() => {
+          if (!selectionMode && !media.offline) onPressStart?.(media);
+        }}
         className={cn(
           "absolute inset-0 overflow-hidden transition-[transform,box-shadow] duration-[160ms] ease-out",
           "hover:-translate-y-0.5 hover:z-10",
@@ -277,13 +284,16 @@ export const MediaCard = memo(function MediaCard({
         )}
 
         {isVideo && !media.offline && (
+          // glass play pill (U2): the bare 40px glyph at 40% opacity dissolved
+          // on bright thumbs; the whitelist glass chip reads on ANY cover and
+          // matches the player/menu glass vocabulary
           <span
             className={cn(
-              "pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-white transition-opacity duration-[160ms]",
-              preview ? "opacity-0" : "opacity-40",
+              "glass pointer-events-none absolute left-1/2 top-1/2 flex h-11 w-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-pill text-white transition-all duration-[160ms] ease-out group-hover:scale-105",
+              preview ? "scale-90 opacity-0" : "opacity-95",
             )}
           >
-            <Play size={40} fill="currentColor" strokeWidth={0} />
+            <Play size={17} fill="currentColor" strokeWidth={0} className="ml-0.5" />
           </span>
         )}
 
