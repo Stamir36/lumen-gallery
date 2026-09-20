@@ -10,3 +10,4 @@ e2e/__screenshots__/
 e2e/.results/
 e2e/.report/
 test-results/
+e2e/visual.spec.ts-snapshots/
