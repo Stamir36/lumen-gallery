@@ -587,7 +587,7 @@ export function Lightbox({ row }: { row: MediaRow }) {
           disabled={!canPrev}
           onClick={() => useViewer.getState().step(-1)}
           className={cn(
-            "absolute left-4 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-pill bg-white/[.06] text-tprimary backdrop-blur-sm transition-all duration-[160ms] hover:bg-white/[.12]",
+            "glass absolute left-4 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-pill text-tprimary transition-colors duration-[160ms] hover:bg-white/[.12]",
             !canPrev && "pointer-events-none opacity-30",
           )}
         >
@@ -600,7 +600,7 @@ export function Lightbox({ row }: { row: MediaRow }) {
           disabled={!canNext}
           onClick={() => useViewer.getState().step(1)}
           className={cn(
-            "absolute right-4 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-pill bg-white/[.06] text-tprimary backdrop-blur-sm transition-all duration-[160ms] hover:bg-white/[.12]",
+            "glass absolute right-4 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-pill text-tprimary transition-colors duration-[160ms] hover:bg-white/[.12]",
             !canNext && "pointer-events-none opacity-30",
           )}
         >
