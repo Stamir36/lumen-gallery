@@ -159,11 +159,20 @@ export function AccentPicker({
   // click, another window, settings reload). Local drags write through commit()
   // first, so this only ever re-normalises — never fights the pointer.
   const [hsv, setHsv] = useState(() => hexToHsv(accent));
-  useEffect(() => setHsv(hexToHsv(accent)), [accent]);
+  /** the last hex WE committed — skips the round-trip re-normalisation, which
+   *  would otherwise quantise HSV→hex→HSV on every pointermove and make the
+   *  cursor dot jitter under the finger */
+  const mineRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (mineRef.current === accent.toLowerCase()) return;
+    setHsv(hexToHsv(accent));
+  }, [accent]);
 
   const commit = (h: number, s: number, v: number) => {
+    const hex = hsvToHex(h, s, v);
+    mineRef.current = hex;
     setHsv({ h, s, v });
-    onPick(hsvToHex(h, s, v));
+    onPick(hex);
   };
 
   const customActive = !isPresetAccent(accent);
