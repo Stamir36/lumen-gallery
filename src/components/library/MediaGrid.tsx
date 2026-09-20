@@ -360,6 +360,7 @@ export function MediaGrid({
         selectionMode={selectionMode}
         selectedIds={selected}
         onToggleSelect={toggleSelected}
+        onPressStart={warmOpen}
         onActivate={(id) => {
           const at = rows.findIndex((r) => r.id === id);
           openViewer(rows, at < 0 ? 0 : at);

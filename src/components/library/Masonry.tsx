@@ -1,10 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
 import type { MediaRow } from "@/lib/api";
 import { computeMasonryColumns, ratioOf } from "@/lib/justified";
 import { DENSITY_PARAMS, useAppSettings } from "@/lib/settings";
 import { useElementWidth, useRafScroll } from "@/lib/hooks";
-import { formatCount } from "@/lib/api";
 import { MediaCard } from "./MediaCard";
 
 /**
@@ -30,6 +28,7 @@ export function Masonry({
   onActivate,
   revealId,
   onRevealed,
+  onPressStart,
 }: {
   rows: MediaRow[];
   radius: number;
@@ -41,8 +40,9 @@ export function Masonry({
   /** item the viewer was showing — scroll the masonry back to it on close */
   revealId?: number | null;
   onRevealed?: () => void;
+  /** U1: card pointerdown — start fetching the original before the click */
+  onPressStart?: (id: number) => void;
 }) {
-  const { t } = useTranslation();
   const scroller = useRef<HTMLDivElement>(null);
   const width = useElementWidth(scroller, 1200);
   // 36px gutter each side + the 8px scrollbar (DESIGN.md §9) — mirrors the
@@ -116,14 +116,8 @@ export function Masonry({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      {limited && (
-        <div className="mx-9 mb-3 flex h-9 shrink-0 items-center rounded-control bg-surface-2 px-3 font-mono text-[11px] tracking-[0.08em] text-ttertiary">
-          {t("grid.masonry_limited", {
-            shown: formatCount(MASONRY_MAX),
-            total: formatCount(rows.length),
-          })}
-        </div>
-      )}
+      {/* F6: the "first 2,000" mono band is gone — a dev-limit banner is not a
+          UI element. The cap stays (perf), the apology doesn't. */}
       <div
         ref={scroller}
         className="relative min-h-0 flex-1 overflow-y-auto overflow-x-hidden"
@@ -146,6 +140,7 @@ export function Masonry({
                 selected={selected.has(media.id)}
                 onToggleSelect={onToggleSelect}
                 onActivate={() => onActivate(media.id)}
+                onPressStart={onPressStart ? () => onPressStart(media.id) : undefined}
               />
             </div>
           ))}

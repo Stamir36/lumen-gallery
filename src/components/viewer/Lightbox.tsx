@@ -121,6 +121,20 @@ export function Lightbox({ row }: { row: MediaRow }) {
    */
   const underlaySrc = useThumbStore((s) => s.thumbs[row.id]?.path ?? row.thumbPath);
 
+  // B4 — the ambient wash must survive a missing thumbnail: with "shuffle"
+  // on, a photo that was never in the grid has no cached thumb, and the stage
+  // behind it fell to plain BLACK. A dominant-color radial keeps the glow;
+  // the neutral tint matches the untoned tiles, it never reads as a bug.
+  const ambientColor = useThumbStore((s) => s.thumbs[row.id]?.color) ?? row.dominantColor ?? null;
+  const ambientCss = ambientColor && /^#[0-9a-fA-F]{6}$/.test(ambientColor) ? ambientColor : null;
+  const showColorAmbient = !underlaySrc && !failed && ambientCss;
+  // F4 — the AMBIENT must never depend on a thumb file alone: a row without
+  // one (still generating, decode failed, shuffle onto a cold row) fell back
+  // to a bare black stage. The dominant color is on every scanned row, so the
+  // stage always glows with the picture's palette.
+  const underlayColor =
+    useThumbStore((s) => s.thumbs[row.id]?.color) ?? row.dominantColor ?? null;
+
   const rotated = Math.abs(rotate % 180) === 90;
 
   // stage size (kept in state so fit can be recomputed on window resize)
@@ -441,6 +455,22 @@ export function Lightbox({ row }: { row: MediaRow }) {
           <div className="shimmer-bg absolute inset-0 opacity-60" aria-hidden />
         )}
 
+        {/* B4 — ambient fallback: no thumb file at all (uncached shuffle item)
+            used to mean a bare black stage; paint the dominant color as a big
+            soft radial until (and while) the original lands */}
+        {showColorAmbient && (
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0"
+            style={{
+              background: `radial-gradient(90% 90% at 50% 45%, ${ambientCss} 0%, transparent 70%)`,
+              opacity: loaded ? 0.32 : 0.26,
+              filter: "blur(60px) saturate(1.4)",
+              transition: "opacity 400ms ease-out",
+            }}
+          />
+        )}
+
         {/* U1 — honest progress: a loading photo without a cached thumb used to
             sit on a silent shimmer for a second; the pill makes the wait READ
             as work, not as a stall. With an underlay the blur-up already
@@ -460,7 +490,18 @@ export function Lightbox({ row }: { row: MediaRow }) {
         {/* AMBIENT — the glow behind letterboxed photos (parity with the video
             player, which always had it): the cached thumb, scaled past the
             stage and blurred 60px. The thumb is the RIGHT source here — it is
-            blurred beyond recognition anyway, so its 480w is invisible. */}
+            blurred beyond recognition anyway, so its 480w is invisible.
+            F4: when there IS no thumb (cold/shuffled row) the dominant color
+            still paints a soft radial glow — the stage is never bare black. */}
+        {!underlaySrc && !failed && underlayColor && (
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0"
+            style={{
+              background: `radial-gradient(70% 60% at 50% 45%, ${underlayColor}59, transparent 75%)`,
+            }}
+          />
+        )}
         {underlaySrc && !failed && (
           <motion.img
             key={`ambient-${row.id}`}
@@ -693,8 +734,10 @@ export function Lightbox({ row }: { row: MediaRow }) {
             )}
             {/* the name leads, directly behind the back arrow (as it always did) */}
             <div className="glass pointer-events-none flex h-10 min-w-0 max-w-[52vw] items-center gap-3 rounded-pill px-4">
-              <span className="truncate text-[13px] text-tprimary">{name}</span>
-              <span className="shrink-0 font-mono text-[10.5px] tabular-nums text-ttertiary">
+              {/* leading-none + flex on BOTH halves: the mono counter used to
+                  sit on its own baseline a hair above the filename */}
+              <span className="flex items-center truncate text-[13px] leading-none text-tprimary">{name}</span>
+              <span className="flex shrink-0 items-center font-mono text-[10.5px] leading-none tabular-nums text-ttertiary">
                 {index + 1} / {queue.length}
               </span>
             </div>
@@ -721,11 +764,14 @@ export function Lightbox({ row }: { row: MediaRow }) {
         <AnimatePresence>
           {infoOpen && (
             <motion.aside
-              initial={reduced ? false : { opacity: 0, x: 16 }}
+              initial={reduced ? false : { opacity: 0, x: -16 }}
               animate={{ opacity: 1, x: 0 }}
-              exit={reduced ? { opacity: 0 } : { opacity: 0, x: 16 }}
+              exit={reduced ? { opacity: 0 } : { opacity: 0, x: -16 }}
               transition={{ duration: reduced ? 0 : 0.16, ease: "easeOut" }}
-              className="absolute right-4 top-16 w-[320px] rounded-viewer bg-surface-2/95 p-4 shadow-[0_16px_48px_rgba(0,0,0,.5)]"
+              // LEFT side + glass material, same as the video player — one
+              // muscle memory for "i" across both viewers (was: solid panel on
+              // the right here, glass on the left there)
+              className="glass absolute left-4 top-16 z-40 w-[320px] rounded-viewer p-4 shadow-[0_16px_48px_rgba(0,0,0,.5)]"
             >
               <dl className="flex flex-col gap-2 text-[11px] leading-relaxed">
                 {[

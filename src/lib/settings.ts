@@ -20,6 +20,12 @@ export const PILL_ALIGN_KEY = "viewer_pill_align";
 export const VIDEO_AUTOPLAY_KEY = "video_autoplay";
 /** Grid density preset (Settings › Appearance): comfort | medium | compact. */
 export const DENSITY_KEY = "grid_density";
+/** Card hover micro-motion (lift + inner scale), default ON. OFF = a still
+ *  grid: only the gradient/chips reveal on hover. */
+export const CARD_HOVER_KEY = "card_hover";
+/** Text is selectable anywhere (search/path fields always keep it). OFF =
+ *  nothing in the app hints at a web page — no I-beam, no selection. */
+export const TEXT_SELECTION_KEY = "ui_text_selection";
 
 export type GridDensity = "comfort" | "medium" | "compact";
 export const DEFAULT_DENSITY: GridDensity = "medium";
@@ -85,6 +91,10 @@ interface AppSettingsState {
   videoScrubRate: number;
   /** filename caption on card hover (F2) */
   hoverCaptions: boolean;
+  /** card lift + inner scale on hover (F14), default ON */
+  cardHover: boolean;
+  /** text selection outside inputs (F13), default OFF (native-app feel) */
+  textSelection: boolean;
   /** a freshly opened video starts playing at once (Settings › Appearance) */
   videoAutoplay: boolean;
   /** horizontal swipe walks the photo queue (Settings › Appearance) */
@@ -115,6 +125,8 @@ interface AppSettingsState {
   load: () => Promise<void>;
   setVideoScrubRate: (rate: number) => Promise<void>;
   setHoverCaptions: (on: boolean) => Promise<void>;
+  setCardHover: (on: boolean) => Promise<void>;
+  setTextSelection: (on: boolean) => Promise<void>;
   setVideoAutoplay: (on: boolean) => Promise<void>;
   setSwipeNavigate: (on: boolean) => Promise<void>;
   setPillAlign: (align: PillAlign) => Promise<void>;
@@ -133,6 +145,8 @@ interface AppSettingsState {
 export const useAppSettings = create<AppSettingsState>((set) => ({
   videoScrubRate: DEFAULT_SCRUB_RATE,
   hoverCaptions: true,
+  cardHover: true,
+  textSelection: false,
   videoAutoplay: true,
   swipeNavigate: true,
   pillAlign: DEFAULT_PILL_ALIGN,
@@ -161,6 +175,8 @@ export const useAppSettings = create<AppSettingsState>((set) => ({
           Number.isFinite(raw) && raw > 0 ? raw : DEFAULT_SCRUB_RATE,
         // absent = first run: captions are ON by default (F2)
         hoverCaptions: byKey.get(HOVER_CAPTIONS_KEY) !== "false",
+        cardHover: byKey.get(CARD_HOVER_KEY) !== "false",
+        textSelection: byKey.get(TEXT_SELECTION_KEY) === "true",
         videoAutoplay: byKey.get(VIDEO_AUTOPLAY_KEY) !== "false",
         swipeNavigate: byKey.get(SWIPE_NAVIGATE_KEY) !== "false",
         pillAlign: readPillAlign(byKey.get(PILL_ALIGN_KEY)),
@@ -204,6 +220,28 @@ export const useAppSettings = create<AppSettingsState>((set) => ({
       await writeSetting(HOVER_CAPTIONS_KEY, String(on));
     } catch (e) {
       console.error("hover captions save failed", e);
+      toast.error(i18n.t("errors.action_failed"));
+    }
+  },
+
+  setCardHover: async (on) => {
+    set({ cardHover: on });
+    try {
+      await writeSetting(CARD_HOVER_KEY, String(on));
+    } catch (e) {
+      console.error("card hover save failed", e);
+      toast.error(i18n.t("errors.action_failed"));
+    }
+  },
+
+  setTextSelection: async (on) => {
+    set({ textSelection: on });
+    // the class flips immediately — no restart, no repaint lag
+    document.documentElement.classList.toggle("allow-select", on);
+    try {
+      await writeSetting(TEXT_SELECTION_KEY, String(on));
+    } catch (e) {
+      console.error("text selection save failed", e);
       toast.error(i18n.t("errors.action_failed"));
     }
   },

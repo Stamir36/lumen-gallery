@@ -835,7 +835,7 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
               }
               setResume(null);
             }}
-            className="glass absolute bottom-28 left-1/2 z-40 -translate-x-1/2 rounded-pill px-4 py-2 font-mono text-[11px] text-tprimary"
+            className="glass absolute bottom-36 left-1/2 z-40 -translate-x-1/2 rounded-pill px-4 py-2 font-mono text-[11px] text-tprimary"
           >
             {t("player.resume", { time: clock(resume.positionMs / 1000) })}
           </motion.button>
@@ -1291,12 +1291,12 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
                       aria-label={t("player.more")}
                       className="absolute bottom-[60px] right-0 z-50 w-[252px] overflow-hidden rounded-[20px] p-1.5"
                       style={{
-                        /* dark-glass v2.3 recipe (the ContextMenu material):
-                           tinted gradient + blur + saturate, hairline border,
-                           inner top highlight. Over a bright frame the plain
-                           `glass` wash was too light for white text. */
+                        /* dark-glass v2.3 recipe (the ContextMenu material),
+                           DARKER than plain `glass`: over a bright video frame
+                           the 68→55% tint washed white text out — 84→74% keeps
+                           the frosting readable on ANY frame */
                         background:
-                          "linear-gradient(180deg, rgba(14,14,18,.68), rgba(14,14,18,.55))",
+                          "linear-gradient(180deg, rgba(14,14,18,.84), rgba(14,14,18,.74))",
                         backdropFilter: "blur(28px) saturate(1.4)",
                         WebkitBackdropFilter: "blur(28px) saturate(1.4)",
                         border: "1px solid rgba(255,255,255,.08)",
@@ -1381,10 +1381,10 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
       <AnimatePresence>
         {infoOpen && (
           <motion.aside
-            initial={reduced ? false : { opacity: 0, x: 16 }}
+            initial={reduced ? false : { opacity: 0, x: -16 }}
             animate={{ opacity: 1, x: 0 }}
-            exit={reduced ? { opacity: 0 } : { opacity: 0, x: 16 }}
-            className="absolute left-4 top-20 z-40 w-[320px] rounded-viewer bg-surface-2/95 p-4 shadow-[0_16px_48px_rgba(0,0,0,.5)]"
+            exit={reduced ? { opacity: 0 } : { opacity: 0, x: -16 }}
+            className="glass absolute left-4 top-20 z-40 w-[320px] rounded-viewer p-4 shadow-[0_16px_48px_rgba(0,0,0,.5)]"
           >
             <dl className="flex flex-col gap-2 font-mono text-[11px]">
               {[

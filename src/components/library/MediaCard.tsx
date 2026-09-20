@@ -237,7 +237,9 @@ export const MediaCard = memo(function MediaCard({
           "hover:shadow-[0_12px_28px_rgba(0,0,0,.4),0_0_0_1px_var(--accent-soft)]",
           "active:scale-[.97]",
           selected && "ring-2 ring-accent/60",
-          focused && "ring-2 ring-accent/40 ring-offset-2 ring-offset-canvas",
+          // F9: ring-INSET, not offset — an offset ring overflows the cell and
+          // the virtualized row clips it ("рамка обрезана по краям ленты")
+          focused && "ring-2 ring-inset ring-accent/50",
         )}
         style={{ borderRadius: radius }}
       >
@@ -284,16 +286,16 @@ export const MediaCard = memo(function MediaCard({
         )}
 
         {isVideo && !media.offline && (
-          // glass play pill (U2): the bare 40px glyph at 40% opacity dissolved
-          // on bright thumbs; the whitelist glass chip reads on ANY cover and
-          // matches the player/menu glass vocabulary
+          // small corner chip, not a centre glyph: the preview belongs to the
+          // photo, not to the badge. Hides on hover — the caption + chips own
+          // the card then; hides while the scrub preview plays.
           <span
             className={cn(
-              "glass pointer-events-none absolute left-1/2 top-1/2 flex h-11 w-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-pill text-white transition-all duration-[160ms] ease-out group-hover:scale-105",
-              preview ? "scale-90 opacity-0" : "opacity-95",
+              "pointer-events-none absolute left-2 top-2 z-10 flex h-6 w-6 items-center justify-center rounded-[8px] bg-black/55 text-white/90 backdrop-blur-sm transition-opacity duration-[160ms] ease-out",
+              preview ? "opacity-0" : "opacity-100 group-hover:opacity-0",
             )}
           >
-            <Play size={17} fill="currentColor" strokeWidth={0} className="ml-0.5" />
+            <Play size={11} fill="currentColor" strokeWidth={0} className="ml-px" />
           </span>
         )}
 

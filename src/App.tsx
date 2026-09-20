@@ -356,6 +356,9 @@ export default function App() {
         right={
           !noRoots && !onboarding.show ? (
             <div className="flex items-center gap-2">
+              {/* F15: the explorer tree/cards switch lives HERE — one toggle,
+                  and only where it actually does something (explorer root) */}
+              {explorer && route.kind === "root" && <ExplorerLayoutSwitch />}
               <BrowseModeSwitch />
               <ViewModeSwitch />
             </div>
@@ -407,9 +410,9 @@ export default function App() {
               items={items}
               railBottom={railBottom}
               status={statusBar}
-              search={
-                explorer && route.kind === "root" ? <ExplorerLayoutSwitch /> : null
-              }
+              // F15: the switch is in the titlebar (App right slot) — the rail
+              // shell used to carry a second copy in its chips panel
+              search={null}
             >
               {gridArea}
             </RailShell>
@@ -418,15 +421,9 @@ export default function App() {
               <LibraryTopBar
                 title={title}
                 count={rows.length}
-                // explorer's own header control: tree vs wrapping folder cards.
-                // FIX 3: only where it actually does something — a library
-                // root in Папки mode; on Вся медиатека and smart views the
-                // explorer has no tree to switch (state stays persisted).
-                extra={
-                  explorer && route.kind === "root" ? (
-                    <ExplorerLayoutSwitch />
-                  ) : undefined
-                }
+                // F15: the tree/cards switch lives ONLY in the window titlebar
+                // now — a second identical toggle in the library bar was a
+                // duplicate control on the same screen.
               />
               {gridArea}
               {statusBar}

@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { formatBytes, formatCount } from "@/lib/api";
 import { formatAgo } from "@/lib/format";
 import { useAppSettings } from "@/lib/settings";
+import { cn } from "@/lib/utils";
 import { usePerf } from "@/lib/perf";
 import type { LibrarySummary } from "@/lib/api";
 
@@ -34,12 +35,23 @@ export function StatusLine({
   // measured, never guessed: frames come from real rAF deltas (Settings ›
   // Appearance turns the chip on), worst = the longest frame in the window
   const showFps = useAppSettings((s) => s.showFps);
+  // F16: the rounded "pill" shell belongs to the rail layout (where every
+  // panel floats). In the classic layout the status line is a quiet editorial
+  // strip — no pill, no fill.
+  const rail = useAppSettings((s) => s.mainLayout) === "rail";
   const fps = usePerf((s) => s.fps);
   const worstMs = usePerf((s) => s.worstMs);
   const longTasks = usePerf((s) => s.longTasks);
 
   return (
-    <div className="mx-3 mb-2 flex h-9 shrink-0 items-center gap-3 rounded-[16px] bg-surface-1/80 px-5 font-mono text-[11px] tracking-[0.04em] text-ttertiary">
+    <div
+      className={cn(
+        "flex h-9 shrink-0 items-center gap-3 font-mono text-[11px] tracking-[0.04em] text-ttertiary",
+        rail
+          ? "mx-3 mb-2 rounded-[16px] bg-surface-1/80 px-5"
+          : "px-9 pb-1.5",
+      )}
+    >
       {scanning ? (
         <span className="text-tsecondary">{scanText}</span>
       ) : (
