@@ -26,6 +26,8 @@ jobs:
   build:
     name: Package site
     runs-on: ubuntu-latest
+    outputs:
+      pages_enabled: ${{ steps.pages.outputs.enabled }}
     steps:
       - uses: actions/checkout@v4
 
@@ -74,6 +76,41 @@ jobs:
           print(f"{len(pages)} pages checked, all local references resolve.")
           PY
 
+      # Pages has to be switched on once in the repository settings, and the
+      # Actions token cannot do it for us: creating a Pages site needs more than
+      # GITHUB_TOKEN is allowed (`enablement: true` fails with "Resource not
+      # accessible by integration"). So we check instead of failing: the build
+      # stays green, the deploy is skipped, and the run summary says what to
+      # click. Probe both with and without the token, so a token that lacks
+      # Pages read rights cannot silently disable the deployment.
+      - name: Is Pages enabled?
+        id: pages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          url="${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/pages"
+          auth=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer ${GITHUB_TOKEN}" -H 'Accept: application/vnd.github+json' "$url")
+          anon=$(curl -s -o /dev/null -w '%{http_code}' -H 'Accept: application/vnd.github+json' "$url")
+          echo "authenticated=$auth anonymous=$anon"
+          if [ "$auth" = "200" ] || [ "$anon" = "200" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            {
+              echo "### GitHub Pages is not switched on yet"
+              echo ""
+              echo "The site built fine and the artifact is attached to this run, but there"
+              echo "is no Pages site to publish it to. One-time setup:"
+              echo ""
+              echo "1. Repository **Settings** → **Pages** → *Build and deployment*"
+              echo "2. Set **Source** to **GitHub Actions**"
+              echo "3. Re-run this workflow: *Actions → Deploy site → Run workflow*"
+              echo ""
+              echo "The address will then be https://$(echo "$GITHUB_REPOSITORY_OWNER" | tr 'A-Z' 'a-z').github.io/${GITHUB_REPOSITORY#*/}/"
+              echo "(plus /ru/ and /privacy/), and it appears under Settings → Pages."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
@@ -82,6 +119,8 @@ jobs:
   deploy:
     name: Deploy
     needs: build
+    # Skipped, not failed, until someone enables Pages in the repository settings
+    if: needs.build.outputs.pages_enabled == 'true'
     runs-on: ubuntu-latest
     environment:
       name: github-pages

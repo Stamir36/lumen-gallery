@@ -50,6 +50,12 @@ The workflow is `.github/workflows/pages.yml`. It needs no secrets: it uses the
 automatic `GITHUB_TOKEN` plus the `pages`/`id-token` permissions declared in the
 file.
 
+If Pages has not been enabled yet, the run does **not** fail: the `build` job
+succeeds, the `deploy` job is skipped, and the run summary spells out the
+setting to change. (The Actions token cannot enable Pages by itself — creating a
+Pages site needs more than `GITHUB_TOKEN` is allowed, so `enablement: true`
+would just fail with *Resource not accessible by integration*.)
+
 ## The URL you get
 
 For a project repository without a custom domain, Pages serves it at:
