@@ -54,8 +54,6 @@
 |---|---|
 | ![Мастер настройки](docs/screenshots/setup-wizard.png) | ![Настройки](docs/screenshots/settings.png) |
 
-<div align="center"><img src="docs/screenshots/setup-finish.png" width="620" alt="Мастер настройки — финальный экран" /></div>
-
 ## Возможности
 
 ### Библиотека
