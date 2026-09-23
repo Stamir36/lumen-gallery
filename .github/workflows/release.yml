@@ -1,0 +1,45 @@
+name: Release
+
+# Push a tag like `v0.2.0` → the Windows installer is built and attached to a
+# draft GitHub release. Nothing is published until you review and publish it.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    name: Windows installer
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - run: pnpm install --frozen-lockfile
+
+      # tauri-action runs `pnpm tauri build` and uploads the NSIS installer
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: "LUMEN ${{ github.ref_name }}"
+          releaseBody: |
+            Windows installer (`LUMEN_*_x64-setup.exe`) — see README for what's new.
+          releaseDraft: true
+          prerelease: false

@@ -1,0 +1,66 @@
+name: Bug report
+description: Something in LUMEN is broken, frozen or wrong
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. The log file turns a "it froze" story into
+        something fixable, so please attach its tail.
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, what you got.
+      placeholder: |
+        1. Opened "Videos" with 1 900 files
+        2. Scrolled quickly to the bottom
+        3. The grid showed date headers with no thumbnails under them
+    validations:
+      required: true
+
+  - type: input
+    id: library
+    attributes:
+      label: Library size
+      description: Roughly how many files LUMEN has indexed.
+      placeholder: "9 500 files / 110 GB"
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: LUMEN version
+      description: Settings › About, or the installer file name.
+      placeholder: v0.2.0 · 97edc9d
+    validations:
+      required: true
+
+  - type: input
+    id: windows
+    attributes:
+      label: Windows version
+      placeholder: Windows 11 23H2 (build 22631)
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log tail
+      description: |
+        Last ~50 lines of `%LOCALAPPDATA%\com.unesell.lumen\logs\LUMEN.log`.
+        Frame times and long-task warnings are in there — please keep them.
+      render: text
+    validations:
+      required: false
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots or video
+      description: Drag and drop here if the problem is visual.
+    validations:
+      required: false

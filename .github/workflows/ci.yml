@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    name: Frontend (typecheck + build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # pnpm 12 matches the lockfile the maintainer generates; older majors
+      # ignore the `allowBuilds` key in pnpm-workspace.yaml and fail the
+      # install with ERR_PNPM_IGNORED_BUILDS
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm build
+
+  rust:
+    name: Rust (clippy)
+    # Windows on purpose: it is the shipping platform, so the tray, the file
+    # associations and the WebView2 paths are actually compiled here.
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - run: cargo clippy --all-targets -- -D warnings
+        working-directory: src-tauri
+
+  # The Playwright suite is intentionally NOT in CI: its pixel baselines are
+  # machine-specific and never committed (see e2e/README.md). Run `pnpm e2e`
+  # locally after `pnpm e2e:update` on a fresh checkout.

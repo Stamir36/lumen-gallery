@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Question / help
+    url: https://github.com/Stamir36/lumen-gallery/discussions
+    about: Setup, habits, "how do I…" — better in Discussions than in issues
