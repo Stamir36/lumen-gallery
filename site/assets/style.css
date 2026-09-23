@@ -88,7 +88,7 @@
 
   --shell: 1080px;
   --measure: 640px;
-  --section: clamp(76px, 8.5vw, 128px);
+  --section: clamp(96px, 11vw, 168px);
 
   --font: "Manrope Variable", "Segoe UI Variable Text", "Segoe UI", system-ui,
     -apple-system, "Helvetica Neue", Arial, sans-serif;
@@ -147,11 +147,16 @@ img {
   height: auto;
 }
 
+/* Gutters, horizontal only — never the `padding` shorthand in this rule.
+   `.wrap` is a class (0,1,0) and `section` is a type selector (0,0,1), so
+   `padding: 0 32px` here silently zeroed the `padding-top/bottom: var(--section)`
+   of every `<section class="wrap">` and collapsed the page rhythm. */
 .wrap {
   width: 100%;
   max-width: var(--shell);
   margin: 0 auto;
-  padding: 0 32px;
+  padding-left: 32px;
+  padding-right: 32px;
 }
 
 .skip {
@@ -411,14 +416,8 @@ img {
 
 /* -------------------------------------------------------------------- hero */
 
-/* Vertical rhythm is set with padding-top/bottom, never with the shorthand:
-   `padding: X 0` on a class-based section would override the horizontal padding
-   of `.wrap` on the same element (same specificity, later rule) and push the
-   content flush against the window edge. */
-.hero {
-  padding-top: clamp(60px, 7.5vw, 96px);
-  padding-bottom: var(--section);
-}
+/* The hero uses the shared `section` rhythm below; it deliberately sets no
+   padding of its own, so every section on the page keeps the same air. */
 
 .eyebrow {
   display: inline-flex;
@@ -522,6 +521,10 @@ h1 {
 
 /* ---------------------------------------------------------------- sections */
 
+/* Vertical rhythm lives here and nowhere else: one token, both axes, every
+   section. Anything that sets vertical padding on a `.wrap` element must use
+   longhand padding-top/padding-bottom, or it wins on specificity and the air
+   disappears (that is exactly what collapsed this page once — see `.wrap`). */
 section {
   padding-top: var(--section);
   padding-bottom: var(--section);
@@ -1274,7 +1277,8 @@ footer {
     font-size: 16px;
   }
   .wrap {
-    padding: 0 20px;
+    padding-left: 20px;
+    padding-right: 20px;
   }
   .skip:focus {
     left: 20px;
