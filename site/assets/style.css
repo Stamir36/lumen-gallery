@@ -1,28 +1,99 @@
 /* ==========================================================================
    LUMEN — project site
-   Flat and quiet on purpose: solid colours, thin rules, no blur, no glow.
-   Whitespace carries the layout; the accent colour appears only where the eye
-   needs a target (the primary button, links inside text).
+   Flat and quiet on purpose: solid tonal surfaces, 1 px rules, no blur, no
+   glow. Whitespace carries the layout; the accent colour appears only where
+   the eye needs a target (the primary button and links inside text).
+
+   Tokens follow docs/DESIGN.md (colour §1, elevation §2, radii §4, spacing §5,
+   typography §6, controls §7). Fonts are bundled locally (Manrope Variable +
+   JetBrains Mono Variable, both SIL OFL — see assets/fonts/OFL-*.txt); the
+   page loads nothing from the network.
    ========================================================================== */
 
+@font-face {
+  font-family: "Manrope Variable";
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url("fonts/manrope-latin-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Manrope Variable";
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url("fonts/manrope-cyrillic-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+
+@font-face {
+  font-family: "JetBrains Mono Variable";
+  font-style: normal;
+  font-weight: 100 800;
+  font-display: swap;
+  src: url("fonts/jetbrains-mono-latin-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "JetBrains Mono Variable";
+  font-style: normal;
+  font-weight: 100 800;
+  font-display: swap;
+  src: url("fonts/jetbrains-mono-cyrillic-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+
 :root {
+  color-scheme: dark;
+
+  /* Surfaces — DESIGN.md §1 */
   --bg: #0a0b0d;
-  --bg-soft: #101216;
-  --line: #1d2026;
-  --line-strong: #2b3038;
-  --text: #f3f4f6;
-  --muted: #8d949f;
-  --muted-dim: #6a707a;
-  --accent: #4f8cff;
-  --accent-hover: #6da1ff;
-  --radius: 14px;
+  --surface-1: #141518;
+  --surface-2: #1e2023;
+  --surface-3: #26282c;
+  --line: rgba(255, 255, 255, 0.06);
+  --line-strong: rgba(255, 255, 255, 0.12);
+  --fill-1: rgba(255, 255, 255, 0.02);
+  --fill-2: rgba(255, 255, 255, 0.06);
+  --fill-3: rgba(255, 255, 255, 0.1);
+
+  /* Text — DESIGN.md §1 */
+  --text: #f2f2f4;
+  --muted: rgba(242, 242, 244, 0.62);
+  --muted-dim: rgba(242, 242, 244, 0.38);
+
+  /* Accent — interactive states only */
+  --accent: #6ec1ff;
+  --accent-hover: #9ad4ff;
+  --accent-ink: #08131c;
+  --accent-line: rgba(110, 193, 255, 0.35);
+
+  /* Radii — DESIGN.md §4 */
+  --radius-card: 22px;
+  --radius-control: 14px;
   --radius-pill: 999px;
+
+  /* Elevation — DESIGN.md §2 */
+  --elev-1: 0 8px 24px rgba(0, 0, 0, 0.35);
+  --elev-2: 0 12px 28px rgba(0, 0, 0, 0.4);
+  --elev-3: 0 16px 48px rgba(0, 0, 0, 0.5);
+  --elev-window: 0 40px 80px -46px rgba(0, 0, 0, 0.9);
+
   --shell: 1080px;
   --measure: 640px;
-  --section: clamp(96px, 11vw, 168px);
-  --font: "Inter", "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system,
-    "Helvetica Neue", Arial, sans-serif;
-  --mono: "JetBrains Mono", "Cascadia Code", ui-monospace, Consolas, monospace;
+  --section: clamp(76px, 8.5vw, 128px);
+
+  --font: "Manrope Variable", "Segoe UI Variable Text", "Segoe UI", system-ui,
+    -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --mono: "JetBrains Mono Variable", "Cascadia Code", ui-monospace, Consolas,
+    monospace;
 }
 
 * {
@@ -31,6 +102,7 @@
 
 html {
   scroll-behavior: smooth;
+  scrollbar-color: var(--line-strong) transparent;
   -webkit-text-size-adjust: 100%;
 }
 
@@ -40,9 +112,12 @@ body {
   color: var(--text);
   font-family: var(--font);
   font-size: 16.5px;
+  font-weight: 400;
   line-height: 1.7;
-  letter-spacing: -0.008em;
+  letter-spacing: -0.011em;
+  overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 a {
@@ -50,14 +125,21 @@ a {
   text-decoration: none;
 }
 
-::selection {
-  background: rgba(79, 140, 255, 0.28);
+ul,
+ol {
+  padding-left: 22px;
 }
 
+::selection {
+  background: rgba(110, 193, 255, 0.3);
+}
+
+/* Stronger than the app's accent/40 ring: on the web the focus indicator has
+   to survive on a black page and is the only cue for keyboard users. */
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
-  border-radius: 6px;
+  border-radius: 8px;
 }
 
 img {
@@ -69,54 +151,58 @@ img {
   width: 100%;
   max-width: var(--shell);
   margin: 0 auto;
-  padding: 0 28px;
+  padding: 0 32px;
 }
 
 .skip {
   position: absolute;
   left: -9999px;
+  top: 0;
 }
+
 .skip:focus {
-  left: 20px;
-  top: 18px;
-  z-index: 50;
-  background: var(--bg-soft);
+  left: 32px;
+  top: 16px;
+  z-index: 60;
+  background: var(--surface-2);
   border: 1px solid var(--line-strong);
-  border-radius: var(--radius);
+  border-radius: var(--radius-control);
   padding: 10px 16px;
+  font-size: 14.5px;
 }
 
 /* ------------------------------------------------------------------ header */
 
 .nav {
-  border-bottom: 1px solid var(--line);
   position: sticky;
   top: 0;
   z-index: 30;
-  background: var(--bg);
+  background: var(--surface-1);
+  border-bottom: 1px solid var(--line);
 }
 
 .nav-inner {
   display: flex;
   align-items: center;
-  gap: 24px;
-  height: 74px;
+  gap: 20px;
+  height: 72px;
 }
 
 .brand {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 12px;
+  gap: 11px;
+  flex: none;
   font-size: 14px;
   font-weight: 600;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.13em;
   text-transform: uppercase;
 }
 
 .brand img {
   width: 28px;
   height: 28px;
-  border-radius: 8px;
+  border-radius: 9px;
   display: block;
 }
 
@@ -134,42 +220,138 @@ img {
 .nav-links {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   margin-left: auto;
 }
 
-.nav-links a {
-  padding: 8px 14px;
+.nav-desktop {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.nav-desktop > a,
+.menu-panel > a {
+  padding: 9px 14px;
   border-radius: var(--radius-pill);
   font-size: 14.5px;
   color: var(--muted);
-  transition: color 0.15s ease;
+  transition: color 0.16s ease, background 0.16s ease;
 }
 
-.nav-links a:hover {
+.nav-desktop > a:hover,
+.menu-panel > a:hover {
   color: var(--text);
+  background: var(--fill-2);
 }
 
 .nav-cta {
-  margin-left: 10px;
+  margin-left: 8px;
 }
 
 .lang {
   display: inline-flex;
+  align-items: center;
   gap: 2px;
+  margin-left: 4px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
   font-family: var(--mono);
-  font-size: 12px;
+  font-size: 11.5px;
 }
 
 .lang a {
-  padding: 5px 9px;
-  border-radius: 6px;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
   color: var(--muted-dim);
+  transition: color 0.16s ease, background 0.16s ease;
+}
+
+.lang a:hover {
+  color: var(--text);
 }
 
 .lang a[aria-current="true"] {
   color: var(--text);
-  background: var(--bg-soft);
+  background: var(--fill-2);
+}
+
+/* Mobile disclosure — no JavaScript needed, the native <details> does it. */
+
+.menu {
+  position: relative;
+  display: none;
+}
+
+.menu > summary {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+  background: var(--fill-1);
+  color: var(--text);
+  cursor: pointer;
+  list-style: none;
+  transition: background 0.16s ease, border-color 0.16s ease;
+}
+
+.menu > summary::-webkit-details-marker {
+  display: none;
+}
+
+.menu > summary:hover {
+  background: var(--fill-2);
+  border-color: var(--fill-3);
+}
+
+.menu[open] > summary {
+  background: var(--fill-2);
+}
+
+.burger {
+  width: 19px;
+  height: 19px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+}
+
+.menu-panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 236px;
+  padding: 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  border-radius: 18px;
+  box-shadow: var(--elev-3);
+}
+
+.menu-panel > a {
+  padding: 11px 14px;
+  border-radius: 12px;
+  font-size: 15px;
+  color: var(--text);
+}
+
+.menu-panel .lang {
+  align-self: flex-start;
+  justify-content: flex-start;
+  width: 100%;
+  margin: 6px 0 2px;
+  padding: 10px 0 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-radius: 0;
 }
 
 /* ----------------------------------------------------------------- buttons */
@@ -177,28 +359,37 @@ img {
 .btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 10px;
-  padding: 12px 22px;
+  min-height: 46px;
+  padding: 0 24px;
   border-radius: var(--radius-pill);
   border: 1px solid var(--line-strong);
-  background: transparent;
+  background: var(--fill-1);
   color: var(--text);
   font-size: 15px;
-  font-weight: 500;
-  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+  font-weight: 550;
+  transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease,
+    transform 0.16s ease;
 }
 
 .btn:hover {
-  border-color: #3a4049;
-  background: var(--bg-soft);
+  background: var(--fill-2);
+  border-color: var(--fill-3);
   transform: translateY(-1px);
 }
 
+.btn:active {
+  transform: scale(0.97);
+}
+
 .btn-primary {
+  min-height: 48px;
+  padding: 0 26px;
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
-  font-weight: 560;
+  color: var(--accent-ink);
+  font-weight: 650;
 }
 
 .btn-primary:hover {
@@ -207,7 +398,8 @@ img {
 }
 
 .btn-sm {
-  padding: 8px 16px;
+  min-height: 38px;
+  padding: 0 16px;
   font-size: 14px;
 }
 
@@ -224,64 +416,93 @@ img {
    of `.wrap` on the same element (same specificity, later rule) and push the
    content flush against the window edge. */
 .hero {
-  padding-top: clamp(84px, 10vw, 132px);
+  padding-top: clamp(60px, 7.5vw, 96px);
   padding-bottom: var(--section);
 }
 
 .eyebrow {
-  display: block;
-  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0 0 28px;
+  padding: 7px 15px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--fill-1);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   color: var(--muted-dim);
-  margin-bottom: 26px;
+}
+
+.eyebrow::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--muted-dim);
 }
 
 h1 {
-  margin: 0 0 26px;
-  font-size: clamp(38px, 5.6vw, 66px);
-  line-height: 1.06;
-  letter-spacing: -0.032em;
-  font-weight: 620;
+  margin: 0 0 24px;
+  font-size: clamp(36px, 5.3vw, 62px);
+  line-height: 1.05;
+  letter-spacing: -0.033em;
+  font-weight: 650;
   max-width: 17ch;
 }
 
 .lede {
   max-width: var(--measure);
-  margin: 0 0 40px;
+  margin: 0 0 36px;
   color: var(--muted);
-  font-size: clamp(17px, 1.5vw, 19.5px);
-  line-height: 1.65;
+  font-size: clamp(17px, 1.5vw, 19px);
+  line-height: 1.6;
 }
 
 .cta-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 14px;
+  gap: 12px;
   align-items: center;
 }
 
-.cta-note {
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   margin: 26px 0 0;
-  font-size: 13.5px;
-  color: var(--muted-dim);
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.chips li {
+  padding: 6px 13px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--fill-1);
 }
 
 .showcase {
-  margin-top: clamp(60px, 8vw, 104px);
+  margin-top: clamp(48px, 6.5vw, 84px);
 }
 
 .window {
   border: 1px solid var(--line);
-  border-radius: var(--radius);
+  border-radius: var(--radius-card);
   overflow: hidden;
-  background: var(--bg-soft);
-  box-shadow: 0 40px 80px -50px rgba(0, 0, 0, 0.9);
+  background: var(--surface-1);
+  box-shadow: var(--elev-window), var(--elev-1);
 }
 
 .titlebar {
   display: flex;
   align-items: center;
-  height: 38px;
-  padding: 0 16px;
+  height: 40px;
+  padding: 0 18px;
   border-bottom: 1px solid var(--line);
   font-family: var(--mono);
   font-size: 10.5px;
@@ -312,29 +533,30 @@ section + section {
 
 /* The header is sticky, so anchor links need to stop below it. */
 section[id] {
-  scroll-margin-top: 92px;
+  scroll-margin-top: 96px;
 }
 
 .section-head {
   max-width: var(--measure);
-  margin-bottom: clamp(56px, 6vw, 88px);
+  margin-bottom: clamp(40px, 4.5vw, 60px);
 }
 
 .tag {
   display: block;
-  font-size: 12.5px;
-  letter-spacing: 0.1em;
+  margin-bottom: 16px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--muted-dim);
-  margin-bottom: 18px;
 }
 
 .section-head h2,
 h2 {
-  margin: 0 0 20px;
-  font-size: clamp(25px, 3.1vw, 36px);
-  line-height: 1.2;
-  letter-spacing: -0.022em;
+  margin: 0 0 18px;
+  font-size: clamp(24px, 3vw, 34px);
+  line-height: 1.16;
+  letter-spacing: -0.026em;
   font-weight: 600;
 }
 
@@ -344,11 +566,11 @@ h2 {
   font-size: 17.5px;
 }
 
-/* feature list — editorial columns, separated by whitespace and a thin rule */
+/* feature cards — tonal elevation instead of borders, lifted 2 px on hover */
 
 .cols {
   display: grid;
-  gap: clamp(40px, 5vw, 64px) clamp(32px, 4vw, 56px);
+  gap: 16px;
   grid-template-columns: repeat(2, 1fr);
 }
 
@@ -359,29 +581,40 @@ h2 {
 }
 
 .col {
-  border-top: 1px solid var(--line);
-  padding-top: 26px;
+  padding: 26px 28px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--surface-1);
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.col:hover {
+  transform: translateY(-2px);
+  border-color: var(--line-strong);
+  box-shadow: var(--elev-2);
 }
 
 .col h3 {
   margin: 0 0 10px;
-  font-size: 17px;
-  font-weight: 570;
-  letter-spacing: -0.012em;
+  font-size: 17.5px;
+  font-weight: 600;
+  letter-spacing: -0.014em;
 }
 
 .col p {
   margin: 0;
   color: var(--muted);
   font-size: 15.5px;
-  line-height: 1.68;
+  line-height: 1.66;
 }
 
 /* ------------------------------------------------------------- screenshots */
 
+/* The hero already shows the gallery itself, so the grid holds the other four
+   screens in a 2 × 2 block — no row is ever left half empty. */
 .shots {
   display: grid;
-  gap: clamp(28px, 3.4vw, 48px);
+  gap: clamp(20px, 2.4vw, 30px);
   grid-template-columns: repeat(2, 1fr);
 }
 
@@ -395,19 +628,23 @@ h2 {
   font: inherit;
   text-align: left;
   cursor: zoom-in;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .shot .frame {
+  display: block;
   border: 1px solid var(--line);
-  border-radius: var(--radius);
+  border-radius: var(--radius-card);
   overflow: hidden;
-  background: var(--bg-soft);
-  transition: border-color 0.18s ease, transform 0.18s ease;
+  background: var(--surface-1);
+  box-shadow: 0 24px 56px -46px rgba(0, 0, 0, 0.9);
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .shot:hover .frame {
-  border-color: var(--line-strong);
   transform: translateY(-2px);
+  border-color: var(--line-strong);
+  box-shadow: var(--elev-2);
 }
 
 .shot img {
@@ -422,20 +659,21 @@ h2 {
   display: flex;
   align-items: baseline;
   gap: 12px;
-  margin-top: 16px;
-  font-size: 14.5px;
+  margin-top: 14px;
+  font-size: 14px;
   color: var(--muted);
 }
 
 .shot .cap b {
   color: var(--text);
-  font-weight: 520;
+  font-weight: 600;
 }
 
 .shot .cap em {
   margin-left: auto;
   font-style: normal;
   font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
   font-size: 11.5px;
   color: var(--muted-dim);
 }
@@ -448,8 +686,10 @@ h2 {
   z-index: 80;
   display: none;
   place-items: center;
-  padding: 4vh 4vw;
-  background: rgba(8, 9, 11, 0.97);
+  padding: 5vh 4vw;
+  background: rgba(6, 7, 9, 0.97);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
   opacity: 0;
   transition: opacity 0.18s ease;
 }
@@ -464,99 +704,139 @@ h2 {
 
 .lightbox img {
   max-width: 100%;
-  max-height: 86vh;
-  border-radius: 10px;
+  max-height: 80vh;
+  border-radius: 12px;
   border: 1px solid var(--line-strong);
+  box-shadow: var(--elev-3);
 }
 
 .lb-bar {
   position: fixed;
   left: 50%;
-  bottom: 28px;
+  bottom: max(24px, env(safe-area-inset-bottom, 24px));
   transform: translateX(-50%);
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 6px;
+  gap: 2px;
+  max-width: calc(100vw - 32px);
+  padding: 5px;
   border-radius: var(--radius-pill);
   border: 1px solid var(--line-strong);
-  background: var(--bg-soft);
+  background: var(--surface-2);
+  box-shadow: var(--elev-3);
   font-size: 13px;
   color: var(--muted);
 }
 
 .lb-bar button {
-  all: unset;
-  cursor: pointer;
-  padding: 6px 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 13px;
+  border: 0;
   border-radius: var(--radius-pill);
+  background: none;
   color: var(--text);
+  font: inherit;
+  font-size: 13.5px;
+  cursor: pointer;
+  transition: background 0.16s ease;
 }
 
 .lb-bar button:hover {
-  background: #1a1d23;
+  background: var(--fill-2);
+}
+
+.lb-bar svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .lb-count {
+  min-width: 58px;
+  padding: 0 6px;
+  text-align: center;
   font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
   font-size: 11.5px;
-  padding: 0 8px;
   color: var(--muted-dim);
 }
 
 /* ---------------------------------------------------------------- privacy */
 
 .note {
-  border-top: 1px solid var(--line);
-  padding-top: 28px;
   max-width: var(--measure);
+  padding: 28px 30px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--surface-1);
 }
 
 .note p {
-  margin: 0 0 20px;
+  margin: 0 0 22px;
   color: var(--muted);
-  font-size: 17px;
-}
-
-.note p:last-of-type {
-  margin-bottom: 24px;
+  font-size: 16.5px;
 }
 
 .text-link {
   color: var(--accent);
-  border-bottom: 1px solid rgba(79, 140, 255, 0.35);
-  padding-bottom: 1px;
+  text-decoration: underline;
+  text-decoration-color: var(--accent-line);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
 }
 
 .text-link:hover {
-  border-bottom-color: var(--accent);
+  color: var(--accent-hover);
+  text-decoration-color: currentColor;
 }
 
 /* --------------------------------------------------------------- download */
 
+/* A full-width closing band — copy on the left, button on the right — so the
+   card's edges line up with the grids above instead of stopping short of them. */
 .download {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px clamp(40px, 6vw, 72px);
+  padding: clamp(40px, 5vw, 64px);
   border: 1px solid var(--line);
-  border-radius: 20px;
-  background: var(--bg-soft);
-  padding: clamp(48px, 6vw, 88px) clamp(28px, 5vw, 72px);
-  max-width: 760px;
+  border-radius: var(--radius-card);
+  background: var(--surface-1);
+  box-shadow: var(--elev-1);
+}
+
+.dl-copy {
+  max-width: 520px;
 }
 
 .download h2 {
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
 .download p {
-  margin: 0 0 34px;
+  margin: 0 0 18px;
   color: var(--muted);
   max-width: 480px;
 }
 
 /* Scoped to `.download` so it beats `.download p`, whose shorthand margin would
-   otherwise collapse this line against the button. */
+   otherwise push the button away from the copy block. */
 .download .dl-meta {
-  margin: 32px 0 0;
-  font-size: 14px;
+  margin: 0;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 12.5px;
   color: var(--muted-dim);
 }
 
@@ -571,14 +851,14 @@ h2 {
 }
 
 .faq summary {
-  cursor: pointer;
-  list-style: none;
-  padding: 24px 0;
-  font-size: 17px;
-  font-weight: 520;
   display: flex;
   align-items: center;
   gap: 20px;
+  padding: 22px 0;
+  font-size: 16.5px;
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
 }
 
 .faq summary::-webkit-details-marker {
@@ -609,41 +889,38 @@ h2 {
 
 footer {
   border-top: 1px solid var(--line);
-  padding: 64px 0 72px;
+  padding: 60px 0 68px;
   font-size: 14.5px;
   color: var(--muted-dim);
 }
 
 .foot-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 40px 64px;
-  justify-content: space-between;
-}
-
-.foot-brand {
-  max-width: 320px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, 1fr);
+  gap: 40px 56px;
 }
 
 .foot-brand p {
   margin: 18px 0 0;
-  color: var(--muted-dim);
+  max-width: 320px;
   font-size: 14px;
 }
 
 .foot-col h4 {
-  margin: 0 0 16px;
-  font-size: 12.5px;
-  letter-spacing: 0.1em;
+  margin: 0 0 14px;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--muted-dim);
-  font-weight: 500;
 }
 
 .foot-col a {
   display: block;
   padding: 5px 0;
   color: var(--muted);
+  transition: color 0.16s ease;
 }
 
 .foot-col a:hover {
@@ -651,20 +928,20 @@ footer {
 }
 
 .foot-end {
-  margin-top: 56px;
-  padding-top: 26px;
-  border-top: 1px solid var(--line);
   display: flex;
   flex-wrap: wrap;
   gap: 12px 32px;
   justify-content: space-between;
+  margin-top: 52px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
   font-size: 13.5px;
 }
 
 /* ------------------------------------------------------- legal documents */
 
 .doc {
-  padding-top: clamp(56px, 7vw, 96px);
+  padding-top: clamp(48px, 6vw, 84px);
   padding-bottom: var(--section);
 }
 
@@ -674,13 +951,16 @@ footer {
 }
 
 .doc h1 {
-  font-size: clamp(30px, 4vw, 42px);
+  font-size: clamp(30px, 3.8vw, 42px);
   max-width: none;
+  letter-spacing: -0.03em;
 }
 
 .doc h2 {
+  margin: 46px 0 12px;
   font-size: 19px;
-  margin: 48px 0 14px;
+  font-weight: 600;
+  letter-spacing: -0.016em;
 }
 
 .doc p,
@@ -694,34 +974,40 @@ footer {
 
 .doc strong {
   color: var(--text);
+  font-weight: 600;
 }
 
 .doc a {
   color: var(--accent);
+  text-decoration: underline;
+  text-decoration-color: var(--accent-line);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
 }
 
 .doc a:hover {
-  border-bottom: 1px solid rgba(79, 140, 255, 0.4);
+  color: var(--accent-hover);
+  text-decoration-color: currentColor;
 }
 
 .doc code {
   font-family: var(--mono);
   font-size: 12.5px;
   color: var(--text);
-  background: var(--bg-soft);
+  background: var(--surface-1);
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: 7px;
   padding: 2px 7px;
   overflow-wrap: anywhere;
 }
 
 .doc .callout {
-  margin: 32px 0;
-  padding: 24px;
+  margin: 30px 0;
+  padding: 24px 26px;
   border: 1px solid var(--line);
   border-left: 2px solid var(--accent);
-  border-radius: 10px;
-  background: var(--bg-soft);
+  border-radius: var(--radius-control);
+  background: var(--surface-1);
   color: var(--text);
 }
 
@@ -730,38 +1016,50 @@ footer {
   color: var(--muted-dim);
 }
 
+/* Keeps a wide table from ever scrolling the whole page sideways; on phones the
+   rows stack instead of scrolling (see the 700px block below). */
+.table-wrap {
+  margin: 18px 0;
+  overflow-x: auto;
+}
+
 .doc-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 14.5px;
-  margin: 18px 0;
 }
 
 .doc-table th,
 .doc-table td {
   text-align: left;
-  padding: 12px 14px 12px 0;
+  padding: 12px 16px 12px 0;
   border-bottom: 1px solid var(--line);
   color: var(--muted);
   vertical-align: top;
+  overflow-wrap: anywhere;
 }
 
 .doc-table th {
   color: var(--text);
-  font-weight: 520;
+  font-weight: 600;
 }
 
 .back {
   display: inline-block;
-  margin-bottom: 32px;
+  margin-bottom: 30px;
   font-size: 14.5px;
   color: var(--muted);
+  transition: color 0.16s ease;
+}
+
+.back:hover {
+  color: var(--text);
 }
 
 .rule {
   border: 0;
   border-top: 1px solid var(--line);
-  margin: 56px 0 26px;
+  margin: 52px 0 24px;
 }
 
 .small-note {
@@ -771,16 +1069,59 @@ footer {
 
 .foot-end-flat {
   margin-top: 0;
-  border-top: 0;
   padding-top: 0;
+  border-top: 0;
 }
 
-.back:hover {
-  color: var(--text);
+/* ------------------------------------------------------------------- 404 */
+
+.notfound {
+  min-height: 72svh;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 22px;
+  padding-top: clamp(56px, 8vw, 96px);
+  padding-bottom: clamp(56px, 8vw, 96px);
+}
+
+.notfound img {
+  display: block;
+  width: 52px;
+  height: 52px;
+  border-radius: 15px;
+}
+
+.notfound .code {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--muted-dim);
+}
+
+.notfound h1 {
+  margin: 0;
+  max-width: 22ch;
+}
+
+.notfound p {
+  max-width: var(--measure);
+  margin: 0;
+}
+
+.notfound .fine {
+  margin: 0;
+  font-size: 14px;
+  color: var(--muted-dim);
 }
 
 /* --------------------------------------------------------------- animation */
 
+/* The `js` class is added by an inline script in <head> of every page, so with
+   JavaScript disabled (or blocked) nothing is ever hidden. */
 .js .reveal {
   opacity: 0;
   transform: translateY(14px);
@@ -802,23 +1143,129 @@ footer {
     transition: none;
   }
   .btn,
+  .col,
   .shot .frame,
   .faq summary::after {
     transition: none !important;
   }
+  .btn:hover,
+  .btn:active,
+  .col:hover,
+  .shot:hover .frame {
+    transform: none;
+  }
+}
+
+/* ------------------------------------------------------------- scrollbars */
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border: 3px solid var(--bg);
+  border-radius: var(--radius-pill);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--fill-3);
 }
 
 /* -------------------------------------------------------------- responsive */
 
 @media (max-width: 860px) {
-  .nav-links a:not(.nav-cta) {
+  .nav-desktop {
     display: none;
+  }
+  .menu {
+    display: block;
+  }
+  .nav-inner {
+    gap: 12px;
+    height: 64px;
+  }
+  .nav-cta {
+    margin-left: 4px;
   }
   .shots {
     grid-template-columns: 1fr;
   }
-  .nav-inner {
-    height: 66px;
+  .foot-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .foot-brand {
+    grid-column: 1 / -1;
+  }
+  section[id] {
+    scroll-margin-top: 84px;
+  }
+}
+
+/* Phones cannot fit three columns: each row becomes a small block whose cells
+   carry their column label from `data-th`, so nothing needs sideways scrolling. */
+@media (max-width: 700px) {
+  .doc-table {
+    min-width: 0;
+  }
+  .doc .table-wrap {
+    overflow-x: visible;
+  }
+  .doc-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .doc-table tr {
+    display: block;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .doc-table td {
+    display: block;
+    padding: 0;
+    border: 0;
+  }
+  .doc-table td:first-child {
+    color: var(--text);
+    font-weight: 600;
+  }
+  .doc-table td:not(:first-child) {
+    margin-top: 10px;
+  }
+  .doc-table td:not(:first-child)::before {
+    content: attr(data-th);
+    display: block;
+    margin-bottom: 4px;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted-dim);
+  }
+}
+
+/* Touch devices keep no sticky hover state. */
+@media (hover: none) {
+  .btn:hover,
+  .col:hover,
+  .shot:hover .frame {
+    transform: none;
+    box-shadow: none;
+  }
+  .col:hover {
+    border-color: var(--line);
+  }
+  .shot:hover .frame {
+    border-color: var(--line);
   }
 }
 
@@ -829,7 +1276,23 @@ footer {
   .wrap {
     padding: 0 20px;
   }
+  .skip:focus {
+    left: 20px;
+  }
+  .ver {
+    display: none;
+  }
   .titlebar {
-    height: 32px;
+    height: 34px;
+  }
+  .col {
+    padding: 24px;
+  }
+  .note {
+    padding: 24px;
+  }
+  .menu-panel {
+    min-width: 216px;
   }
 }
+

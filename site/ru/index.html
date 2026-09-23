@@ -12,17 +12,54 @@
 
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="LUMEN" />
+<meta property="og:locale" content="ru_RU" />
+<meta property="og:locale:alternate" content="en_US" />
 <meta property="og:title" content="LUMEN — галерея фотографий и видео для Windows" />
 <meta property="og:description" content="Ваши фото и видео там, где вы их храните. Спокойная галерея для Windows, которая ничего не загружает и не перемещает." />
 <meta property="og:url" content="https://stamir36.github.io/lumen-gallery/ru/" />
-<meta property="og:image" content="https://stamir36.github.io/lumen-gallery/assets/screen1.jpg" />
+<meta property="og:image" content="https://stamir36.github.io/lumen-gallery/assets/og.png" />
+<meta property="og:image:type" content="image/png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="LUMEN — ваши фото и видео там, где вы их храните." />
 <meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="LUMEN — галерея фотографий и видео для Windows" />
+<meta name="twitter:description" content="Ваши фото и видео там, где вы их храните. Спокойная галерея для Windows, которая ничего не загружает и не перемещает." />
+<meta name="twitter:image" content="https://stamir36.github.io/lumen-gallery/assets/og.png" />
 <meta name="theme-color" content="#0a0b0d" />
 
 <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml" />
 <link rel="apple-touch-icon" href="../assets/icon.svg" />
 <script>document.documentElement.classList.add("js");</script>
 <link rel="stylesheet" href="../assets/style.css" />
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "LUMEN",
+  "applicationCategory": "MultimediaApplication",
+  "applicationSubCategory": "Галерея фотографий и видео",
+  "operatingSystem": "Windows 10, Windows 11",
+  "softwareVersion": "0.2.0",
+  "url": "https://stamir36.github.io/lumen-gallery/ru/",
+  "downloadUrl": "https://github.com/Stamir36/lumen-gallery/releases/latest",
+  "installUrl": "https://github.com/Stamir36/lumen-gallery/releases/latest",
+  "inLanguage": "ru",
+  "isAccessibleForFree": true,
+  "license": "https://github.com/Stamir36/lumen-gallery/blob/master/LICENSE",
+  "image": "https://stamir36.github.io/lumen-gallery/assets/og.png",
+  "description": "LUMEN показывает ваши папки с фото и видео как быструю галерею в Windows. Файлы остаются на месте: ничего не загружается, не импортируется и не перемещается.",
+  "author": {
+    "@type": "Person",
+    "name": "Станислав Мирошниченко"
+  },
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD"
+  }
+}
+</script>
 </head>
 <body>
 <a class="skip" href="#main">Перейти к содержимому</a>
@@ -32,15 +69,32 @@
     <a class="brand" href="../">
       <img src="../assets/icon.svg" alt="" width="28" height="28" />
       LUMEN
+      <span class="ver">v0.2.0</span>
     </a>
     <nav class="nav-links" aria-label="Основная навигация">
-      <a href="#why">Возможности</a>
-      <a href="#screenshots">Скриншоты</a>
-      <a href="#privacy">Конфиденциальность</a>
-      <span class="lang" role="group" aria-label="Язык">
-        <a href="../" hreflang="en">EN</a>
-        <a href="./" aria-current="true" hreflang="ru">RU</a>
-      </span>
+      <div class="nav-desktop">
+        <a href="#why">Почему LUMEN</a>
+        <a href="#screenshots">Скриншоты</a>
+        <a href="#privacy">Конфиденциальность</a>
+        <span class="lang" role="group" aria-label="Язык">
+          <a href="../" hreflang="en" lang="en">EN</a>
+          <a href="./" hreflang="ru" lang="ru" aria-current="true">RU</a>
+        </span>
+      </div>
+      <details class="menu">
+        <summary aria-label="Меню">
+          <svg class="burger" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M3 6.5h14M3 10h14M3 13.5h14" /></svg>
+        </summary>
+        <div class="menu-panel">
+          <a href="#why">Почему LUMEN</a>
+          <a href="#screenshots">Скриншоты</a>
+          <a href="#privacy">Конфиденциальность</a>
+          <span class="lang" role="group" aria-label="Язык">
+            <a href="../" hreflang="en" lang="en">EN</a>
+            <a href="./" hreflang="ru" lang="ru" aria-current="true">RU</a>
+          </span>
+        </div>
+      </details>
       <a class="btn btn-sm nav-cta" href="#download">Скачать</a>
     </nav>
   </div>
@@ -63,7 +117,12 @@
       </a>
       <a class="btn" href="#screenshots">Посмотреть, как выглядит</a>
     </div>
-    <p class="cta-note">Бесплатно · без аккаунта · без рекламы · открытый код</p>
+    <ul class="chips">
+      <li>Бесплатно</li>
+      <li>Без аккаунта</li>
+      <li>Без рекламы</li>
+      <li>Открытый код</li>
+    </ul>
 
     <div class="showcase reveal">
       <div class="window">
@@ -125,24 +184,20 @@
     </div>
 
     <div class="shots">
-      <button class="shot reveal" data-src="../assets/screen1.jpg" data-alt="Галерея LUMEN с сеткой фотографий.">
-        <span class="frame"><img src="../assets/screen1.jpg" loading="lazy" alt="Галерея LUMEN." /></span>
-        <span class="cap"><b>Ваша галерея</b> <em>1</em></span>
-      </button>
       <button class="shot reveal" data-src="../assets/screen2.jpg" data-alt="Настройки LUMEN: цвета, размеры и раскладка.">
         <span class="frame"><img src="../assets/screen2.jpg" loading="lazy" alt="Настройки LUMEN." /></span>
-        <span class="cap"><b>Настройки</b> <em>2</em></span>
+        <span class="cap"><b>Настройки</b> <em>1</em></span>
       </button>
       <button class="shot reveal" data-src="../assets/screen3.jpg" data-alt="Фотография, открытая на весь экран, с данными о файле рядом.">
         <span class="frame"><img src="../assets/screen3.jpg" loading="lazy" alt="Фотография на весь экран." /></span>
-        <span class="cap"><b>Просмотр фото</b> <em>3</em></span>
+        <span class="cap"><b>Просмотр фото</b> <em>2</em></span>
       </button>
       <button class="shot reveal" data-src="../assets/screen4.jpg" data-alt="Видео воспроизводится в LUMEN вместе с элементами управления.">
         <span class="frame"><img src="../assets/screen4.jpg" loading="lazy" alt="Видео в LUMEN." /></span>
-        <span class="cap"><b>Просмотр видео</b> <em>4</em></span>
+        <span class="cap"><b>Просмотр видео</b> <em>3</em></span>
       </button>
       <button class="shot reveal" data-src="../assets/setup-wizard.png" data-alt="Первоначальная настройка LUMEN.">
-        <span class="frame"><img src="../assets/setup-wizard.png" loading="lazy" alt="Первоначальная настройка LUMEN." /></span>
+        <span class="frame"><img src="../assets/setup-wizard.png" loading="lazy" alt="Первый запуск LUMEN." /></span>
         <span class="cap"><b>Первый запуск</b> <em>5</em></span>
       </button>
     </div>
@@ -166,15 +221,17 @@
 
   <section id="download" class="wrap">
     <div class="download reveal">
-      <h2>Скачать LUMEN</h2>
-      <p>Один установщик для Windows 10 и 11, 64-бит. Бесплатно, и так и останется.</p>
+      <div class="dl-copy">
+        <h2>Скачать LUMEN</h2>
+        <p>Один установщик для Windows 10 и 11, 64-бит. Бесплатно, и так и останется.</p>
+        <p class="dl-meta">Версия 0.2.0 · 64-бит · открытый код (GPL-3.0)</p>
+      </div>
       <div class="cta-row">
         <a class="btn btn-primary" href="https://github.com/Stamir36/lumen-gallery/releases/latest" rel="noopener">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 12 5 5 5-5"/><path d="M4 21h16"/></svg>
           Открыть последнюю версию
         </a>
       </div>
-      <p class="dl-meta">Версия 0.2.0 · 64-бит · открытый код (GPL-3.0)</p>
     </div>
   </section>
 
@@ -236,7 +293,7 @@
         <h4>Правовое</h4>
         <a href="privacy/">Политика конфиденциальности</a>
         <a href="https://github.com/Stamir36/lumen-gallery/blob/master/LICENSE" rel="noopener">Лицензия (GPL-3.0)</a>
-        <a href="../">English version</a>
+        <a href="../" hreflang="en" lang="en">English version</a>
       </div>
     </div>
     <div class="foot-end">
@@ -246,16 +303,23 @@
   </div>
 </footer>
 
-<div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Скриншот">
-  <img src="" alt="" />
+<div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Просмотр скриншотов">
+  <img src="../assets/screen2.jpg" alt="" loading="lazy" decoding="async" />
   <div class="lb-bar">
-    <button type="button" data-prev aria-label="Предыдущий скриншот">←</button>
-    <span class="lb-count">1 / 5</span>
-    <button type="button" data-next aria-label="Следующий скриншот">→</button>
-    <button type="button" data-close>Esc · Закрыть</button>
+    <button type="button" data-prev aria-label="Предыдущий скриншот">
+      <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M12.5 4.5 7 10l5.5 5.5" /></svg>
+    </button>
+    <span class="lb-count" aria-live="polite">1 / 4</span>
+    <button type="button" data-next aria-label="Следующий скриншот">
+      <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M7.5 4.5 13 10l-5.5 5.5" /></svg>
+    </button>
+    <button type="button" data-close aria-label="Закрыть просмотр скриншотов">Esc · Закрыть</button>
   </div>
 </div>
 
 <script src="../assets/app.js" defer></script>
 </body>
 </html>
+
+
+

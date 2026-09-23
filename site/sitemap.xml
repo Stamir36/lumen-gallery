@@ -5,6 +5,7 @@
     <loc>https://stamir36.github.io/lumen-gallery/</loc>
     <xhtml:link rel="alternate" hreflang="en" href="https://stamir36.github.io/lumen-gallery/" />
     <xhtml:link rel="alternate" hreflang="ru" href="https://stamir36.github.io/lumen-gallery/ru/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://stamir36.github.io/lumen-gallery/" />
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
@@ -12,6 +13,7 @@
     <loc>https://stamir36.github.io/lumen-gallery/ru/</loc>
     <xhtml:link rel="alternate" hreflang="en" href="https://stamir36.github.io/lumen-gallery/" />
     <xhtml:link rel="alternate" hreflang="ru" href="https://stamir36.github.io/lumen-gallery/ru/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://stamir36.github.io/lumen-gallery/" />
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
@@ -19,6 +21,7 @@
     <loc>https://stamir36.github.io/lumen-gallery/privacy/</loc>
     <xhtml:link rel="alternate" hreflang="en" href="https://stamir36.github.io/lumen-gallery/privacy/" />
     <xhtml:link rel="alternate" hreflang="ru" href="https://stamir36.github.io/lumen-gallery/ru/privacy/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://stamir36.github.io/lumen-gallery/privacy/" />
     <changefreq>yearly</changefreq>
     <priority>0.4</priority>
   </url>
@@ -26,6 +29,7 @@
     <loc>https://stamir36.github.io/lumen-gallery/ru/privacy/</loc>
     <xhtml:link rel="alternate" hreflang="en" href="https://stamir36.github.io/lumen-gallery/privacy/" />
     <xhtml:link rel="alternate" hreflang="ru" href="https://stamir36.github.io/lumen-gallery/ru/privacy/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://stamir36.github.io/lumen-gallery/privacy/" />
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>

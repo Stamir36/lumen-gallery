@@ -8,12 +8,25 @@
 <link rel="canonical" href="https://stamir36.github.io/lumen-gallery/ru/privacy/" />
 <link rel="alternate" hreflang="en" href="https://stamir36.github.io/lumen-gallery/privacy/" />
 <link rel="alternate" hreflang="ru" href="https://stamir36.github.io/lumen-gallery/ru/privacy/" />
+<link rel="alternate" hreflang="x-default" href="https://stamir36.github.io/lumen-gallery/privacy/" />
 
 <meta property="og:type" content="article" />
+<meta property="og:site_name" content="LUMEN" />
+<meta property="og:locale" content="ru_RU" />
+<meta property="og:locale:alternate" content="en_US" />
 <meta property="og:title" content="Политика конфиденциальности — LUMEN" />
 <meta property="og:description" content="Ни телеметрии, ни аккаунтов, ни серверов. Что LUMEN хранит на вашем диске — и больше ничего." />
 <meta property="og:url" content="https://stamir36.github.io/lumen-gallery/ru/privacy/" />
-<meta name="theme-color" content="#08090c" />
+<meta property="og:image" content="https://stamir36.github.io/lumen-gallery/assets/og.png" />
+<meta property="og:image:type" content="image/png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="LUMEN — галерея фотографий и видео для Windows." />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Политика конфиденциальности — LUMEN" />
+<meta name="twitter:description" content="Ни телеметрии, ни аккаунтов, ни серверов. Что LUMEN хранит на вашем диске — и больше ничего." />
+<meta name="twitter:image" content="https://stamir36.github.io/lumen-gallery/assets/og.png" />
+<meta name="theme-color" content="#0a0b0d" />
 <meta name="robots" content="index, follow" />
 
 <link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml" />
@@ -30,14 +43,30 @@
       <span class="ver">v0.2.0</span>
     </a>
     <nav class="nav-links" aria-label="Основная навигация">
-      <a href="../../ru/#features">Возможности</a>
-      <a href="../../ru/#screenshots">Скриншоты</a>
-      <a href="../../ru/#download">Скачать</a>
-      <span class="lang" role="group" aria-label="Язык">
-        <a href="../../privacy/" hreflang="en">EN</a>
-        <a href="./" aria-current="true" hreflang="ru">RU</a>
-      </span>
-      <a class="btn nav-cta" href="https://github.com/Stamir36/lumen-gallery" rel="noopener">GitHub</a>
+      <div class="nav-desktop">
+        <a href="../../ru/#why">Почему LUMEN</a>
+        <a href="../../ru/#screenshots">Скриншоты</a>
+        <a href="../../ru/#download">Скачать</a>
+        <span class="lang" role="group" aria-label="Язык">
+          <a href="../../privacy/" hreflang="en" lang="en">EN</a>
+          <a href="./" hreflang="ru" lang="ru" aria-current="true">RU</a>
+        </span>
+      </div>
+      <details class="menu">
+        <summary aria-label="Меню">
+          <svg class="burger" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M3 6.5h14M3 10h14M3 13.5h14" /></svg>
+        </summary>
+        <div class="menu-panel">
+          <a href="../../ru/#why">Почему LUMEN</a>
+          <a href="../../ru/#screenshots">Скриншоты</a>
+          <a href="../../ru/#download">Скачать</a>
+          <span class="lang" role="group" aria-label="Язык">
+            <a href="../../privacy/" hreflang="en" lang="en">EN</a>
+            <a href="./" hreflang="ru" lang="ru" aria-current="true">RU</a>
+          </span>
+        </div>
+      </details>
+      <a class="btn btn-sm nav-cta" href="https://github.com/Stamir36/lumen-gallery" rel="noopener">GitHub</a>
     </nav>
   </div>
 </header>
@@ -85,6 +114,7 @@
       покидает компьютер, и всё это создаётся только потому, что вы пользуетесь
       программой:
     </p>
+    <div class="table-wrap">
     <table class="doc-table">
       <thead>
         <tr><th>Данные</th><th>Где лежат</th><th>Зачем</th></tr>
@@ -92,26 +122,27 @@
       <tbody>
         <tr>
           <td>База библиотеки — список папок, пути к файлам, размеры, даты, метки избранного и корзины</td>
-          <td><code>%APPDATA%\com.unesell.lumen\lumen.db</code></td>
-          <td>Чтобы галерея не сканировала диск заново при каждом запуске</td>
+          <td data-th="Где лежат"><code>%APPDATA%\com.unesell.lumen\lumen.db</code></td>
+          <td data-th="Зачем">Чтобы галерея не сканировала диск заново при каждом запуске</td>
         </tr>
         <tr>
           <td>Кэш миниатюр</td>
-          <td><code>%LOCALAPPDATA%\com.unesell.lumen\</code></td>
-          <td>Чтобы сетка появлялась сразу, без повторного декодирования</td>
+          <td data-th="Где лежат"><code>%LOCALAPPDATA%\com.unesell.lumen\</code></td>
+          <td data-th="Зачем">Чтобы сетка появлялась сразу, без повторного декодирования</td>
         </tr>
         <tr>
           <td>Журнал — может содержать пути к файлам, которые не удалось декодировать</td>
-          <td><code>%LOCALAPPDATA%\com.unesell.lumen\logs\LUMEN.log</code></td>
-          <td>Чтобы по отчёту об ошибке было понятно, что произошло</td>
+          <td data-th="Где лежат"><code>%LOCALAPPDATA%\com.unesell.lumen\logs\LUMEN.log</code></td>
+          <td data-th="Зачем">Чтобы по отчёту об ошибке было понятно, что произошло</td>
         </tr>
         <tr>
           <td>Настройки — язык, акцент, раскладка, плотность, режим трея</td>
-          <td>Та же база данных</td>
-          <td>Чтобы приложение помнило, как вам удобно</td>
+          <td data-th="Где лежат">Та же база данных</td>
+          <td data-th="Зачем">Чтобы приложение помнило, как вам удобно</td>
         </tr>
       </tbody>
     </table>
+    </div>
     <p>
       <strong>Ваши файлы не копируются.</strong> В кэше миниатюр лежат уменьшенные
       версии просмотренных изображений — на вашем диске, внутри вашего профиля.
