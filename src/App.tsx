@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { readSetting, writeSetting } from "@/i18n";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import {
@@ -20,6 +21,7 @@ import { LanguageDropdown, LanguageDropdownIcon } from "@/components/LanguageSwi
 import { NavTooltip } from "@/components/ui/NavTooltip";
 import { IconButton } from "@/components/ui/IconButton";
 import { Onboarding } from "@/pages/Onboarding";
+import { SetupWizard } from "@/pages/SetupWizard";
 import { LibraryTopBar, RailTitlebarCenter } from "@/components/library/LibraryTopBar";
 import { RailShell } from "@/components/library/RailShell";
 import { MediaGrid } from "@/components/library/MediaGrid";
@@ -40,6 +42,7 @@ import { filterForRoute, useLibraryUi, type SmartView } from "@/state/library-ui
 import { getDb } from "@/lib/db";
 import { useAppSettings } from "@/lib/settings";
 import { syncVideoFilterFromStore } from "@/lib/colorCorrection";
+import appIcon from "../assets/icon.svg";
 
 /** Every "Add library" entry point resets the onboarding state machine. */
 function useOpenOnboarding() {
@@ -79,6 +82,8 @@ export default function App() {
   const lastScanAt = useScanStore((s) => s.lastScanAt);
   const onboarding = useOpenOnboarding();
   const [ready, setReady] = useState(false);
+  // null = the first-run flag has not been read yet (never flash the wizard)
+  const [setupSeen, setSetupSeen] = useState<boolean | null>(null);
 
   const route = useLibraryUi((s) => s.route);
   const setRoute = useLibraryUi((s) => s.setRoute);
@@ -92,6 +97,7 @@ export default function App() {
   const explorerLayout = useLibraryUi((s) => s.explorerLayout);
   // P4: classic (sidebar + library bar) or rail (header + 64px icon rail)
   const mainLayout = useAppSettings((s) => s.mainLayout);
+  const uiMotion = useAppSettings((s) => s.uiMotion);
   const rail = mainLayout === "rail";
   /** explorer = file manager: folder tree + only the open folder's contents */
   const explorer = browse === "explorer";
@@ -128,6 +134,27 @@ export default function App() {
       }
     })();
   }, [load]);
+
+  // First-run personalization: the wizard opens ONCE, and only for someone who
+  // already has a library (before that, adding a library IS the first step).
+  useEffect(() => {
+    let alive = true;
+    void readSetting("setup_completed")
+      .then((v) => alive && setSetupSeen(v === "true"))
+      .catch(() => alive && setSetupSeen(true)); // no backend → don't nag
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const finishSetup = async () => {
+    setSetupSeen(true);
+    try {
+      await writeSetting("setup_completed", "true");
+    } catch {
+      /* browser QA — the flag is best-effort */
+    }
+  };
 
   // alt+← = up one folder level (STEP 3B)
   useEffect(() => {
@@ -194,6 +221,25 @@ export default function App() {
 
   const media = useMediaRows(params);
   const rows = media.data ?? [];
+
+  // ---------- view change motion (P9) ----------
+  // Every navigation (smart view ⇄ library ⇄ folders ⇄ explorer) re-runs a
+  // 140ms rise on the grid host. The class is toggled on a ref, so the
+  // virtualized list is NOT remounted — the animation rides on top.
+  const viewKey = `${route.kind}:${route.kind === "smart" ? route.id : route.rootId}:${foldersView}:${explorer}`;
+  const gridHost = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const el = gridHost.current;
+    if (!el || !uiMotion) return;
+    el.classList.remove("view-in");
+    void el.offsetWidth; // force a reflow so the animation restarts
+    el.classList.add("view-in");
+    const timer = window.setTimeout(() => el.classList.remove("view-in"), 220);
+    return () => window.clearTimeout(timer);
+  }, [viewKey, uiMotion]);
+
+  // `ready` guard: never flash the wizard over a library that is still loading
+  const showWizard = ready && setupSeen === false && roots.length > 0 && !onboarding.show;
 
   // FIX: nav rows route change while the "Add library" onboarding was open —
   // the grid behind it DID switch, but the onboarding sheet stayed on top and
@@ -292,7 +338,7 @@ export default function App() {
           className="w-[264px] shrink-0 border-r border-hairline bg-surface-1"
         />
       )}
-      <div className="relative min-h-0 min-w-0 flex-1">
+      <div ref={gridHost} className="relative min-h-0 min-w-0 flex-1">
         <MediaGrid
           rows={rows}
           pending={media.isPending}
@@ -337,6 +383,38 @@ export default function App() {
     </>
   );
 
+  // FIRST-RUN TAKE-OVER: the wizard is a full screen, not a panel — the
+  // sidebar, the library bar and the view switches all belong to a library
+  // that does not exist yet, and drawing them behind the wizard made the app
+  // look like it had already opened (user report). Only the titlebar survives,
+  // because the window is frameless: without it there is nothing to drag or
+  // close.
+  if (showWizard) {
+    return (
+      <div className="flex h-full flex-col">
+        <WindowTitleBar
+          // the app mark instead of the default hamburger: in a take-over
+          // screen a decorative menu glyph is a dead affordance
+          leftAction={
+            <img
+              src={appIcon}
+              alt=""
+              aria-hidden
+              width={20}
+              height={20}
+              draggable={false}
+              className="rounded-[6px]"
+            />
+          }
+        />
+        <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <SetupWizard onDone={() => void finishSetup()} />
+        </main>
+        <ContextMenuHost />
+      </div>
+    );
+  }
+
   const statusBar = (
     <StatusLine
       summary={summary.data}
@@ -349,7 +427,9 @@ export default function App() {
   return (
     <div className="flex h-full flex-col">
       <WindowTitleBar
-        leftAction={<span className="font-mono text-xs text-ttertiary">v0.1</span>}
+        // BUGS 29.09: the hard-coded v0.1 is gone — the titlebar now carries
+        // the app mark + a quiet version pill (see WindowTitleBar).
+        leftAction={undefined}
         // F4 — rail mode: the library controls live IN the titlebar so the
         // screen shows exactly ONE header. Classic keeps the full GlassTopBar.
         center={

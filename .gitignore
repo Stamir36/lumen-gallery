@@ -2,8 +2,10 @@ node_modules/
 dist/
 src-tauri/target/
 src-tauri/gen/schemas/
+docs/PUBLISHING.md
 *.local
 .DS_Store
+.freebuff
 
 # playwright
 e2e/__screenshots__/
@@ -11,4 +13,7 @@ e2e/.results/
 e2e/.report/
 test-results/
 e2e/visual.spec.ts-snapshots/
+# every spec writes its own pixel baselines — they are machine-specific
+# (fonts, GPU rasterization) and must never be committed
+e2e/*.spec.ts-snapshots/
 b.txt

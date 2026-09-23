@@ -112,7 +112,7 @@ function SidebarRow({ item, wide }: { item: SidebarItem; wide: boolean }) {
         "active:scale-[.98] active:duration-75",
         item.active
           ? // accent anchor: 14% tinted glass + accent icon + accent counter
-            "bg-accent/[.14] text-tprimary shadow-[inset_0_1px_0_var(--accent-soft),inset_2px_0_0_var(--accent)] [&_svg]:text-accent"
+            "bg-accent/[.14] text-tprimary shadow-[inset_0_1px_0_var(--accent-soft)] [&_svg]:text-accent"
           : // unified hover language: tonal fill + faint accent glow (§2/§11)
             "text-tsecondary hover:bg-white/[.06] hover:text-tprimary hover:shadow-[0_0_0_1px_var(--accent-soft)]",
         !wide && "justify-center px-0",

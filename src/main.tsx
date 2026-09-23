@@ -6,16 +6,19 @@ import { Toaster } from "sonner";
 import App from "./App";
 import StylePage from "./pages/StylePage";
 import OnboardingPage from "./pages/OnboardingRoute";
+import { SetupWizard } from "./pages/SetupWizard";
 import SettingsPage from "./pages/SettingsPage";
 import AssetTest from "./pages/AssetTest";
 import GridDemo from "./pages/GridDemo";
 import MiniPlayer from "./components/miniplayer/MiniPlayer";
 import { invoke } from "@tauri-apps/api/core";
-import { initI18n, readSavedLang, applyCursorPreference } from "./i18n";
+import { initI18n, readSavedLang, applyCursorPreference, applyCustomCursorPreference } from "./i18n";
 import { tauriAvailable } from "./lib/assets";
 import { applyCachedAccent } from "./lib/accent";
 import { initScanListener, initOfflineListener } from "./state/library";
 import { queryClient } from "./lib/queryClient";
+import { useAppSettings } from "./lib/settings";
+import { MotionConfig } from "framer-motion";
 import { startPerfWatchdog } from "./lib/perf";
 import { initExternalOpen } from "./lib/externalOpen";
 import "./index.css";
@@ -70,22 +73,50 @@ async function resolveBootFile(): Promise<string | null> {
   }
 }
 
+/**
+ * One switch for every Framer animation in the app (Settings › micro-motion).
+ * "user" honours the OS preference, "always" pins the reduced mode on — which
+ * is exactly the still UI the switch promises. The CSS layer reads the same
+ * flag through `html[data-motion-off]`.
+ */
+function MotionScope({ children }: { children: React.ReactNode }) {
+  const uiMotion = useAppSettings((s) => s.uiMotion);
+  return (
+    <MotionConfig reducedMotion={uiMotion ? "user" : "always"}>{children}</MotionConfig>
+  );
+}
+
 async function bootstrap() {
   // apply the persisted/system language BEFORE the first render
   const saved = await readSavedLang();
   await initI18n(saved);
   await applyCursorPreference().catch(() => undefined);
+  await applyCustomCursorPreference().catch(() => undefined);
 
   ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
     <React.StrictMode>
       <QueryClientProvider client={queryClient}>
         <HashRouter>
+          <MotionScope>
           <Routes>
             <Route path="/" element={<App />} />
             {/* hidden living style sheet */}
             <Route path="/style" element={<StylePage />} />
             {/* onboarding is also reachable directly for QA/screenshots */}
             <Route path="/onboarding" element={<OnboardingPage />} />
+            {/* first-run personalization wizard (QA: full walkthrough, no Tauri) */}
+            <Route
+              path="/setup"
+              element={
+                <SetupWizard
+                  // the QA route ends back at the app root (history.back() could
+                  // leave the browser window entirely)
+                  onDone={() => {
+                    window.location.hash = "#/";
+                  }}
+                />
+              }
+            />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/asset-test" element={<AssetTest />} />
             {/* dev-only grid QA surface (synthetic rows, no Tauri calls) */}
@@ -93,6 +124,7 @@ async function bootstrap() {
             {/* F5: the custom mini-player lives in its own frameless window */}
             <Route path="/miniplayer" element={<MiniPlayer />} />
           </Routes>
+          </MotionScope>
         </HashRouter>
         {/* P9 motion/density: three toasts is a stack, four is a wall. Older
             ones collapse behind the newest (sonner's own spring), and the panel

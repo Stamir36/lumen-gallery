@@ -1,7 +1,33 @@
 {
   "name": "lumen",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
+  "description": "Local-first photo & video gallery for Windows — Tauri v2 + React + Rust",
+  "license": "GPL-3.0-or-later",
+  "author": "Stanislav Miroshnichenko (Unesell Studio)",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Stamir36/lumen-gallery.git"
+  },
+  "homepage": "https://github.com/Stamir36/lumen-gallery#readme",
+  "bugs": {
+    "url": "https://github.com/Stamir36/lumen-gallery/issues"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "photo-gallery",
+    "video-player",
+    "image-viewer",
+    "tauri",
+    "rust",
+    "react",
+    "windows",
+    "desktop-app",
+    "local-first",
+    "media-organizer"
+  ],
   "type": "module",
   "scripts": {
     "dev": "vite",

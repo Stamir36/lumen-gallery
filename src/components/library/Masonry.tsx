@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useReducedMotion } from "framer-motion";
 import type { MediaRow } from "@/lib/api";
 import { computeMasonryColumns, ratioOf } from "@/lib/justified";
 import { DENSITY_PARAMS, useAppSettings } from "@/lib/settings";
 import { useElementWidth, useRafScroll } from "@/lib/hooks";
 import { setViewportIds, enqueueThumbs } from "@/lib/thumbs";
+import { cn } from "@/lib/utils";
 import { MediaCard } from "./MediaCard";
 
 /**
@@ -107,6 +109,19 @@ export function Masonry({
   }, [revealId, positionOf, onRevealed]);
 
   const columnWidth = packed.colW;
+  // RELAYOUT GLIDE: tiles are positioned with a single transform, so a layout
+  // change (density switch, resize → new column count) can simply TRANSITION
+  // the transform and every tile glides to its new slot — the grid visibly
+  // re-packs instead of snapping. Disabled under prefers-reduced-motion and
+  // while the virtual window is catching up (a first paint must not "fly in").
+  const reduced = useReducedMotion();
+  const glide = !reduced;
+  const [everSeen, setEverSeen] = useState(false);
+  useEffect(() => {
+    if (!glide || everSeen) return;
+    const id = window.setTimeout(() => setEverSeen(true), 350);
+    return () => window.clearTimeout(id);
+  }, [glide, everSeen]);
   // F8: the same window the render walks — memoised so the viewport broadcast
   // below is a cheap identity check, not a rebuild per frame
   const tiles = useMemo(() => {
@@ -155,7 +170,10 @@ export function Masonry({
             {tiles.map(({ media, x, y, h }) => (
               <div
                 key={media.id}
-                className="absolute left-0 top-0 will-change-transform"
+                className={cn(
+                  "absolute left-0 top-0 will-change-transform",
+                  glide && everSeen && "transition-transform duration-[280ms] ease-[cubic-bezier(.22,1,.36,1)]",
+                )}
                 style={{
                   width: columnWidth,
                   height: h,

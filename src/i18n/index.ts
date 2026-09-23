@@ -109,11 +109,25 @@ export async function writeSetting(key: string, value: string) {
 export const CURSOR_KEY = "ui.cursor_pointer";
 export async function applyCursorPreference() {
   const v = await readSetting(CURSOR_KEY);
-  document.documentElement.classList.toggle("cursor-pointer", v === "true");
+  // data-attribute, NOT a class: `.cursor-pointer` collides with the Tailwind
+  // utility of the same name, and cursor inherits — the whole window pointed
+  // (BUGS 29.09).
+  document.documentElement.toggleAttribute("data-cursor-pointer", v === "true");
 }
 export async function setCursorPointer(on: boolean) {
-  document.documentElement.classList.toggle("cursor-pointer", on);
+  document.documentElement.toggleAttribute("data-cursor-pointer", on);
   await writeSetting(CURSOR_KEY, String(on));
+}
+
+/** Custom LUMEN cursor (default OFF): the drawn arrow replaces the system one. */
+export const CUSTOM_CURSOR_KEY = "ui.custom_cursor";
+export async function applyCustomCursorPreference() {
+  const v = await readSetting(CUSTOM_CURSOR_KEY);
+  document.documentElement.toggleAttribute("data-custom-cursor", v === "true");
+}
+export async function setCustomCursor(on: boolean) {
+  document.documentElement.toggleAttribute("data-custom-cursor", on);
+  await writeSetting(CUSTOM_CURSOR_KEY, String(on));
 }
 
 export default i18n;

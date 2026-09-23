@@ -8,6 +8,7 @@ mod db;
 mod media_server;
 mod scan;
 mod thumbs;
+mod tray;
 mod volumes;
 mod watch;
 mod writer;
@@ -137,6 +138,7 @@ pub fn run() {
       commands::library_stats,
       commands::library_summary,
       commands::cancel_scan,
+      commands::set_tray_mode,
       commands::db_exec,
       commands::thumb_record,
       commands::backend_ready,
@@ -164,11 +166,23 @@ pub fn run() {
       cache::clear_thumbnail_cache,
       thumbs::generate_thumbs,
     ])
+    .manage(tray::TrayMode::default())
     .manage(watch::WatcherRegistry::default())
     .manage(thumbs::ThumbEngine::default())
     .manage(commands::BackendState::default())
     .manage(commands::MiniPlayerState::default())
     .on_window_event(|window, event| {
+      // BACKGROUND MODE (opt-in, Settings › System): only when the user armed
+      // it does the close request park the app in the tray instead of ending
+      // the process. Default = the native behavior: the window closes, the
+      // process exits, the WebView2 memory goes back to the OS.
+      if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+        if window.label() == "main" && tray::is_enabled(window.app_handle()) {
+          let _ = window.hide();
+          api.prevent_close();
+          return;
+        }
+      }
       // F5: the mini player closing by ANY path (X button, taskbar, Alt+F4)
       // still hands its position back before the webview dies.
       if let tauri::WindowEvent::CloseRequested { .. } = event {

@@ -120,8 +120,9 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
       return;
     }
     const r = moreAnchorRef.current?.getBoundingClientRect();
-    // +12px above the pill: flush-at-8 read as glued to the pill (user note)
-    if (r) setOverflowPos({ left: r.right - 252, bottom: window.innerHeight - r.top + 12 });
+    // +20px above the pill: flush-at-8 read as glued to the pill (user note),
+    // +12 was still close — lifted a little more
+    if (r) setOverflowPos({ left: r.right - 252, bottom: window.innerHeight - r.top + 20 });
     setOverflowOpen(true);
   };
   /** P7 F4: color-correction popover inside the overflow */

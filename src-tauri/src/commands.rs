@@ -1162,3 +1162,21 @@ pub async fn library_summary(app: AppHandle) -> Result<LibrarySummary, String> {
     })
 }
 
+
+/// Tauri command: arm/disarm background (tray) mode.
+///
+/// DEFAULT IS OFF: closing the window quits the app (native behavior, RAM
+/// freed). When ON, the close request parks the app in the tray so the next
+/// launch hits the warm instance instantly.
+///
+/// The labels are passed from the frontend so the tray menu follows the app
+/// language without duplicating the translation table in Rust.
+#[tauri::command]
+pub fn set_tray_mode(
+    app: AppHandle,
+    enabled: bool,
+    open_label: String,
+    exit_label: String,
+) -> Result<(), String> {
+    crate::tray::set_enabled(&app, enabled, &open_label, &exit_label).map_err(|e| e.to_string())
+}

@@ -40,8 +40,8 @@ const CHIPS: { id: SmartView; labelKey: string; icon: React.ReactNode }[] = [
  *
  * The rail is ONE floating panel (radius 20, 12px margin — the user sketch):
  * 40px icon hit areas, small mono count chip under the icon, active item =
- * accent tint + accent icon + a 2px accent bar on the panel's left edge, mono
- * tooltips. The search field keeps its "/" hotkey contract here.
+ * accent tint + accent icon, mono tooltips. The search field keeps its
+ * "/" hotkey contract here.
  */
 export function RailShell({
   title,
@@ -102,10 +102,6 @@ export function RailShell({
           aria-label={t("rail.nav")}
           className="relative flex w-[64px] shrink-0 flex-col items-center gap-1 overflow-hidden rounded-[20px] bg-surface-1 py-3"
         >
-          {/* the 2px accent bar marks the panel the keyboard/mouse is on (sketch) */}
-          {items.some((i) => i.active) && (
-            <span className="absolute left-0 top-1/2 h-10 w-0.5 -translate-y-1/2 rounded-pill bg-accent" />
-          )}
           <div className="flex min-h-0 flex-1 flex-col items-center gap-1 overflow-y-auto">
             {items.map((item) => (
               <NavTooltip key={item.id} label={item.label} mono side="right">

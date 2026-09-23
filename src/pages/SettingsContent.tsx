@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { invoke } from "@tauri-apps/api/core";
@@ -6,26 +6,40 @@ import { appCacheDir, appLogDir, join } from "@tauri-apps/api/path";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import {
+  Wand2,
   FolderOpen,
-  Languages,
   Palette,
   RefreshCw,
   Trash2,
   Gauge,
   Cpu,
   Play,
+  MousePointerClick,
+  Info,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { DENSITY_PARAMS, SCRUB_RATES, THUMB_WORKER_OPTIONS, useAppSettings, type GridDensity, type MainLayout } from "@/lib/settings";
+import {
+  DENSITY_PARAMS,
+  RADIUS_PRESETS,
+  SCRUB_RATES,
+  THUMB_WORKER_OPTIONS,
+  useAppSettings,
+  type GridDensity,
+  type MainLayout,
+  type PillAlign,
+  type UiRadius,
+} from "@/lib/settings";
 import { ACCENTS } from "@/lib/accent";
 import { ExcludedFolders } from "@/components/settings/ExcludedFolders";
 import { FileAssociations } from "@/components/settings/FileAssociations";
 import { LanguageDropdown } from "@/components/LanguageSwitcher";
 import { GlassCard } from "@/components/ui/GlassCard";
-import { Segmented } from "@/components/ui/Segmented";
 import { AccentPicker } from "@/components/ui/AccentPicker";
 import { PillButton } from "@/components/ui/PillButton";
 import { IconButton } from "@/components/ui/IconButton";
+import { PillChoice, SettingRow, Toggle } from "@/components/settings/Primitives";
+import { LayoutDiagram } from "@/components/settings/LayoutDiagram";
+import { DiagramCard } from "@/components/settings/DiagramCard";
 import { api, formatBytes, type RootRow } from "@/lib/api";
 import { resetThumbs } from "@/lib/thumbs";
 import { queryClient } from "@/lib/queryClient";
@@ -33,37 +47,30 @@ import { getDb } from "@/lib/db";
 import { useRootsStore } from "@/state/library";
 import { APP_VERSION } from "@/lib/version";
 import appIcon from "../../assets/icon.svg";
-import {
-  readSetting,
-  writeSetting,
-  CURSOR_KEY,
-} from "@/i18n";
+import { readSetting, writeSetting, CURSOR_KEY, setCustomCursor, CUSTOM_CURSOR_KEY } from "@/i18n";
 
 /** Density presets in the order the segmented control shows them (FIX 4b). */
 const DENSITY_ORDER: GridDensity[] = ["comfort", "medium", "compact"];
 
-/**
- * P4 — mini glyph preview for the layout segmented: a 18×14 diagram of the
- * chrome. The previews are DIAGRAMS, not screenshots, so they stay legible at
- * 18px and cost nothing to render.
- */
-function LayoutGlyph({ kind }: { kind: MainLayout }) {
+/** Layout choice card in Settings = the wizard's OptionCard + shared diagram. */
+function LayoutCard({
+  kind,
+  active,
+  label,
+  onClick,
+}: {
+  kind: MainLayout;
+  active: boolean;
+  label: string;
+  onClick: () => void;
+}) {
   return (
-    <svg width="18" height="14" viewBox="0 0 18 14" aria-hidden focusable="false">
-      {kind === "classic" ? (
-        <>
-          <rect x="0" y="0" width="5" height="14" rx="1.5" className="fill-white/35" />
-          <rect x="7" y="0" width="11" height="2.5" rx="1" className="fill-white/20" />
-          <rect x="7" y="4.5" width="11" height="9.5" rx="1.5" className="fill-white/12" />
-        </>
-      ) : (
-        <>
-          <rect x="0" y="0" width="18" height="2.5" rx="1" className="fill-white/20" />
-          <rect x="0" y="4.5" width="4" height="9.5" rx="1.5" className="fill-white/35" />
-          <rect x="6.5" y="4.5" width="11.5" height="9.5" rx="1.5" className="fill-white/12" />
-        </>
-      )}
-    </svg>
+    <DiagramCard
+      active={active}
+      onClick={onClick}
+      label={label}
+      diagram={<LayoutDiagram kind={kind} active={active} />}
+    />
   );
 }
 
@@ -112,6 +119,22 @@ export function SettingsContent() {
   const [failed, setFailed] = useState(false);
   const [active, setActive] = useState<string>("libraries");
   const [cursorPointer, setCursorPointer] = useState(false);
+  const [customCursor, setCustomCursorState] = useState(false);
+  // BUGS 29.09: text-selection is a developer tool — hidden until the user
+  // clicks the About logo 5× (the classic Android “debug mode” gesture).
+  // Persisted: once unlocked it stays unlocked. The gesture: 5 clicks on the
+  // About logo (same spirit as the Android debug easter egg).
+  const [devUnlocked, setDevUnlocked] = useState(false);
+  const logoClicks = useRef(0);
+  const onLogoClick = () => {
+    if (devUnlocked) return;
+    logoClicks.current += 1;
+    if (logoClicks.current >= 5) {
+      setDevUnlocked(true);
+      void writeSetting("ui.dev_unlocked", "true").catch(() => undefined);
+    }
+  };
+
   const scrubRate = useAppSettings((s) => s.videoScrubRate);
   const setScrubRate = useAppSettings((s) => s.setVideoScrubRate);
   const hoverCaptions = useAppSettings((s) => s.hoverCaptions);
@@ -140,12 +163,29 @@ export function SettingsContent() {
   const thumbWorkers = useAppSettings((s) => s.thumbWorkers);
   const setThumbWorkers = useAppSettings((s) => s.setThumbWorkers);
   const setShowFps = useAppSettings((s) => s.setShowFps);
+  const uiMotion = useAppSettings((s) => s.uiMotion);
+  const setUiMotion = useAppSettings((s) => s.setUiMotion);
+  const uiRadius = useAppSettings((s) => s.uiRadius);
+  const setUiRadius = useAppSettings((s) => s.setUiRadius);
+  const backgroundMode = useAppSettings((s) => s.backgroundMode);
+  const setBackgroundMode = useAppSettings((s) => s.setBackgroundMode);
 
   useEffect(() => {
-    void readSetting(CURSOR_KEY).then((v) =>
-      setCursorPointer(v === "true"),
-    );
+    void readSetting(CURSOR_KEY).then((v) => setCursorPointer(v === "true"));
+    void readSetting(CUSTOM_CURSOR_KEY).then((v) => setCustomCursor(v === "true"));
+    void readSetting("ui.dev_unlocked").then((v) => setDevUnlocked(v === "true"));
   }, []);
+
+  const toggleCustomCursor = async (on: boolean) => {
+    setCustomCursorState(on); // optimistic — same pattern as toggleCursor
+    try {
+      await setCustomCursor(on); // applies the attribute AND persists
+      setCustomCursorState(on);
+    } catch (e) {
+      console.error("custom cursor save failed", e);
+      toast.error(t("errors.action_failed"));
+    }
+  };
 
   const toggleCursor = async (on: boolean) => {
     setCursorPointer(on);
@@ -215,9 +255,12 @@ export function SettingsContent() {
   const navItems = [
     { id: "libraries", icon: <FolderOpen size={18} />, label: t("settings.nav_libraries") },
     { id: "appearance", icon: <Palette size={18} />, label: t("settings.nav_appearance") },
+    { id: "behavior", icon: <MousePointerClick size={18} />, label: t("settings.nav_behavior") },
     { id: "playback", icon: <Play size={18} />, label: t("settings.nav_playback") },
     { id: "cache", icon: <Gauge size={18} />, label: t("settings.nav_cache") },
     { id: "system", icon: <Cpu size={18} />, label: t("settings.nav_system") },
+    // BUGS 29.09: About existed only as a section — the left nav never listed it
+    { id: "about", icon: <Info size={18} />, label: t("settings.nav_about") },
   ];
   /** stable list for the scrollspy observer (navItems is rebuilt per render) */
   const SECTION_IDS = navItems.map((n) => n.id);
@@ -258,15 +301,25 @@ export function SettingsContent() {
           <button
             key={n.id}
             onClick={() => jump(n.id)}
-            className={
-              "flex min-h-11 items-center gap-3 break-words rounded-control px-3 py-2 text-left text-sm leading-snug transition-all duration-[160ms] ease-out " +
-              (active === n.id
-                ? "bg-accent/[.14] text-tprimary [&_svg]:text-accent"
-                : "text-tsecondary hover:bg-white/[.06] hover:text-tprimary")
-            }
+            className={cn(
+              "relative flex min-h-11 items-center gap-3 break-words rounded-control px-3 py-2",
+              "text-left text-sm leading-snug transition-colors duration-[160ms] ease-out",
+              active === n.id
+                ? "text-tprimary [&_svg]:text-accent"
+                : "text-tsecondary hover:bg-white/[.06] hover:text-tprimary",
+            )}
           >
-            <span className="shrink-0">{n.icon}</span>
-            <span>{n.label}</span>
+            {/* the tinted pill SLIDES between rows (framer layoutId) instead of
+                blinking — the nav reads as one control, not six */}
+            {active === n.id && (
+              <motion.span
+                layoutId="settings-nav-pill"
+                transition={{ type: "spring", stiffness: 420, damping: 34 }}
+                className="absolute inset-0 rounded-control bg-accent/[.14] shadow-[inset_0_1px_0_var(--accent-soft)]"
+              />
+            )}
+            <span className="relative z-10 shrink-0">{n.icon}</span>
+            <span className="relative z-10">{n.label}</span>
           </button>
         ))}
       </nav>
@@ -289,12 +342,8 @@ export function SettingsContent() {
                   className="flex items-center gap-3 rounded-control bg-surface-2 p-4"
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium">
-                      {root.label || root.path}
-                    </p>
-                    <p className="break-all font-mono text-xs text-tsecondary">
-                      {root.path}
-                    </p>
+                    <p className="truncate font-medium">{root.label || root.path}</p>
+                    <p className="break-all font-mono text-xs text-tsecondary">{root.path}</p>
                   </div>
                   <IconButton
                     label={t("sidebar.rescan", { label: root.label || root.path })}
@@ -326,316 +375,40 @@ export function SettingsContent() {
             <PillButton variant="ghost" onClick={() => navigate("/onboarding")}>
               {t("sidebar.add_library")}
             </PillButton>
-            <p className="mt-4 text-sm text-tsecondary">
-              {t("settings.remove_hint")}
-            </p>
+            <p className="mt-4 text-sm text-tsecondary">{t("settings.remove_hint")}</p>
           </GlassCard>
         </Section>
 
         {/* 02 Appearance */}
         <Section index="02" id="appearance" title={t("settings.nav_appearance")}>
           <GlassCard>
-            <div className="flex flex-wrap items-center justify-between gap-4 py-2">
-              <div className="flex items-center gap-3 text-sm text-tprimary">
-                <Languages size={18} className="text-tsecondary" />
-                {t("settings.language")}
-              </div>
+            <SettingRow label={t("settings.language")}>
               <div className="w-44">
                 <LanguageDropdown />
               </div>
-            </div>
-            <div className="mt-2 flex min-h-16 items-center justify-between border-t border-hairline py-4">
-              <span className="text-sm text-tprimary">{t("settings.theme")}</span>
+            </SettingRow>
+
+            <SettingRow label={t("settings.theme")}>
               <span className="text-sm text-tsecondary">{t("settings.dark")}</span>
-            </div>
-            <div className="flex min-h-16 items-center justify-between border-t border-hairline py-4">
-              <span className="text-sm text-tprimary">
-                {t("settings.cursor_pointer")}
-              </span>
-              <button
-                role="switch"
-                aria-checked={cursorPointer}
-                aria-label={t("settings.cursor_pointer")}
-                onClick={() => void toggleCursor(!cursorPointer)}
-                className={
-                  "relative h-6 w-11 rounded-pill transition-colors duration-[160ms] ease-out " +
-                  (cursorPointer ? "bg-accent" : "bg-surface-3")
-                }
-              >
-                <span
-                  className={
-                    "absolute top-0.5 h-5 w-5 rounded-pill bg-white transition-all duration-[160ms] ease-out " +
-                    (cursorPointer ? "left-[22px]" : "left-0.5")
-                  }
-                />
-              </button>
-            </div>
-            <div className="flex min-h-16 items-center justify-between border-t border-hairline py-4">
-              <span className="flex flex-col gap-0.5">
-                <span className="text-sm text-tprimary">{t("settings.show_fps")}</span>
-                <span className="text-[12px] text-ttertiary">{t("settings.show_fps_hint")}</span>
-              </span>
-              <button
-                role="switch"
-                aria-checked={showFps}
-                aria-label={t("settings.show_fps")}
-                onClick={() => void setShowFps(!showFps)}
-                className={
-                  "relative h-6 w-11 shrink-0 rounded-pill transition-colors duration-[160ms] ease-out " +
-                  (showFps ? "bg-accent" : "bg-surface-3")
-                }
-              >
-                <span
-                  className={
-                    "absolute top-0.5 h-5 w-5 rounded-pill bg-white transition-all duration-[160ms] ease-out " +
-                    (showFps ? "left-[22px]" : "left-0.5")
-                  }
-                />
-              </button>
-            </div>
-            <div className="flex min-h-16 items-center justify-between border-t border-hairline py-4">
-              <span className="flex flex-col gap-0.5">
-                <span className="text-sm text-tprimary">{t("settings.pill_align")}</span>
-                <span className="text-[12px] text-ttertiary">
-                  {t("settings.pill_align_hint")}
-                </span>
-              </span>
-              <div
-                role="radiogroup"
-                aria-label={t("settings.pill_align")}
-                className="flex shrink-0 items-center gap-1 rounded-pill bg-surface-3 p-1"
-              >
-                {(
-                  [
-                    ["left", "settings.pill_left"],
-                    ["center", "settings.pill_center"],
-                    ["right", "settings.pill_right"],
-                  ] as const
-                ).map(([value, key]) => (
-                  <button
-                    key={value}
-                    type="button"
-                    role="radio"
-                    aria-checked={pillAlign === value}
-                    aria-label={t(key)}
-                    title={t(key)}
-                    onClick={() => void setPillAlign(value)}
-                    className={
-                      "flex h-7 items-center rounded-pill px-3 text-[12px] transition-colors duration-[160ms] " +
-                      (pillAlign === value
-                        ? "bg-white/[.14] text-tprimary"
-                        : "text-tsecondary hover:text-tprimary")
-                    }
-                  >
-                    {t(key)}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="flex min-h-16 items-center justify-between border-t border-hairline py-4">
-              <span className="flex flex-col gap-0.5">
-                <span className="text-sm text-tprimary">{t("settings.swipe_navigate")}</span>
-                <span className="text-[12px] text-ttertiary">{t("settings.swipe_hint")}</span>
-              </span>
-              <button
-                role="switch"
-                aria-checked={swipeNavigate}
-                aria-label={t("settings.swipe_navigate")}
-                onClick={() => void setSwipeNavigate(!swipeNavigate)}
-                className={
-                  "relative h-6 w-11 shrink-0 rounded-pill transition-colors duration-[160ms] ease-out " +
-                  (swipeNavigate ? "bg-accent" : "bg-surface-3")
-                }
-              >
-                <span
-                  className={
-                    "absolute top-0.5 h-5 w-5 rounded-pill bg-white transition-all duration-[160ms] ease-out " +
-                    (swipeNavigate ? "left-[22px]" : "left-0.5")
-                  }
-                />
-              </button>
-            </div>
-            <div className="flex min-h-16 items-center justify-between border-t border-hairline py-4">
-              <span className="text-sm text-tprimary">
-                {t("settings.hover_captions")}
-              </span>
-              <button
-                role="switch"
-                aria-checked={hoverCaptions}
-                aria-label={t("settings.hover_captions")}
-                onClick={() => void setHoverCaptions(!hoverCaptions)}
-                className={
-                  "relative h-6 w-11 rounded-pill transition-colors duration-[160ms] ease-out " +
-                  (hoverCaptions ? "bg-accent" : "bg-surface-3")
-                }
-              >
-                <span
-                  className={
-                    "absolute top-0.5 h-5 w-5 rounded-pill bg-white transition-all duration-[160ms] ease-out " +
-                    (hoverCaptions ? "left-[22px]" : "left-0.5")
-                  }
-                />
-              </button>
-            </div>
-            <div className="flex min-h-16 items-center justify-between border-t border-hairline py-4">
-              <span className="flex flex-col gap-0.5">
-                <span className="text-sm text-tprimary">
-                  {t("settings.card_hover")}
-                </span>
-                <span className="text-[12px] text-ttertiary">
-                  {t("settings.card_hover_hint")}
-                </span>
-              </span>
-              <button
-                role="switch"
-                aria-checked={cardHover}
-                aria-label={t("settings.card_hover")}
-                onClick={() => void setCardHover(!cardHover)}
-                className={
-                  "relative h-6 w-11 rounded-pill transition-colors duration-[160ms] ease-out " +
-                  (cardHover ? "bg-accent" : "bg-surface-3")
-                }
-              >
-                <span
-                  className={
-                    "absolute top-0.5 h-5 w-5 rounded-pill bg-white transition-all duration-[160ms] ease-out " +
-                    (cardHover ? "left-[22px]" : "left-0.5")
-                  }
-                />
-              </button>
-            </div>
-            <div className="flex min-h-16 items-center justify-between border-t border-hairline py-4">
-              <span className="flex flex-col gap-0.5">
-                <span className="text-sm text-tprimary">
-                  {t("settings.text_selection")}
-                </span>
-                <span className="text-[12px] text-ttertiary">
-                  {t("settings.text_selection_hint")}
-                </span>
-              </span>
-              <button
-                role="switch"
-                aria-checked={textSelection}
-                aria-label={t("settings.text_selection")}
-                onClick={() => void setTextSelection(!textSelection)}
-                className={
-                  "relative h-6 w-11 rounded-pill transition-colors duration-[160ms] ease-out " +
-                  (textSelection ? "bg-accent" : "bg-surface-3")
-                }
-              >
-                <span
-                  className={
-                    "absolute top-0.5 h-5 w-5 rounded-pill bg-white transition-all duration-[160ms] ease-out " +
-                    (textSelection ? "left-[22px]" : "left-0.5")
-                  }
-                />
-              </button>
-            </div>
-            <div className="flex min-h-16 items-center justify-between border-t border-hairline py-4">
-              <span className="text-sm text-tprimary">
-                {t("settings.video_autoplay")}
-              </span>
-              <button
-                role="switch"
-                aria-checked={videoAutoplay}
-                aria-label={t("settings.video_autoplay")}
-                onClick={() => void setVideoAutoplay(!videoAutoplay)}
-                className={
-                  "relative h-6 w-11 rounded-pill transition-colors duration-[160ms] ease-out " +
-                  (videoAutoplay ? "bg-accent" : "bg-surface-3")
-                }
-              >
-                <span
-                  className={
-                    "absolute top-0.5 h-5 w-5 rounded-pill bg-white transition-all duration-[160ms] ease-out " +
-                    (videoAutoplay ? "left-[22px]" : "left-0.5")
-                  }
-                />
-              </button>
-            </div>
-            <div className="flex min-h-16 items-center justify-between border-t border-hairline py-4">
-              <span className="flex flex-col gap-0.5">
-                <span className="text-sm text-tprimary">{t("settings.thumb_workers")}</span>
-                <span className="text-[12px] text-ttertiary">
-                  {t("settings.thumb_workers_hint")}
-                </span>
-              </span>
-              <div
-                role="radiogroup"
-                aria-label={t("settings.thumb_workers")}
-                className="flex shrink-0 items-center gap-1 rounded-pill bg-surface-3 p-1"
-              >
-                {THUMB_WORKER_OPTIONS.map((n) => (
-                  <button
-                    key={n}
-                    type="button"
-                    role="radio"
-                    aria-checked={thumbWorkers === n}
-                    aria-label={String(n)}
-                    onClick={() => void setThumbWorkers(n)}
-                    className={
-                      "flex h-7 w-9 items-center justify-center rounded-pill font-mono text-[12px] tabular-nums transition-colors duration-[160ms] " +
-                      (thumbWorkers === n
-                        ? "bg-white/[.14] text-tprimary"
-                        : "text-tsecondary hover:text-tprimary")
-                    }
-                  >
-                    {n}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="flex min-h-16 items-center justify-between border-t border-hairline py-4">
-              <span className="flex flex-col gap-0.5">
-                <span className="text-sm text-tprimary">{t("settings.show_excluded")}</span>
-                <span className="text-[12px] text-ttertiary">
-                  {t("settings.show_excluded_hint")}
-                </span>
-              </span>
-              <button
-                role="switch"
-                aria-checked={showExcluded}
-                aria-label={t("settings.show_excluded")}
-                onClick={() => void setShowExcluded(!showExcluded)}
-                className={
-                  "relative h-6 w-11 shrink-0 rounded-pill transition-colors duration-[160ms] ease-out " +
-                  (showExcluded ? "bg-accent" : "bg-surface-3")
-                }
-              >
-                <span
-                  className={
-                    "absolute top-0.5 h-5 w-5 rounded-pill bg-white transition-all duration-[160ms] ease-out " +
-                    (showExcluded ? "left-[22px]" : "left-0.5")
-                  }
-                />
-              </button>
-            </div>
-            {/* FIX 4a: accent presets — the swatch rewrites the CSS vars live,
-                every accent anchor in the app follows it */}
-            <div className="flex min-h-16 items-center justify-between border-t border-hairline py-4">
-              <span className="flex flex-col gap-0.5">
-                <span className="text-sm text-tprimary">
-                  {t("settings.accent_color")}
-                </span>
-                <span className="text-[12px] text-ttertiary">
-                  {t("settings.accent_hint")}
-                </span>
-              </span>
+            </SettingRow>
+
+            {/* accent presets — the swatch rewrites the CSS vars live, every
+                accent anchor in the app follows it */}
+            <SettingRow label={t("settings.accent_color")} hint={t("settings.accent_hint")}>
               <div className="flex flex-wrap items-center justify-end gap-2">
                 {ACCENTS.map((preset) => {
-                  const active =
-                    accent.toLowerCase() === preset.hex.toLowerCase();
+                  const activeAccent = accent.toLowerCase() === preset.hex.toLowerCase();
                   return (
                     <button
                       key={preset.id}
                       type="button"
                       title={t(preset.labelKey)}
                       aria-label={t(preset.labelKey)}
-                      aria-pressed={active}
+                      aria-pressed={activeAccent}
                       onClick={() => void setAccent(preset.hex)}
                       className={cn(
                         "h-8 w-8 rounded-pill transition-all duration-[160ms] ease-out active:scale-[.94]",
-                        active
+                        activeAccent
                           ? "ring-2 ring-white/85 ring-offset-2 ring-offset-surface-1"
                           : "opacity-80 hover:scale-105 hover:opacity-100",
                       )}
@@ -648,159 +421,224 @@ export function SettingsContent() {
                     that screamed "web page" */}
                 <AccentPicker accent={accent} onPick={(hex) => void setAccent(hex)} />
               </div>
-            </div>
+            </SettingRow>
 
-            {/* FIX 4b: grid density — target row height, gutter and masonry
-                column width, applied to the grid live (no reload) */}
-            <div className="flex min-h-16 items-center justify-between border-t border-hairline py-4">
-              <span className="flex flex-col gap-0.5">
-                <span className="text-sm text-tprimary">
-                  {t("settings.grid_density")}
-                </span>
-                <span className="text-[12px] text-ttertiary">
-                  {t("settings.grid_density_hint", {
-                    h: DENSITY_PARAMS[gridDensity].targetH,
-                    gap: DENSITY_PARAMS[gridDensity].gap,
-                  })}
-                </span>
-              </span>
-              <div className="flex items-center gap-1.5">
-                {DENSITY_ORDER.map((d) => (
-                  <button
-                    key={d}
-                    type="button"
-                    aria-pressed={gridDensity === d}
-                    aria-label={t(`settings.density_${d}`)}
-                    onClick={() => void setGridDensity(d)}
-                    className={cn(
-                      "inline-flex h-9 items-center rounded-pill px-3.5",
-                      "font-mono text-[12px] transition-colors duration-[160ms] ease-out active:scale-[.97]",
-                      gridDensity === d
-                        ? "bg-accent text-[#0A0A0C]"
-                        : "bg-surface-2 text-tsecondary hover:text-tprimary",
-                    )}
-                  >
-                    {t(`settings.density_${d}`)}
-                  </button>
-                ))}
-              </div>
-            </div>
+            {/* grid density — target row height, gutter and masonry column
+                width, applied to the grid live (no reload) */}
+            <SettingRow
+              label={t("settings.grid_density")}
+              hint={t("settings.grid_density_hint", {
+                h: DENSITY_PARAMS[gridDensity].targetH,
+                gap: DENSITY_PARAMS[gridDensity].gap,
+              })}
+            >
+              <PillChoice<GridDensity>
+                ariaLabel={t("settings.grid_density")}
+                value={gridDensity}
+                onChange={(d) => void setGridDensity(d)}
+                className="bg-surface-2 p-1"
+                options={DENSITY_ORDER.map((d) => ({
+                  value: d,
+                  label: t(`settings.density_${d}`),
+                }))}
+              />
+            </SettingRow>
 
             {/* P4: main-screen layout — classic sidebar vs permanent icon rail.
-                MAIN SCREEN ONLY: viewers/player/collage are untouched. */}
-            <div className="flex min-h-16 items-center justify-between border-t border-hairline py-4">
-              <span className="flex flex-col gap-0.5">
-                <span className="text-sm text-tprimary">{t("settings.main_layout")}</span>
-                <span className="text-[12px] text-ttertiary">
-                  {t("settings.main_layout_hint")}
-                </span>
-              </span>
-              <Segmented<MainLayout>
-                aria-label={t("settings.main_layout")}
-                value={mainLayout}
-                onChange={(v) => void setMainLayout(v)}
+                MAIN SCREEN ONLY: viewers/player/collage are untouched.
+                BUGS 29.09 #4: this was the one row with a unique toggle design;
+                now it uses the wizard's diagram cards (LayoutDiagram lives in
+                SetupWizard and is reused here verbatim). */}
+            <div className="border-t border-hairline py-4 first:border-t-0 first:pt-0">
+              <p className="text-sm text-tprimary">{t("settings.main_layout")}</p>
+              <p className="mb-3 mt-0.5 text-[12px] leading-snug text-ttertiary">
+                {t("settings.main_layout_hint")}
+              </p>
+              <div className="flex gap-3">
+                <LayoutCard
+                  kind="classic"
+                  active={mainLayout === "classic"}
+                  label={t("settings.main_layout_classic")}
+                  onClick={() => void setMainLayout("classic")}
+                />
+                <LayoutCard
+                  kind="rail"
+                  active={mainLayout === "rail"}
+                  label={t("settings.main_layout_rail")}
+                  onClick={() => void setMainLayout("rail")}
+                />
+              </div>
+            </div>
+
+            {/* corner language: one attribute, every card/control follows */}
+            <SettingRow label={t("settings.corners")} hint={t("settings.corners_hint")}>
+              <PillChoice<UiRadius>
+                ariaLabel={t("settings.corners")}
+                value={uiRadius}
+                onChange={(v) => void setUiRadius(v)}
+                options={RADIUS_PRESETS.map((r) => ({ value: r.id, label: t(r.labelKey) }))}
+              />
+            </SettingRow>
+
+            <Toggle
+              label={t("settings.card_hover")}
+              hint={t("settings.card_hover_hint")}
+              on={cardHover}
+              onChange={(v) => void setCardHover(v)}
+            />
+            <Toggle
+              label={t("settings.ui_motion")}
+              hint={t("settings.ui_motion_hint")}
+              on={uiMotion}
+              onChange={(v) => void setUiMotion(v)}
+            />
+            <Toggle
+              label={t("settings.cursor_pointer")}
+              on={cursorPointer}
+              onChange={(v) => void toggleCursor(v)}
+            />
+            {/* the drawn LUMEN cursor — a taste, default OFF (see index.css) */}
+            <Toggle
+              label={t("settings.custom_cursor")}
+              hint={t("settings.custom_cursor_hint")}
+              on={customCursor}
+              onChange={(v) => void toggleCustomCursor(v)}
+            />
+            {/* BUGS 29.09: developer-only switch — hidden until the About logo
+                easter egg (5 clicks) unlocks it for the session. */}
+            {devUnlocked && (
+              <Toggle
+                label={t("settings.text_selection")}
+                hint={t("settings.text_selection_hint")}
+                on={textSelection}
+                onChange={(v) => void setTextSelection(v)}
+              />
+            )}
+            <Toggle
+              label={t("settings.show_fps")}
+              hint={t("settings.show_fps_hint")}
+              on={showFps}
+              onChange={(v) => void setShowFps(v)}
+            />
+            <SettingRow label={t("settings.pill_align")} hint={t("settings.pill_align_hint")}>
+              <PillChoice<PillAlign>
+                ariaLabel={t("settings.pill_align")}
+                value={pillAlign}
+                onChange={(v) => void setPillAlign(v)}
                 options={[
-                  {
-                    value: "classic",
-                    label: t("settings.main_layout_classic"),
-                    icon: <LayoutGlyph kind="classic" />,
-                  },
-                  {
-                    value: "rail",
-                    label: t("settings.main_layout_rail"),
-                    icon: <LayoutGlyph kind="rail" />,
-                  },
+                  { value: "left", label: t("settings.pill_left") },
+                  { value: "center", label: t("settings.pill_center") },
+                  { value: "right", label: t("settings.pill_right") },
                 ]}
               />
-            </div>
+            </SettingRow>
+
+            {/* Setup wizard entry point: the first-run personalization walkthrough,
+                always reachable — a user must not have to remember it existed */}
+            <SettingRow label={t("setup.settings_entry")} hint={t("setup.settings_entry_hint")}>
+              <PillButton variant="ghost" onClick={() => navigate("/setup")}>
+                <Wand2 size={16} /> {t("setup.open")}
+              </PillButton>
+            </SettingRow>
           </GlassCard>
         </Section>
 
-        {/* 03 Playback */}
-        <Section index="03" id="playback" title={t("settings.nav_playback")}>
+        {/* 03 Behavior */}
+        <Section index="03" id="behavior" title={t("settings.nav_behavior")}>
           <GlassCard>
-            <div className="flex items-center justify-between border-b border-hairline pb-4">
-              <span className="flex flex-col gap-0.5">
-                <span className="text-sm text-tprimary">{t("settings.direct_playback")}</span>
-                <span className="text-[12px] text-ttertiary">{t("settings.direct_playback_hint")}</span>
+            <Toggle
+              label={t("settings.video_autoplay")}
+              hint={t("settings.video_autoplay_hint")}
+              on={videoAutoplay}
+              onChange={(v) => void setVideoAutoplay(v)}
+            />
+            <Toggle
+              label={t("settings.swipe_navigate")}
+              hint={t("settings.swipe_hint")}
+              on={swipeNavigate}
+              onChange={(v) => void setSwipeNavigate(v)}
+            />
+            <Toggle
+              label={t("settings.hover_captions")}
+              hint={t("settings.hover_captions_hint")}
+              on={hoverCaptions}
+              onChange={(v) => void setHoverCaptions(v)}
+            />
+            {/* the one switch that changes how the APP quits: default OFF */}
+            <Toggle
+              label={t("settings.background_mode")}
+              hint={t("settings.background_mode_hint")}
+              on={backgroundMode}
+              onChange={(v) => void setBackgroundMode(v)}
+            />
+            <Toggle
+              label={t("settings.show_excluded")}
+              hint={t("settings.show_excluded_hint")}
+              on={showExcluded}
+              onChange={(v) => void setShowExcluded(v)}
+            />
+            <SettingRow label={t("settings.thumb_workers")} hint={t("settings.thumb_workers_hint")}>
+              <PillChoice<number>
+                ariaLabel={t("settings.thumb_workers")}
+                value={thumbWorkers}
+                onChange={(n) => void setThumbWorkers(n)}
+                options={THUMB_WORKER_OPTIONS.map((n) => ({ value: n, label: String(n) }))}
+              />
+            </SettingRow>
+          </GlassCard>
+        </Section>
+
+        {/* 04 Playback */}
+        <Section index="04" id="playback" title={t("settings.nav_playback")}>
+          <GlassCard>
+            <Toggle
+              label={t("settings.direct_playback")}
+              hint={t("settings.direct_playback_hint")}
+              on={directPlayback}
+              onChange={(v) => void setDirectPlayback(v)}
+            />
+            <SettingRow label={t("settings.scrub_speed")} hint={t("settings.scrub_hint")}>
+              <PillChoice<number>
+                ariaLabel={t("settings.scrub_speed")}
+                value={scrubRate}
+                onChange={(r) => void setScrubRate(r)}
+                className="bg-surface-2 p-1"
+                options={SCRUB_RATES.map((r) => ({ value: r, label: `${r}×` }))}
+              />
+            </SettingRow>
+          </GlassCard>
+        </Section>
+
+        {/* 05 Cache & Performance */}
+        <Section index="05" id="cache" title={t("settings.nav_cache")}>
+          <GlassCard>
+            <SettingRow label={t("settings.cache")}>
+              <span className="font-mono text-[12px] text-tsecondary">
+                {bytes === null ? t("settings.loading") : formatBytes(bytes)}
               </span>
-              <button
-                role="switch"
-                aria-checked={directPlayback}
-                aria-label={t("settings.direct_playback")}
-                onClick={() => void setDirectPlayback(!directPlayback)}
-                className={
-                  "relative h-6 w-11 shrink-0 rounded-pill transition-colors duration-[160ms] ease-out " +
-                  (directPlayback ? "bg-accent" : "bg-surface-3")
+              <PillButton
+                variant="ghost"
+                disabled={!ready || busy}
+                onClick={() =>
+                  void perform(async () => {
+                    await invoke("clear_thumbnail_cache");
+                    // rows + in-memory state must come back empty, otherwise a
+                    // stale (e.g. black) video frame stays on screen forever
+                    resetThumbs();
+                    await queryClient.invalidateQueries({ queryKey: ["media"] });
+                    setBytes(await invoke<number>("thumbnail_cache_size"));
+                  })
                 }
               >
-                <span
-                  className={
-                    "absolute top-0.5 h-5 w-5 rounded-pill bg-white transition-all duration-[160ms] ease-out " +
-                    (directPlayback ? "left-[22px]" : "left-0.5")
-                  }
-                />
-              </button>
-            </div>
-            <div className="flex flex-wrap items-center justify-between gap-4 pt-4">
-              <span className="text-sm text-tprimary">{t("settings.scrub_speed")}</span>
-              <div className="flex items-center gap-1.5">
-                {SCRUB_RATES.map((rate) => (
-                  <button
-                    key={rate}
-                    type="button"
-                    aria-pressed={scrubRate === rate}
-                    aria-label={t("settings.scrub_rate", { rate })}
-                    onClick={() => void setScrubRate(rate)}
-                    className={cn(
-                      "inline-flex h-9 items-center rounded-pill px-3.5 font-mono text-[12px] transition-colors duration-[160ms] ease-out active:scale-[.97]",
-                      scrubRate === rate
-                        ? "bg-accent text-[#0A0A0C]"
-                        : "bg-surface-2 text-tsecondary hover:text-tprimary",
-                    )}
-                  >
-                    {rate}×
-                  </button>
-                ))}
-              </div>
-            </div>
-            <p className="mt-3 text-sm text-tsecondary">{t("settings.scrub_hint")}</p>
+                <Trash2 size={16} />
+                {t("settings.clear_cache")}
+              </PillButton>
+            </SettingRow>
           </GlassCard>
         </Section>
 
-        {/* 04 Cache & Performance */}
-        <Section index="04" id="cache" title={t("settings.nav_cache")}>
-          <GlassCard>
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <span className="text-sm text-tprimary">{t("settings.cache")}</span>
-              <div className="flex items-center gap-4">
-                <span className="font-mono text-[12px] text-tsecondary">
-                  {bytes === null ? t("settings.loading") : formatBytes(bytes)}
-                </span>
-                <PillButton
-                  variant="ghost"
-                  disabled={!ready || busy}
-                  onClick={() =>
-                    void perform(async () => {
-                      await invoke("clear_thumbnail_cache");
-                      // rows + in-memory state must come back empty, otherwise a
-                      // stale (e.g. black) video frame stays on screen forever
-                      resetThumbs();
-                      await queryClient.invalidateQueries({ queryKey: ["media"] });
-                      setBytes(await invoke<number>("thumbnail_cache_size"));
-                    })
-                  }
-                >
-                  <Trash2 size={16} />
-                  {t("settings.clear_cache")}
-                </PillButton>
-              </div>
-            </div>
-          </GlassCard>
-        </Section>
-
-        {/* 05 System */}
-        <Section index="05" id="system" title={t("settings.nav_system")}>
+        {/* 06 System */}
+        <Section index="06" id="system" title={t("settings.nav_system")}>
           <GlassCard>
             <form
               onSubmit={(e) => {
@@ -812,10 +650,7 @@ export function SettingsContent() {
                 });
               }}
             >
-              <label
-                htmlFor="external-player"
-                className="mb-4 block text-sm text-tprimary"
-              >
+              <label htmlFor="external-player" className="mb-4 block text-sm text-tprimary">
                 {t("settings.external_player")}
               </label>
               <input
@@ -850,8 +685,7 @@ export function SettingsContent() {
             </form>
             {/* Phase 6 STEP 4: opt-in, reversible, HKCU-only associations */}
             <FileAssociations />
-            <div className="mt-2 flex min-h-16 items-center justify-between border-t border-hairline py-4">
-              <span className="text-sm text-tprimary">{t("settings.open_logs")}</span>
+            <SettingRow label={t("settings.open_logs")}>
               <button
                 type="button"
                 onClick={() =>
@@ -863,9 +697,8 @@ export function SettingsContent() {
               >
                 {t("settings.reveal")}
               </button>
-            </div>
-            <div className="flex min-h-16 items-center justify-between border-t border-hairline py-4">
-              <span className="text-sm text-tprimary">{t("settings.open_thumbs")}</span>
+            </SettingRow>
+            <SettingRow label={t("settings.open_thumbs")}>
               <button
                 type="button"
                 onClick={() =>
@@ -878,12 +711,12 @@ export function SettingsContent() {
               >
                 {t("settings.reveal")}
               </button>
-            </div>
+            </SettingRow>
           </GlassCard>
         </Section>
 
-        {/* 06 About (P3 — material about screen) */}
-        <Section index="06" id="about" title={t("settings.nav_about")}>
+        {/* 07 About (P3 — material about screen) */}
+        <Section index="07" id="about" title={t("settings.nav_about")}>
           <GlassCard>
             {/* identity: the app mark, the name in display type, a mono build
                 chip. Nothing else competes with it — the facts live below. */}
@@ -895,8 +728,14 @@ export function SettingsContent() {
                 width={96}
                 height={96}
                 draggable={false}
-                className="h-24 w-24 select-none rounded-[26px] shadow-[0_8px_24px_rgba(0,0,0,.35)]"
+                onClick={onLogoClick}
+                className="h-24 w-24 cursor-default select-none rounded-[26px] shadow-[0_8px_24px_rgba(0,0,0,.35)]"
               />
+              {devUnlocked && (
+                <span className="mt-2 font-mono text-[10px] uppercase tracking-[0.14em] text-accent">
+                  {t("settings.dev_mode_on")}
+                </span>
+              )}
               <h3 className="mt-5 text-[32px] leading-[1.05] font-[650] tracking-[-0.02em] text-tprimary">
                 LUMEN
               </h3>
@@ -910,20 +749,17 @@ export function SettingsContent() {
             {/* the facts: one list, hairline dividers (editorial only) */}
             <div className="border-t border-hairline">
               <AboutRow label={t("settings.about_author")}>Stanislav Miroshnichenko</AboutRow>
+              {/* the source: the project lives here, releases and issues too */}
               <AboutRow label={t("settings.about_github")}>
-                <button
-                  type="button"
-                  onClick={() =>
-                    void invoke("open_url", { url: "https://github.com/Stamir36" }).catch(
-                      (e) => toast.error(String(e)),
-                    )
-                  }
-                  // the app-wide :focus-visible ring (index.css) already applies;
-                  // a second white ring here was off-token
-                  className="rounded-pill px-1 font-mono text-[13px] text-accent underline decoration-accent/40 underline-offset-2 transition-colors hover:decoration-accent"
-                >
-                  github.com/Stamir36
-                </button>
+                <RepoLink url="https://github.com/Stamir36/lumen-gallery">
+                  github.com/Stamir36/lumen-gallery
+                </RepoLink>
+              </AboutRow>
+              {/* the shortest path from "this is broken" to a bug report */}
+              <AboutRow label={t("settings.about_issues")}>
+                <RepoLink url="https://github.com/Stamir36/lumen-gallery/issues/new/choose">
+                  {t("settings.about_issues_cta")}
+                </RepoLink>
               </AboutRow>
               <AboutRow label={t("settings.about_studio")}>Unesell Studio</AboutRow>
               <AboutRow label={t("settings.about_package")}>
@@ -949,6 +785,22 @@ export function SettingsContent() {
         )}
       </div>
     </div>
+  );
+}
+
+/**
+ * An external link in the About list. The app-wide :focus-visible ring
+ * (index.css) already applies — a second white ring here was off-token.
+ */
+function RepoLink({ url, children }: { url: string; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={() => void invoke("open_url", { url }).catch((e) => toast.error(String(e)))}
+      className="rounded-pill px-1 font-mono text-[13px] text-accent underline decoration-accent/40 underline-offset-2 transition-colors hover:decoration-accent"
+    >
+      {children}
+    </button>
   );
 }
 

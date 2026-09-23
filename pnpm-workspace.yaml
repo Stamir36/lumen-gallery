@@ -1,4 +1,9 @@
-allowBuilds:
-  esbuild: set this to true or false
+# esbuild ships a prebuilt binary and needs its install script to place it.
+# pnpm >= 10 blocks dependency build scripts by default, so a fresh clone would
+# otherwise fail with ERR_PNPM_IGNORED_BUILDS. Both spellings are listed because
+# the field was renamed between pnpm majors (onlyBuiltDependencies in 10.x,
+# allowBuilds in newer ones) — each version ignores the key it does not know.
 onlyBuiltDependencies:
   - esbuild
+allowBuilds:
+  esbuild: true

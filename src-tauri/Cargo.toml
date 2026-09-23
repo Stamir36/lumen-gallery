@@ -1,10 +1,11 @@
 [package]
 name = "lumen"
 version = "0.2.0"
-description = "LUMEN — local-first photo & video gallery"
-authors = ["LUMEN"]
-license = ""
-repository = ""
+description = "LUMEN — local-first photo & video gallery for Windows"
+authors = ["Stanislav Miroshnichenko <https://github.com/Stamir36>"]
+license = "GPL-3.0-or-later"
+repository = "https://github.com/Stamir36/lumen-gallery"
+homepage = "https://github.com/Stamir36/lumen-gallery#readme"
 edition = "2021"
 rust-version = "1.77.2"
 
@@ -21,7 +22,7 @@ tauri-build = { version = "2.6.3", features = [] }
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 log = "0.4"
-tauri = { version = "2.11.3", features = ["protocol-asset"] }
+tauri = { version = "2.11.3", features = ["protocol-asset", "tray-icon"] }
   tauri-plugin-log = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"

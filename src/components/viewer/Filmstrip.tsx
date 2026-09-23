@@ -105,9 +105,14 @@ export function Filmstrip({
               "group relative rounded-[8px] outline-none transition-all duration-[160ms] ease-out",
               // 4px each side = an 8px gap between tiles (FIX 2)
               vertical ? "my-1" : "mx-1",
+              // NOTE: no scale on the active tile — Virtuoso clips its item
+              // wrapper (overflow: hidden), so the ring + scale got their
+              // top/bottom edges cut off. The highlight is an INSET shadow
+              // painted inside the tile instead, which physically cannot be
+              // clipped, and the "lift" is a brightness step, not a scale.
               active
-                ? "scale-[1.03] ring-2 ring-accent shadow-[0_8px_24px_rgba(0,0,0,.45)]"
-                : "opacity-75 hover:opacity-100 hover:scale-[1.02] focus-visible:opacity-100",
+                ? "brightness-[1.08] shadow-[inset_0_0_0_2px_var(--accent),0_8px_24px_rgba(0,0,0,.45)]"
+                : "opacity-75 hover:opacity-100 hover:brightness-[1.05] focus-visible:opacity-100",
             )}
             style={{ width: tile.w, height: tileH }}
           >

@@ -90,9 +90,15 @@ export function buildGrid(
     groups.push(group);
 
     if (grouped) {
+      // BUG: the key used to be just `h-${group.key}` — but rows can be sorted
+      // by ADDED date while grouped by SHOT date (mtime), so one day can yield
+      // SEVERAL non-contiguous groups with the SAME key. Duplicate keys break
+      // react-virtuoso's internal size map (its contract: keys are unique) and
+      // the grid painted date headers with no rows under them. The group index
+      // makes the key unique no matter how the rows are ordered.
       items.push({
         kind: "header",
-        key: `h-${group.key}`,
+        key: `h-${gi}-${group.key}`,
         label: group.label,
         count: group.count,
         height: HEADER_HEIGHT,

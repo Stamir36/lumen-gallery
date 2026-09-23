@@ -2,6 +2,8 @@ import { create } from "zustand";
 import { toast } from "sonner";
 import i18n, { writeSetting } from "@/i18n";
 import { getDb } from "@/lib/db";
+import { invoke } from "@tauri-apps/api/core";
+import { tauriAvailable } from "@/lib/assets";
 import { ACCENT_KEY as ACCENT_SETTING_KEY, DEFAULT_ACCENT, applyAccent } from "@/lib/accent";
 import { applyVideoFilter } from "@/lib/colorCorrection";
 
@@ -26,6 +28,58 @@ export const CARD_HOVER_KEY = "card_hover";
 /** Text is selectable anywhere (search/path fields always keep it). OFF =
  *  nothing in the app hints at a web page — no I-beam, no selection. */
 export const TEXT_SELECTION_KEY = "ui_text_selection";
+
+/**
+ * BACKGROUND (tray) MODE — OPT-IN, default OFF.
+ *
+ * OFF = the native contract: closing the window ends the process and hands the
+ * WebView2 working set back to the OS. ON = the process parks in the tray, so
+ * a re-launch (or a double-click on a registered file type) shows the window
+ * and the media in milliseconds instead of paying the cold start again.
+ */
+export const BACKGROUND_MODE_KEY = "app.background_mode";
+/** Micro-animations (row stagger, nav pill, hover lift). OFF = a still UI. */
+export const UI_MOTION_KEY = "ui_motion";
+/** Corner language of the whole app: sharp | default | round. */
+export const RADIUS_KEY = "ui_radius";
+export type UiRadius = "sharp" | "default" | "round";
+export const RADIUS_PRESETS: { id: UiRadius; labelKey: string }[] = [
+  { id: "sharp", labelKey: "settings.radius_sharp" },
+  { id: "default", labelKey: "settings.radius_default" },
+  { id: "round", labelKey: "settings.radius_round" },
+];
+export const DEFAULT_RADIUS: UiRadius = "default";
+
+/**
+ * Paint the radius preset onto <html>: every card/control reads the CSS vars,
+ * so one attribute restyles the whole app with no re-render.
+ */
+export function applyUiRadius(preset: UiRadius) {
+  if (preset === "default") document.documentElement.removeAttribute("data-radius");
+  else document.documentElement.setAttribute("data-radius", preset);
+}
+
+/** Turn the app's micro-animations on/off (html flag: CSS + MotionConfig). */
+export function applyUiMotion(on: boolean) {
+  document.documentElement.toggleAttribute("data-motion-off", !on);
+}
+
+/**
+ * Arm/disarm the tray presence. Best-effort: a plain browser preview has no
+ * IPC, and a failure here must never break the settings write itself.
+ */
+export async function applyBackgroundMode(enabled: boolean) {
+  if (!tauriAvailable()) return;
+  try {
+    await invoke("set_tray_mode", {
+      enabled,
+      openLabel: i18n.t("tray.open"),
+      exitLabel: i18n.t("tray.exit"),
+    });
+  } catch (e) {
+    console.error("tray mode apply failed", e);
+  }
+}
 
 export type GridDensity = "comfort" | "medium" | "compact";
 export const DEFAULT_DENSITY: GridDensity = "medium";
@@ -121,6 +175,12 @@ interface AppSettingsState {
   directPlayback: boolean;
   /** main-screen layout: classic sidebar vs permanent icon rail */
   mainLayout: MainLayout;
+  /** keep the process alive in the tray after the window closes (default OFF) */
+  backgroundMode: boolean;
+  /** micro-animations across the UI (default ON) */
+  uiMotion: boolean;
+  /** corner language: sharp | default | round */
+  uiRadius: UiRadius;
   loaded: boolean;
   load: () => Promise<void>;
   setVideoScrubRate: (rate: number) => Promise<void>;
@@ -140,12 +200,17 @@ interface AppSettingsState {
   setCollageFit: (fit: CollageFit) => Promise<void>;
   setDirectPlayback: (on: boolean) => Promise<void>;
   setMainLayout: (layout: MainLayout) => Promise<void>;
+  setBackgroundMode: (on: boolean) => Promise<void>;
+  setUiMotion: (on: boolean) => Promise<void>;
+  setUiRadius: (preset: UiRadius) => Promise<void>;
 }
 
 export const useAppSettings = create<AppSettingsState>((set) => ({
   videoScrubRate: DEFAULT_SCRUB_RATE,
   hoverCaptions: true,
-  cardHover: false,
+  // default ON (user request): the lift + inner zoom are part of the grid's
+  // hover language; only an explicit OFF in the DB turns them off
+  cardHover: true,
   textSelection: false,
   videoAutoplay: true,
   swipeNavigate: true,
@@ -160,13 +225,17 @@ export const useAppSettings = create<AppSettingsState>((set) => ({
   collageFit: "contain",
   directPlayback: false,
   mainLayout: DEFAULT_MAIN_LAYOUT,
+  // default OFF: the window close quits the app (see BACKGROUND_MODE_KEY)
+  backgroundMode: false,
+  uiMotion: true,
+  uiRadius: DEFAULT_RADIUS,
   loaded: false,
 
   load: async () => {
     try {
       const db = await getDb();
       const rows = await db.select<{ key: string; value: string }[]>(
-        "SELECT key, value FROM settings WHERE key IN ('video_scrub_rate', 'hover_captions', 'video_autoplay', 'viewer_swipe', 'viewer_pill_align', 'perf_show_fps', 'show_excluded', 'thumb_workers', 'accent', 'grid_density', 'video_saturation', 'video_sharpness', 'collage_fit', 'direct_playback', 'appearance.main_layout', 'card_hover', 'ui_text_selection')",
+        "SELECT key, value FROM settings WHERE key IN ('video_scrub_rate', 'hover_captions', 'video_autoplay', 'viewer_swipe', 'viewer_pill_align', 'perf_show_fps', 'show_excluded', 'thumb_workers', 'accent', 'grid_density', 'video_saturation', 'video_sharpness', 'collage_fit', 'direct_playback', 'appearance.main_layout', 'card_hover', 'ui_text_selection', 'app.background_mode', 'ui_motion', 'ui_radius')",
       );
       const byKey = new Map(rows.map((r) => [r.key, r.value]));
       const raw = Number(byKey.get(SCRUB_RATE_KEY));
@@ -175,7 +244,8 @@ export const useAppSettings = create<AppSettingsState>((set) => ({
           Number.isFinite(raw) && raw > 0 ? raw : DEFAULT_SCRUB_RATE,
         // absent = first run: captions are ON by default (F2)
         hoverCaptions: byKey.get(HOVER_CAPTIONS_KEY) !== "false",
-        cardHover: byKey.get(CARD_HOVER_KEY) === "true",
+        // ABSENT = first run: card animation ON by default
+        cardHover: byKey.get(CARD_HOVER_KEY) !== "false",
         textSelection: byKey.get(TEXT_SELECTION_KEY) === "true",
         videoAutoplay: byKey.get(VIDEO_AUTOPLAY_KEY) !== "false",
         swipeNavigate: byKey.get(SWIPE_NAVIGATE_KEY) !== "false",
@@ -192,10 +262,20 @@ export const useAppSettings = create<AppSettingsState>((set) => ({
         directPlayback: byKey.get(DIRECT_PLAYBACK_KEY) === "true",
         // ABSENT = classic: the rail is an opt-in layout
         mainLayout: byKey.get(MAIN_LAYOUT_KEY) === "rail" ? "rail" : DEFAULT_MAIN_LAYOUT,
+        // ABSENT = OFF: closing the window must quit the app unless asked
+        backgroundMode: byKey.get(BACKGROUND_MODE_KEY) === "true",
+        uiMotion: byKey.get(UI_MOTION_KEY) !== "false",
+        uiRadius: readRadius(byKey.get(RADIUS_KEY)),
         loaded: true,
       });
       // the stored accent wins over the pre-paint cache
       applyAccent(readAccent(byKey.get(ACCENT_SETTING_KEY)));
+      // paint the radius + motion language before the first interaction
+      applyUiRadius(readRadius(byKey.get(RADIUS_KEY)));
+      applyUiMotion(byKey.get(UI_MOTION_KEY) !== "false");
+      // re-arm the tray if the user asked for it (the flag lives in Rust too,
+      // and the Rust side starts from "off" on every launch)
+      if (byKey.get(BACKGROUND_MODE_KEY) === "true") void applyBackgroundMode(true);
       // F13: restore the text-selection preference (default OFF = native feel)
       document.documentElement.classList.toggle(
         "allow-select",
@@ -385,7 +465,52 @@ export const useAppSettings = create<AppSettingsState>((set) => ({
       toast.error(i18n.t("errors.action_failed"));
     }
   },
+
+  setBackgroundMode: async (backgroundMode) => {
+    set({ backgroundMode }); // optimistic: the tray arms/removes immediately
+    await applyBackgroundMode(backgroundMode);
+    try {
+      await writeSetting(BACKGROUND_MODE_KEY, String(backgroundMode));
+    } catch (e) {
+      console.error("background mode save failed", e);
+      toast.error(i18n.t("errors.action_failed"));
+    }
+  },
+
+  setUiMotion: async (uiMotion) => {
+    set({ uiMotion });
+    applyUiMotion(uiMotion); // the flag flips before the write lands
+    try {
+      await writeSetting(UI_MOTION_KEY, String(uiMotion));
+    } catch (e) {
+      console.error("ui motion save failed", e);
+      toast.error(i18n.t("errors.action_failed"));
+    }
+  },
+
+  setUiRadius: async (uiRadius) => {
+    set({ uiRadius });
+    applyUiRadius(uiRadius); // live restyle, no reload
+    try {
+      await writeSetting(RADIUS_KEY, uiRadius);
+    } catch (e) {
+      console.error("ui radius save failed", e);
+      toast.error(i18n.t("errors.action_failed"));
+    }
+  },
 }));
+
+// The tray menu is built in Rust, so its labels must follow the app language:
+// switching to English while background mode is armed re-arms it with the new
+// strings (a no-op when the mode is off).
+i18n.on("languageChanged", () => {
+  if (useAppSettings.getState().backgroundMode) void applyBackgroundMode(true);
+});
+
+/** Unknown radius values fall back to the default language. */
+function readRadius(raw: string | undefined): UiRadius {
+  return raw === "sharp" || raw === "round" ? raw : DEFAULT_RADIUS;
+}
 
 /** Anything unexpected in the stored accent falls back to the default. */
 function readAccent(raw: string | undefined): string {
