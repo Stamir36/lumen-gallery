@@ -12,8 +12,9 @@
 [![Платформа: Windows](https://img.shields.io/badge/platform-Windows-6ec1ff.svg)](#быстрый-старт)
 [![Tauri v2](https://img.shields.io/badge/Tauri-v2-24c8db.svg)](https://tauri.app)
 [![Rust + React](https://img.shields.io/badge/Rust%20%2B%20React-18-3ecf8e.svg)](#технологии)
+[![Сайт](https://img.shields.io/badge/website-stamir36.github.io%2Flumen--gallery-2f7bff.svg)](https://stamir36.github.io/lumen-gallery/ru/)
 
-[English](README.md) · **Русский**
+[English](README.md) · **Русский** · [Сайт](https://stamir36.github.io/lumen-gallery/ru/) · [Политика конфиденциальности](https://stamir36.github.io/lumen-gallery/ru/privacy/)
 
 </div>
 
@@ -119,7 +120,7 @@
 
 ```bash
 git clone https://github.com/Stamir36/lumen-gallery.git
-cd lumen
+cd lumen-gallery
 pnpm install
 
 pnpm tauri dev      # запуск с горячей перезагрузкой
@@ -159,6 +160,7 @@ pnpm typecheck        # tsc --noEmit
 pnpm build            # проверка типов + продакшн-сборка
 pnpm e2e              # набор Playwright
 pnpm e2e:update       # перезапись базлайнов — они зависят от машины
+pnpm site             # локальный показ страницы из site/ на localhost:4173
 (cd src-tauri && cargo clippy --all-targets)
 ```
 
@@ -174,6 +176,20 @@ pnpm e2e:update       # перезапись базлайнов — они за�
 - База: `%APPDATA%\com.unesell.lumen\lumen.db`
 - Превью и логи: `%LOCALAPPDATA%\com.unesell.lumen\`
 - Ваши файлы: там же, где были — LUMEN их только читает.
+
+## Сайт проекта
+
+Страница проекта и политика конфиденциальности лежат в [`site/`](site/) как
+обычный статический HTML без сборки и публикуются на GitHub Pages workflow'ом
+[`.github/workflows/pages.yml`](.github/workflows/pages.yml):
+
+- <https://stamir36.github.io/lumen-gallery/> — английская версия
+- <https://stamir36.github.io/lumen-gallery/ru/> — русская версия
+- <https://stamir36.github.io/lumen-gallery/ru/privacy/> — политика конфиденциальности
+
+Посмотреть локально: `pnpm site`. Как развернуть и как получается адрес — в
+[docs/WEBSITE.md](docs/WEBSITE.md); публикация в Microsoft Store — в
+[docs/MICROSOFT-STORE.md](docs/MICROSOFT-STORE.md).
 
 ## План развития
 

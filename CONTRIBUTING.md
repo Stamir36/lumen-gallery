@@ -62,6 +62,25 @@ supposed to alter the UI, re-record and *look at the diff before accepting it*.
   clicks real controls and asserts real state instead of only pixels.
 - Mention the Windows version and library size for anything performance-related.
 
+### Editing the website
+
+The landing page and the privacy policy live in `site/` as plain static HTML —
+no framework, no build step, two shared assets (`assets/style.css`,
+`assets/app.js`). Conventions:
+
+- **Both languages, always.** Editing `site/index.html` means editing
+  `site/ru/index.html`; the same goes for the privacy pages. Each page carries
+  `hreflang` links to its translation.
+- **Preview with `pnpm site`** (a plain static server on port 4173). Opening the
+  file directly also works, but the `/ru/` paths need a server, exactly as on
+  GitHub Pages.
+- **The deploy workflow is also the link checker.** `Deploy site` refuses to
+  publish if any local `href`/`src` does not resolve, so a broken image fails
+  the build rather than the page.
+- **Keep the claims true.** The page states what the app does (no telemetry,
+  read-only indexing) and which version is current; when you change either,
+  change the page in the same PR. `docs/WEBSITE.md` lists what to keep in sync.
+
 ### Reporting bugs
 
 Include: Windows version, library size, the exact steps, and the tail of
@@ -128,6 +147,26 @@ pnpm e2e                                   # в первый раз: pnpm e2e:up
   настоящее состояние, а не только пиксели.
 - Для всего, что связано с производительностью, указывайте версию Windows и
   размер библиотеки.
+
+### Правка сайта
+
+Страница проекта и политика конфиденциальности лежат в `site/` как обычный
+статический HTML: без фреймворка и сборки, всего два общих файла
+(`assets/style.css`, `assets/app.js`). Правила:
+
+- **Всегда оба языка.** Изменение в `site/index.html` требует такого же в
+  `site/ru/index.html`; то же для страниц политики. Каждая страница содержит
+  `hreflang`-ссылки на перевод.
+- **Локальный просмотр — `pnpm site`** (статический сервер на порту 4173).
+  Открыть файл напрямую тоже можно, но пути `/ru/` требуют сервера — как и на
+  GitHub Pages.
+- **Workflow деплоя заодно проверяет ссылки.** `Deploy site` не публикует
+  страницу, если локальный `href`/`src` никуда не ведёт, поэтому битая картинка
+  валит сборку, а не страницу.
+- **Утверждения должны оставаться правдой.** На странице написано, что делает
+  приложение (нет телеметрии, индексация только на чтение) и какая версия сейчас
+  актуальна; меняете это — меняйте страницу в том же PR. Список синхронизации —
+  в `docs/WEBSITE.md`.
 
 ### Баг-репорт
 

@@ -8,6 +8,13 @@ All notable changes to LUMEN are recorded here. The format follows
 
 ### Added
 
+- **Project website** — a dependency-free landing page in `site/` (English and
+  Russian, plus the privacy policy), published to GitHub Pages by
+  `.github/workflows/pages.yml`: <https://stamir36.github.io/lumen-gallery/>.
+- **Microsoft Store packaging** — `pnpm build:store` builds the installer with
+  `src-tauri/tauri.microsoftstore.conf.json`: offline WebView2 installer,
+  explicit publisher name and no interactive installer UI, which is what a Win32
+  Store submission requires.
 - **Personalization wizard on first run** — language, accent, interface density,
   corners and behavior in four steps, with a live miniature of the library that
   follows every choice. It ends with a real summary panel and remembers that it

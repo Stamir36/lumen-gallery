@@ -5,7 +5,7 @@ description = "LUMEN — local-first photo & video gallery for Windows"
 authors = ["Stanislav Miroshnichenko <https://github.com/Stamir36>"]
 license = "GPL-3.0-or-later"
 repository = "https://github.com/Stamir36/lumen-gallery"
-homepage = "https://github.com/Stamir36/lumen-gallery#readme"
+homepage = "https://stamir36.github.io/lumen-gallery/"
 edition = "2021"
 rust-version = "1.77.2"
 

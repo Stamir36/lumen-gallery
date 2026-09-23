@@ -9,7 +9,7 @@
     "type": "git",
     "url": "https://github.com/Stamir36/lumen-gallery.git"
   },
-  "homepage": "https://github.com/Stamir36/lumen-gallery#readme",
+  "homepage": "https://stamir36.github.io/lumen-gallery/",
   "bugs": {
     "url": "https://github.com/Stamir36/lumen-gallery/issues"
   },
@@ -36,7 +36,9 @@
     "typecheck": "tsc --noEmit",
     "tauri": "tauri",
     "e2e": "playwright test",
-    "e2e:update": "playwright test --update-snapshots"
+    "e2e:update": "playwright test --update-snapshots",
+    "site": "python -m http.server 4173 --directory site",
+    "build:store": "tauri build --no-bundle && tauri bundle --config src-tauri/tauri.microsoftstore.conf.json"
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.1.0",

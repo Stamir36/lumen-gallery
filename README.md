@@ -12,8 +12,9 @@ Local-first: your files stay where they are — no cloud, no import, no account.
 [![Platform: Windows](https://img.shields.io/badge/platform-Windows-6ec1ff.svg)](#getting-started)
 [![Tauri v2](https://img.shields.io/badge/Tauri-v2-24c8db.svg)](https://tauri.app)
 [![Rust + React](https://img.shields.io/badge/Rust%20%2B%20React-18-3ecf8e.svg)](#tech-stack)
+[![Website](https://img.shields.io/badge/website-stamir36.github.io%2Flumen--gallery-2f7bff.svg)](https://stamir36.github.io/lumen-gallery/)
 
-[English](README.md) · [Русский](README.ru.md)
+[English](README.md) · [Русский](README.ru.md) · [Website](https://stamir36.github.io/lumen-gallery/) · [Privacy policy](https://stamir36.github.io/lumen-gallery/privacy/)
 
 </div>
 
@@ -120,7 +121,7 @@ for (opening a link, or an external player).
 
 ```bash
 git clone https://github.com/Stamir36/lumen-gallery.git
-cd lumen
+cd lumen-gallery
 pnpm install
 
 pnpm tauri dev      # run with hot reload
@@ -160,6 +161,7 @@ pnpm typecheck        # tsc --noEmit
 pnpm build            # typecheck + production bundle
 pnpm e2e              # Playwright suite
 pnpm e2e:update       # (re)record pixel baselines — they are machine-specific
+pnpm site             # serve the landing page in site/ at localhost:4173
 (cd src-tauri && cargo clippy --all-targets)
 ```
 
@@ -175,6 +177,20 @@ Hidden QA routes (work in a plain browser, no Tauri needed): `#/grid-demo`
 - Database: `%APPDATA%\com.unesell.lumen\lumen.db`
 - Thumbnails, logs: `%LOCALAPPDATA%\com.unesell.lumen\`
 - Your media: exactly where it was — LUMEN only reads it.
+
+## Project website
+
+The landing page and the privacy policy live in [`site/`](site/) as plain static
+HTML — no build step — and are published to GitHub Pages by
+[`.github/workflows/pages.yml`](.github/workflows/pages.yml):
+
+- <https://stamir36.github.io/lumen-gallery/> — English
+- <https://stamir36.github.io/lumen-gallery/ru/> — Russian
+- <https://stamir36.github.io/lumen-gallery/privacy/> — privacy policy
+
+Preview it locally with `pnpm site`. How to deploy it, and how the URL is formed,
+is in [docs/WEBSITE.md](docs/WEBSITE.md); publishing to the Microsoft Store is
+covered in [docs/MICROSOFT-STORE.md](docs/MICROSOFT-STORE.md).
 
 ## Roadmap
 

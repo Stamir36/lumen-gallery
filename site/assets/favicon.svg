@@ -1,0 +1,18 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <!-- LUMEN favicon — the mosaic mark, simplified for 16px rendering -->
+  <defs>
+    <linearGradient id="a" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2F7BFF"/>
+      <stop offset="1" stop-color="#4FD8FF"/>
+    </linearGradient>
+    <clipPath id="s"><rect width="64" height="64" rx="15"/></clipPath>
+  </defs>
+  <g clip-path="url(#s)">
+    <rect width="64" height="64" fill="#141418"/>
+    <rect x="9" y="11" width="11" height="42" rx="3.5" fill="url(#a)"/>
+    <rect x="24" y="11" width="31" height="12" rx="3.5" fill="#22232a"/>
+    <rect x="24" y="27" width="12" height="12" rx="3.5" fill="#22232a"/>
+    <rect x="24" y="43" width="12" height="10" rx="3.5" fill="#22232a"/>
+    <rect x="40" y="27" width="15" height="26" rx="3.5" fill="#22232a"/>
+  </g>
+</svg>

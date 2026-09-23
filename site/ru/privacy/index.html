@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Политика конфиденциальности — LUMEN</title>
+<meta name="description" content="Политика конфиденциальности LUMEN: приложение ничего не собирает и никуда не отправляет, у него нет сервера. Что хранится локально и как это удалить." />
+<link rel="canonical" href="https://stamir36.github.io/lumen-gallery/ru/privacy/" />
+<link rel="alternate" hreflang="en" href="https://stamir36.github.io/lumen-gallery/privacy/" />
+<link rel="alternate" hreflang="ru" href="https://stamir36.github.io/lumen-gallery/ru/privacy/" />
+
+<meta property="og:type" content="article" />
+<meta property="og:title" content="Политика конфиденциальности — LUMEN" />
+<meta property="og:description" content="Ни телеметрии, ни аккаунтов, ни серверов. Что LUMEN хранит на вашем диске — и больше ничего." />
+<meta property="og:url" content="https://stamir36.github.io/lumen-gallery/ru/privacy/" />
+<meta name="theme-color" content="#08090c" />
+<meta name="robots" content="index, follow" />
+
+<link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml" />
+<script>document.documentElement.classList.add("js");</script>
+<link rel="stylesheet" href="../../assets/style.css" />
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap nav-inner">
+    <a class="brand" href="../../ru/">
+      <img src="../../assets/icon.svg" alt="" width="30" height="30" />
+      LUMEN
+      <span class="ver">v0.2.0</span>
+    </a>
+    <nav class="nav-links" aria-label="Основная навигация">
+      <a href="../../ru/#features">Возможности</a>
+      <a href="../../ru/#screenshots">Скриншоты</a>
+      <a href="../../ru/#download">Скачать</a>
+      <span class="lang" role="group" aria-label="Язык">
+        <a href="../../privacy/" hreflang="en">EN</a>
+        <a href="./" aria-current="true" hreflang="ru">RU</a>
+      </span>
+      <a class="btn nav-cta" href="https://github.com/Stamir36/lumen-gallery" rel="noopener">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main class="doc">
+  <div class="wrap doc-wrap">
+    <a class="back" href="../../ru/">← Назад к LUMEN</a>
+
+    <h1>Политика конфиденциальности</h1>
+    <p class="updated">Для LUMEN 0.2.0 и новее · Обновлено 23 сентября 2026</p>
+
+    <div class="callout">
+      <strong>Если коротко:</strong> LUMEN не собирает персональные данные, не
+      содержит аналитики и не имеет сервера, куда что-либо можно отправить. Он
+      никогда не предлагал создать аккаунт. Всё, что он хранит, лежит в вашем
+      профиле Windows и удаляется вместе с ним.
+    </div>
+
+    <h2>1. Кто отвечает за обработку</h2>
+    <p>
+      LUMEN — бесплатное приложение с открытым исходным кодом для Windows, которое
+      разрабатывает и публикует <strong>Станислав Мирошниченко (Unesell Studio)</strong>.
+      Полный исходный код открыт на
+      <a href="https://github.com/Stamir36/lumen-gallery" rel="noopener">github.com/Stamir36/lumen-gallery</a>,
+      поэтому каждое утверждение с этой страницы можно проверить, а не принимать на веру.
+    </p>
+
+    <h2>2. Чего LUMEN не делает</h2>
+    <ul>
+      <li>Он <strong>не</strong> отправляет ваши фотографии, видео, имена файлов,
+        названия папок, статистику библиотеки или данные об использовании — никуда.</li>
+      <li>В нём <strong>нет</strong> SDK аналитики, сборщика отчётов о падениях,
+        рекламных идентификаторов, систем атрибуции и проверки обновлений.</li>
+      <li>Он <strong>не</strong> требует и не предлагает аккаунт, вход, e-mail или
+        лицензионный ключ.</li>
+      <li>Он <strong>не</strong> читает историю браузера, данные других программ,
+        содержимое буфера обмена или ваши контакты.</li>
+      <li>Он <strong>не</strong> перемещает, не переименовывает, не загружает и не
+        изменяет ваши медиафайлы. Индексация работает только на чтение.</li>
+    </ul>
+
+    <h2>3. Что хранится на вашем устройстве</h2>
+    <p>
+      LUMEN держит свои рабочие данные в вашем профиле Windows. Ничего из этого не
+      покидает компьютер, и всё это создаётся только потому, что вы пользуетесь
+      программой:
+    </p>
+    <table class="doc-table">
+      <thead>
+        <tr><th>Данные</th><th>Где лежат</th><th>Зачем</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>База библиотеки — список папок, пути к файлам, размеры, даты, метки избранного и корзины</td>
+          <td><code>%APPDATA%\com.unesell.lumen\lumen.db</code></td>
+          <td>Чтобы галерея не сканировала диск заново при каждом запуске</td>
+        </tr>
+        <tr>
+          <td>Кэш миниатюр</td>
+          <td><code>%LOCALAPPDATA%\com.unesell.lumen\</code></td>
+          <td>Чтобы сетка появлялась сразу, без повторного декодирования</td>
+        </tr>
+        <tr>
+          <td>Журнал — может содержать пути к файлам, которые не удалось декодировать</td>
+          <td><code>%LOCALAPPDATA%\com.unesell.lumen\logs\LUMEN.log</code></td>
+          <td>Чтобы по отчёту об ошибке было понятно, что произошло</td>
+        </tr>
+        <tr>
+          <td>Настройки — язык, акцент, раскладка, плотность, режим трея</td>
+          <td>Та же база данных</td>
+          <td>Чтобы приложение помнило, как вам удобно</td>
+        </tr>
+      </tbody>
+    </table>
+    <p>
+      <strong>Ваши файлы не копируются.</strong> В кэше миниатюр лежат уменьшенные
+      версии просмотренных изображений — на вашем диске, внутри вашего профиля.
+    </p>
+
+    <h2>4. Сетевая активность</h2>
+    <p>
+      Работающий LUMEN не устанавливает соединений по своей инициативе. Единственный
+      сетевой трафик, который может возникнуть, вызван вами:
+    </p>
+    <ul>
+      <li>переход по ссылке — например, на страницу проекта или трекер задач — в
+        браузере по умолчанию, где действует политика этого сайта;</li>
+      <li>передача файла во внешний плеер, который вы настроили сами;</li>
+      <li>режим VR-купола, который отдаёт изображения собственному WebView по
+        адресу обратной петли (<code>127.0.0.1</code>). Трафик по петле не выходит
+        в сеть.</li>
+    </ul>
+    <p>
+      Если вы установили LUMEN из Microsoft Store, Microsoft как оператор магазина
+      может собирать телеметрию установки и диагностики согласно
+      <a href="https://privacy.microsoft.com/ru-ru/privacystatement" rel="noopener">собственной политике конфиденциальности Microsoft</a>.
+      Разработчику эти данные не передаются в идентифицирующем виде — он видит ту же
+      агрегированную анонимную статистику, что и любой издатель в Partner Center.
+    </p>
+
+    <h2>5. Файлы на вашем компьютере</h2>
+    <p>
+      LUMEN читает только те папки, которые вы явно добавили, — чтобы построить
+      миниатюры и метаданные. Удаление файлов из представления галереи их не удаляет:
+      когда вы просите удалить, LUMEN отправляет файл в корзину Windows через
+      системный API, так что восстановить его сможете вы сами. Ни один файл за
+      пределами выбранных папок не открывается.
+    </p>
+
+    <h2>6. Дети</h2>
+    <p>
+      LUMEN — универсальный просмотрщик файлов. Он не рассчитан на детей, не
+      собирает данные ни у кого и поэтому не собирает их и у детей.
+    </p>
+
+    <h2>7. Ваши права</h2>
+    <p>
+      Поскольку разработчик не хранит о вас персональных данных, запрашивать,
+      исправлять, экспортировать или удалять на нашей стороне нечего. Всё, что
+      сохраняет LUMEN, полностью под вашим контролем:
+    </p>
+    <ul>
+      <li><strong>Удалить кэш и настройки</strong> — удалите папки
+        <code>%LOCALAPPDATA%\com.unesell.lumen\</code> и
+        <code>%APPDATA%\com.unesell.lumen\</code> либо используйте сброс в настройках
+        приложения.</li>
+      <li><strong>Удалить приложение</strong> — через *Windows → Приложения →
+        Установленные приложения* или деинсталлятором в папке установки. Ваши файлы
+        не затрагиваются.</li>
+      <li><strong>Проверить код</strong> — репозиторий открыт, а лицензия GPL-3.0
+        гарантирует право прочитать и собрать всё самостоятельно.</li>
+    </ul>
+
+    <h2>8. Безопасность</h2>
+    <p>
+      LUMEN работает целиком на вашей машине и не передаёт данные, поэтому
+      защищать в пути нечего. Приложение запрашивает только те права к файловой
+      системе, которые нужны для выбранных вами папок. Как и для любой локальной
+      программы, реальная защита самих данных — это порядок в вашей учётной записи
+      Windows и шифрование диска.
+    </p>
+
+    <h2>9. Изменения политики</h2>
+    <p>
+      Если в будущей версии LUMEN появится функция, меняющая эту политику —
+      что угодно, что передаёт данные, даже безобидное, — эта страница будет
+      обновлена до выхода такой версии, а изменение попадёт в
+      <a href="https://github.com/Stamir36/lumen-gallery/blob/master/CHANGELOG.md" rel="noopener">CHANGELOG</a>
+      проекта. Дата «Обновлено» в начале страницы всегда соответствует текущей
+      редакции.
+    </p>
+
+    <h2>10. Контакты</h2>
+    <p>Вопросы по политике или по тому, что LUMEN делает с файлами:</p>
+    <ul>
+      <li>Создайте issue или обсуждение:
+        <a href="https://github.com/Stamir36/lumen-gallery/issues/new/choose" rel="noopener">github.com/Stamir36/lumen-gallery/issues</a>
+        (быстрее всего, и ответ пригодится другим).</li>
+      <li>Либо напишите автору через профиль GitHub
+        <a href="https://github.com/Stamir36" rel="noopener">@Stamir36</a>.</li>
+    </ul>
+
+    <hr class="rule" />
+    <p class="small-note">
+      LUMEN — свободное ПО под лицензией GPL-3.0. Эта страница описывает само
+      настольное приложение; сайт размещён на GitHub Pages, и на хостинг
+      распространяется политика конфиденциальности GitHub.
+    </p>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-end foot-end-flat">
+      <span>© 2026 Станислав Мирошниченко · LUMEN — свободное ПО под GPL-3.0.</span>
+      <span><a href="../../ru/">Главная</a> · <a href="https://github.com/Stamir36/lumen-gallery/blob/master/LICENSE" rel="noopener">Лицензия</a></span>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

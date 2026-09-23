@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://stamir36.github.io/lumen-gallery/sitemap.xml

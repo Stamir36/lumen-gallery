@@ -1,0 +1,91 @@
+name: Deploy site
+
+# Publishes the static landing page in site/ to GitHub Pages.
+# One-time setup: repository → Settings → Pages → Build and deployment →
+# Source: "GitHub Actions". Nothing else to configure; the URL appears in the
+# workflow summary and in Settings → Pages after the first successful run.
+
+on:
+  push:
+    branches: [master, main]
+    paths:
+      - "site/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Package site
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check that the site has no broken local links
+        run: |
+          python3 - <<'PY'
+          import os, posixpath, re, sys, urllib.parse
+
+          root = "site"
+          # A GitHub Pages project site is served under /<repo>/, so the
+          # root-absolute links (404.html) carry that prefix. Strip it before
+          # resolving them against the site/ tree.
+          prefix = "/" + os.environ.get("GITHUB_REPOSITORY", "Stamir36/lumen-gallery").split("/")[-1]
+
+          pages = [
+              posixpath.join(d.replace(os.sep, "/"), f)
+              for d, _dirs, fs in os.walk(root)
+              for f in fs
+              if f.endswith(".html")
+          ]
+          missing = []
+
+          for page in pages:
+              with open(page, encoding="utf-8") as handle:
+                  html = handle.read()
+              for _attr, value in re.findall(r'(href|src)="([^"]+)"', html):
+                  if re.match(r"^(https?:|mailto:|#|data:|//)", value):
+                      continue
+                  target = urllib.parse.unquote(value.split("#")[0].split("?")[0])
+                  if not target:
+                      continue
+                  if target.startswith("/"):
+                      rel = target[len(prefix):].lstrip("/") if target in (prefix, prefix + "/") or target.startswith(prefix + "/") else target.lstrip("/")
+                      resolved = posixpath.join(root, rel)
+                  else:
+                      resolved = posixpath.normpath(posixpath.join(posixpath.dirname(page), target))
+                  if os.path.isdir(resolved):
+                      resolved = posixpath.join(resolved, "index.html")
+                  if not os.path.exists(resolved):
+                      missing.append(f"{page}: {value}")
+
+          if missing:
+              print("Broken local references:")
+              print("\n".join(missing))
+              sys.exit(1)
+          print(f"{len(pages)} pages checked, all local references resolve.")
+          PY
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    name: Deploy
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

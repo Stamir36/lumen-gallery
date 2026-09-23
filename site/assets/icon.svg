@@ -1,0 +1,31 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <!-- LUMEN icon — mosaic mark per DESIGN.md v2.4 tokens -->
+  <defs>
+    <linearGradient id="accent" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2F7BFF"/>
+      <stop offset="1" stop-color="#4FD8FF"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.42" r="0.62">
+      <stop offset="0" stop-color="#2F7BFF" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#2F7BFF" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="squircle">
+      <rect x="64" y="64" width="896" height="896" rx="224"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#squircle)">
+    <rect width="1024" height="1024" fill="#141418"/>
+    <!-- soft accent glow behind the tall tile -->
+    <rect x="64" y="64" width="896" height="896" fill="url(#glow)"/>
+    <!-- tall left tile: accent gradient -->
+    <rect x="192" y="192" width="192" height="640" rx="48" fill="url(#accent)"/>
+    <!-- wide top tile -->
+    <rect x="416" y="192" width="416" height="192" rx="48" fill="#1E1E24" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="2"/>
+    <!-- small middle tile -->
+    <rect x="416" y="416" width="192" height="192" rx="48" fill="#1E1E24" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="2"/>
+    <!-- small bottom tile -->
+    <rect x="416" y="640" width="192" height="192" rx="48" fill="#1E1E24" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="2"/>
+    <!-- medium vertical tile -->
+    <rect x="640" y="416" width="192" height="416" rx="48" fill="#1E1E24" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="2"/>
+  </g>
+</svg>

@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Privacy policy — LUMEN</title>
+<meta name="description" content="LUMEN's privacy policy: the app collects nothing, sends nothing and has no server. What is stored locally, and how to remove it." />
+<link rel="canonical" href="https://stamir36.github.io/lumen-gallery/privacy/" />
+<link rel="alternate" hreflang="en" href="https://stamir36.github.io/lumen-gallery/privacy/" />
+<link rel="alternate" hreflang="ru" href="https://stamir36.github.io/lumen-gallery/ru/privacy/" />
+
+<meta property="og:type" content="article" />
+<meta property="og:title" content="Privacy policy — LUMEN" />
+<meta property="og:description" content="No telemetry, no accounts, no servers. What LUMEN stores on your own disk, and nothing else." />
+<meta property="og:url" content="https://stamir36.github.io/lumen-gallery/privacy/" />
+<meta name="theme-color" content="#08090c" />
+<meta name="robots" content="index, follow" />
+
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml" />
+<script>document.documentElement.classList.add("js");</script>
+<link rel="stylesheet" href="../assets/style.css" />
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap nav-inner">
+    <a class="brand" href="../">
+      <img src="../assets/icon.svg" alt="" width="30" height="30" />
+      LUMEN
+      <span class="ver">v0.2.0</span>
+    </a>
+    <nav class="nav-links" aria-label="Main">
+      <a href="../#features">Features</a>
+      <a href="../#screenshots">Screenshots</a>
+      <a href="../#download">Download</a>
+      <span class="lang" role="group" aria-label="Language">
+        <a href="./" aria-current="true" hreflang="en">EN</a>
+        <a href="../ru/privacy/" hreflang="ru">RU</a>
+      </span>
+      <a class="btn nav-cta" href="https://github.com/Stamir36/lumen-gallery" rel="noopener">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main class="doc">
+  <div class="wrap doc-wrap">
+    <a class="back" href="../">← Back to LUMEN</a>
+
+    <h1>Privacy policy</h1>
+    <p class="updated">Applies to LUMEN 0.2.0 and later · Last updated 23 September 2026</p>
+
+    <div class="callout">
+      <strong>The short version:</strong> LUMEN collects no personal data, contains no
+      analytics, and has no server to send anything to. It has never asked you to
+      create an account. Everything it stores lives in your own user profile and is
+      deleted when you delete it.
+    </div>
+
+    <h2>1. Who is responsible</h2>
+    <p>
+      LUMEN is a free, open-source desktop application for Windows, developed and
+      published by <strong>Stanislav Miroshnichenko (Unesell Studio)</strong>, the
+      data controller for the limited processing described below. The complete
+      source code is public at
+      <a href="https://github.com/Stamir36/lumen-gallery" rel="noopener">github.com/Stamir36/lumen-gallery</a>,
+      so every claim on this page can be verified rather than trusted.
+    </p>
+
+    <h2>2. What LUMEN does not do</h2>
+    <ul>
+      <li>It does <strong>not</strong> send your photos, videos, filenames, folder
+        names, library statistics or usage data anywhere.</li>
+      <li>It contains <strong>no</strong> analytics SDK, crash reporter, advertising
+        identifier, attribution framework or update pinger.</li>
+      <li>It does <strong>not</strong> require or offer an account, sign-in, e-mail
+        address or licence key.</li>
+      <li>It does <strong>not</strong> read browsing history, other applications'
+        data, clipboard content or your contacts.</li>
+      <li>It does <strong>not</strong> move, rename, upload or modify your media
+        files. Indexing is read-only.</li>
+    </ul>
+
+    <h2>3. What is stored on your device</h2>
+    <p>
+      LUMEN keeps its own working data in your Windows user profile. None of it
+      leaves your computer and all of it is created by you using the app:
+    </p>
+    <table class="doc-table">
+      <thead>
+        <tr><th>Data</th><th>Location</th><th>Why</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Library database — folder list, file paths, sizes, dates, favourite and recycle-bin flags</td>
+          <td><code>%APPDATA%\com.unesell.lumen\lumen.db</code></td>
+          <td>So the gallery does not have to rescan your drive on every launch</td>
+        </tr>
+        <tr>
+          <td>Thumbnail cache</td>
+          <td><code>%LOCALAPPDATA%\com.unesell.lumen\</code></td>
+          <td>So the grid appears instantly instead of decoding images again</td>
+        </tr>
+        <tr>
+          <td>Log file — may include file paths that failed to decode</td>
+          <td><code>%LOCALAPPDATA%\com.unesell.lumen\logs\LUMEN.log</code></td>
+          <td>So a bug report can explain what went wrong</td>
+        </tr>
+        <tr>
+          <td>Preferences — language, accent, layout, density, tray behaviour</td>
+          <td>Same database</td>
+          <td>So the app remembers how you like it</td>
+        </tr>
+      </tbody>
+    </table>
+    <p>
+      <strong>Your media files are never copied.</strong> The thumbnail cache holds
+      reduced versions of images you have viewed, on your own disk, inside your own
+      user profile.
+    </p>
+
+    <h2>4. Network activity</h2>
+    <p>
+      A running LUMEN makes no outbound connections on its own. The only network
+      traffic it can produce is caused directly by you:
+    </p>
+    <ul>
+      <li>opening a link — for example the project page or a bug tracker — in your
+        default browser, where that site's own privacy policy applies;</li>
+      <li>handing a file to an external player you configured yourself;</li>
+      <li>using the built-in VR dome viewer, which serves images to LUMEN's own
+        WebView over a loopback (<code>127.0.0.1</code>) address. Loopback traffic
+        never reaches the network.</li>
+    </ul>
+    <p>
+      If you installed LUMEN from the Microsoft Store, Microsoft may collect
+      installation and diagnostic telemetry as the store operator, under
+      <a href="https://privacy.microsoft.com/privacystatement" rel="noopener">Microsoft's own privacy statement</a>.
+      That data is not shared with the developer in personally identifying form; the
+      developer receives the same aggregate, anonymised statistics any publisher
+      sees in Partner Center.
+    </p>
+
+    <h2>5. Files on your computer</h2>
+    <p>
+      LUMEN reads the folders you explicitly add, to build thumbnails and metadata.
+      Removing files from the gallery's view does not delete them; when you ask LUMEN
+      to delete, it moves files to the Windows Recycle Bin through the operating
+      system's API, so they remain recoverable by you. No file outside the folders
+      you selected is accessed.
+    </p>
+
+    <h2>6. Children</h2>
+    <p>
+      LUMEN is a general-purpose file viewer. It is not directed at children, it
+      collects no data from anyone, and therefore collects no data from children.
+    </p>
+
+    <h2>7. Your rights</h2>
+    <p>
+      Because the developer holds no personal data about you, there is nothing to
+      request, correct, export or erase on our side. Everything LUMEN stores is
+      under your control:
+    </p>
+    <ul>
+      <li><strong>Delete the cache and preferences</strong> — remove
+        <code>%LOCALAPPDATA%\com.unesell.lumen\</code> and
+        <code>%APPDATA%\com.unesell.lumen\</code>, or use the app's own reset
+        options in Settings.</li>
+      <li><strong>Uninstall</strong> — through Windows *Apps → Installed apps*, or
+        by running the uninstaller in the install folder. Your media is untouched.</li>
+      <li><strong>Inspect the code</strong> — the repository is public and the
+        licence (GPL-3.0) guarantees you can read and rebuild everything.</li>
+    </ul>
+
+    <h2>8. Security</h2>
+    <p>
+      LUMEN runs entirely on your machine and does not transmit data, so there is no
+      data in transit to protect. The application requests only the filesystem
+      permissions it needs for the folders you choose. As with any local software,
+      keeping your Windows account and disk encryption in order is the relevant
+      protection for the data itself.
+    </p>
+
+    <h2>9. Changes to this policy</h2>
+    <p>
+      If a future version of LUMEN ever introduces a feature that would change this
+      policy — anything that transmits data, however harmless — this page will be
+      updated before that version is released, and the change will be recorded in
+      the project's
+      <a href="https://github.com/Stamir36/lumen-gallery/blob/master/CHANGELOG.md" rel="noopener">CHANGELOG</a>.
+      The "last updated" date at the top of this page always reflects the current
+      policy.
+    </p>
+
+    <h2>10. Contact</h2>
+    <p>
+      Questions about this policy, or about anything LUMEN does with files:
+    </p>
+    <ul>
+      <li>Open an issue or a discussion:
+        <a href="https://github.com/Stamir36/lumen-gallery/issues/new/choose" rel="noopener">github.com/Stamir36/lumen-gallery/issues</a>
+        (fastest, and the answer helps other people too).</li>
+      <li>Or write to the developer through the GitHub profile
+        <a href="https://github.com/Stamir36" rel="noopener">@Stamir36</a>.</li>
+    </ul>
+
+    <hr class="rule" />
+    <p class="small-note">
+      LUMEN is free software licensed under GPL-3.0. This page describes the desktop
+      application itself; the hosting of this website is provided by GitHub Pages and
+      is subject to GitHub's own privacy statement.
+    </p>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-end foot-end-flat">
+      <span>© 2026 Stanislav Miroshnichenko · LUMEN is free software under GPL-3.0.</span>
+      <span><a href="../">Home</a> · <a href="https://github.com/Stamir36/lumen-gallery/blob/master/LICENSE" rel="noopener">License</a></span>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
