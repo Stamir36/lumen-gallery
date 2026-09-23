@@ -54,8 +54,6 @@ drive, and wants to browse them without waiting:
 |---|---|
 | ![Setup wizard](docs/screenshots/setup-wizard.png) | ![Settings](docs/screenshots/settings.png) |
 
-<div align="center"><img src="docs/screenshots/setup-finish.png" width="620" alt="Setup wizard — finish panel" /></div>
-
 ## Features
 
 ### Library
