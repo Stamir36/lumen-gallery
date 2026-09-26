@@ -11,10 +11,55 @@ All notable changes to LUMEN are recorded here. The format follows
 - **Project website** — a dependency-free landing page in `site/` (English and
   Russian, plus the privacy policy), published to GitHub Pages by
   `.github/workflows/pages.yml`: <https://stamir36.github.io/lumen-gallery/>.
-- **Microsoft Store packaging** — `pnpm build:store` builds the installer with
-  `src-tauri/tauri.microsoftstore.conf.json`: offline WebView2 installer,
-  explicit publisher name and no interactive installer UI, which is what a Win32
-  Store submission requires.
+- **Microsoft Store packaging (MSIX)** — `pnpm build:msix` packages LUMEN
+  through `src-tauri/msix/Package.appxmanifest` and `scripts/build-msix.ps1`.
+  Windows installs the package, the Store signs it for free and hosts it, so
+  this route needs no code-signing certificate and no download URL of your own.
+  The package carries `lumen.exe` alone (~6 MiB) and runs against the machine's
+  Evergreen WebView2 runtime; the manifest declares the file type associations,
+  because a packaged app's writes to HKCU land in a private hive that Explorer
+  cannot see.
+- **Linked-installer build for the Store (fallback)** — `pnpm build:store` (or
+  `build-store.bat`) builds the offline-WebView2 installer that the EXE/MSI
+  route needs: per-user silent install, no installer UI, publisher set. It takes
+  a certificate to sign, so it is the fallback, and its 210 MiB is published as
+  a release asset rather than committed.
+- **Code signing hook** — `scripts/sign-file.ps1` is wired to Tauri's
+  `signCommand`, so the application binary, every NSIS plugin and the finished
+  installer are signed in one pass (the linked-installer route requires all of
+  them). It is a no-op until `LUMEN_SIGN_PFX` / `LUMEN_SIGN_THUMBPRINT` is set.
+- **Slideshow** — hands-off playback of whatever the grid is showing: photos
+  only, a slow Ken Burns drift, shuffle, 3–20 s slide duration and an optional
+  file-name caption, started from the library bar next to the sort control (or
+  by opening `/slideshow`). It reads the current view out of the same query the
+  grid uses, so it opens instantly, needs no new backend call, and leaves the
+  grid untouched underneath. Slide duration and caption are remembered.
+- **Tools page** — a hub for the app's instruments, with animated cards and
+  room for future tools. The duplicate finder moved here from the sidebar, so
+  the sidebar is a pure library list again (drives + smart views). The page is
+  a full screen with its own title bar, back button included, and follows the
+  design system: tonal cards, no gradients, mono only for metadata.
+- **Disk space tool** — "where did my drive go" for the indexed library: the
+  heaviest files with size bars and thumbnails, the same bytes grouped by
+  format, and per-library totals. Read-only — one SQL pass per view, no file
+  is ever opened; the only action is "show in Explorer".
+- **Update check** — Settings › About gains an explicit "Check for updates":
+  one press queries the GitHub releases API of
+  `Stamir36/lumen-gallery`, and a newer published version offers to open the
+  releases page in the browser. A local build that is AHEAD of the latest
+  release (development) is told nothing rather than "downgrade", and nothing
+  is fetched at boot — the check belongs to the user, not the startup.
+- **Slideshow polish** — slides now crossfade through a pre-decoded next
+  picture (the transition never waits on the disk, which read as a black gap),
+  the stage rises with a slight zoom when the show opens, and the control pill
+  picks up a backdrop blur.
+- **Duplicate finder** — finds files that share their content and shows them as
+  groups, biggest waste first, with how much recycling the extras would return.
+  The comparison narrows in three passes — equal file size in SQL, then a hash
+  of the first 64 KB, then the whole file — so only the files that survive each
+  pass are ever read end to end, and files under 1 MB are left out unless you
+  lower the floor. You pick which copy to keep; the rest go to the Recycle Bin
+  through the existing "delete forever" path, and nothing is ever unlinked.
 - **Personalization wizard on first run** — language, accent, interface density,
   corners and behavior in four steps, with a live miniature of the library that
   follows every choice. It ends with a real summary panel and remembers that it
@@ -41,6 +86,14 @@ All notable changes to LUMEN are recorded here. The format follows
 
 ### Fixed
 
+- **The Store listing could not be submitted** — the installer behind the linked
+  URL was a plain `pnpm tauri build` artifact, whose WebView2 "download
+  bootstrapper" fetches the runtime while setup runs. Microsoft classifies that
+  as a downloader stub, so its validation could not complete an unattended
+  install and refused the submission with *«модули PackageSet недействительны»*.
+  The Store route is now an MSIX package instead: nothing is downloaded during
+  setup, Microsoft signs and hosts it, and the linked-installer build remains as
+  a documented fallback for the day a certificate is worth buying.
 - **The setup wizard no longer runs off its own step list** — pressing *Next* on
   the last step used to advance into empty screens forever; it now finishes.
 - **Blank `#/settings` and `#/onboarding` pages outside Tauri** — a window API

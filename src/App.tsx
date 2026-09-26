@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import {
   Clock,
+  Wand2 as Wand2Icon,
   Film,
   FolderTree as FolderTreeIcon,
   HardDrive,
@@ -307,6 +308,15 @@ export default function App() {
         onSelect: () => selectAndLeave(() => setRoute({ kind: "smart", id: s.id })),
       };
     }),
+    // A hub, not a view: tools live on their own screen so the sidebar stays
+    // a pure library list (drives + smart views). One row instead of one row
+    // per tool — new instruments land on the Tools page, not here.
+    {
+      id: "tools",
+      label: t("tools.title"),
+      icon: <Wand2Icon />,
+      onSelect: () => selectAndLeave(() => navigate("/tools")),
+    } satisfies SidebarItem,
   ];
 
   const title = t(

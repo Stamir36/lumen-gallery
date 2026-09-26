@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import {
   ArrowDownWideNarrow,
@@ -7,6 +8,7 @@ import {
   Check,
   FolderTree as FolderTreeIcon,
   Images as ImagesIcon,
+  MonitorPlay,
   Search,
   SquareCheck,
 } from "lucide-react";
@@ -155,6 +157,8 @@ export function LibraryTopBar({
 
           <SortMenu />
 
+          <SlideshowButton />
+
           <IconButton
             label={t("topbar.selection_mode")}
             aria-pressed={selectionMode}
@@ -166,6 +170,24 @@ export function LibraryTopBar({
         </>
       }
     />
+  );
+}
+
+/**
+ * Slideshow entry point, shared by both shells (classic bar and rail titlebar) —
+ * hence a component of its own rather than a prop drilled into each one.
+ *
+ * It is a ROUTE, not an overlay: the slideshow owns the whole screen and reads
+ * the current view straight out of the query cache, so what plays is exactly
+ * what the grid was showing.
+ */
+export function SlideshowButton() {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  return (
+    <IconButton label={t("topbar.slideshow")} onClick={() => navigate("/slideshow")}>
+      <MonitorPlay size={18} />
+    </IconButton>
   );
 }
 
@@ -294,6 +316,7 @@ export function RailTitlebarCenter() {
         )}
       </div>
       <SortMenu />
+      <SlideshowButton />
       <IconButton
         label={t("topbar.selection_mode")}
         aria-pressed={selectionMode}

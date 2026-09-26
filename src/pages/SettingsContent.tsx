@@ -16,6 +16,7 @@ import {
   Play,
   MousePointerClick,
   Info,
+  Download,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -45,7 +46,7 @@ import { resetThumbs } from "@/lib/thumbs";
 import { queryClient } from "@/lib/queryClient";
 import { getDb } from "@/lib/db";
 import { useRootsStore } from "@/state/library";
-import { APP_VERSION } from "@/lib/version";
+import { APP_VERSION, compareWithLatest, fetchLatestTag, RELEASES_URL } from "@/lib/version";
 import appIcon from "../../assets/icon.svg";
 import { readSetting, writeSetting, CURSOR_KEY, setCustomCursor, CUSTOM_CURSOR_KEY } from "@/i18n";
 
@@ -748,6 +749,9 @@ export function SettingsContent() {
 
             {/* the facts: one list, hairline dividers (editorial only) */}
             <div className="border-t border-hairline">
+              {/* the update check lives in About: one press, one GitHub call —
+                  never a background phone-home at boot */}
+              <UpdateRow />
               <AboutRow label={t("settings.about_author")}>Stanislav Miroshnichenko</AboutRow>
               {/* the source: the project lives here, releases and issues too */}
               <AboutRow label={t("settings.about_github")}>
@@ -801,6 +805,86 @@ function RepoLink({ url, children }: { url: string; children: React.ReactNode })
     >
       {children}
     </button>
+  );
+}
+
+type UpdateState =
+  | { kind: "idle" }
+  | { kind: "checking" }
+  | { kind: "latest" }
+  | { kind: "available"; version: string }
+  | { kind: "failed" };
+
+/**
+ * Update check in the About card: one explicit press, one GitHub API call.
+ * A dev build that is AHEAD of the published release answers "latest" —
+ * telling a developer to downgrade would be a bug, so silence is correct.
+ * Nothing is fetched at boot: the check belongs to the user, not the startup.
+ */
+function UpdateRow() {
+  const { t } = useTranslation();
+  const [state, setState] = useState<UpdateState>({ kind: "idle" });
+
+  async function check() {
+    setState({ kind: "checking" });
+    const tag = await fetchLatestTag();
+    if (!tag) {
+      setState({ kind: "failed" });
+      return;
+    }
+    const verdict = compareWithLatest(APP_VERSION, tag);
+    if (verdict === "available") setState({ kind: "available", version: tag.replace(/^v/i, "") });
+    else setState({ kind: "latest" });
+  }
+
+  return (
+    <div className="flex items-center justify-between gap-3 py-3">
+      <span className="text-[13px] text-tsecondary">{t("settings.about_update")}</span>
+      <div className="flex items-center gap-2">
+        {state.kind === "available" && (
+          <span className="font-mono text-[11px] text-ttertiary">
+            {t("settings.update_available", { version: state.version })}
+          </span>
+        )}
+        {state.kind === "latest" && (
+          <span className="font-mono text-[11px] text-ttertiary">{t("settings.update_latest")}</span>
+        )}
+        {state.kind === "failed" && (
+          <span className="font-mono text-[11px] text-danger">{t("settings.update_failed")}</span>
+        )}
+        {state.kind === "checking" && (
+          <span className="font-mono text-[11px] text-ttertiary">{t("settings.update_checking")}</span>
+        )}
+        {state.kind === "failed" && (
+          // graceful degradation: when GitHub cannot be reached (offline, or
+          // the shared-IP API limit), the releases page itself is the fallback
+          <PillButton
+            onClick={() =>
+              void invoke("open_url", { url: RELEASES_URL }).catch((e) => toast.error(String(e)))
+            }
+          >
+            <Download size={14} />
+            {t("settings.update_open")}
+          </PillButton>
+        )}
+        {state.kind === "available" && (
+          <PillButton
+            onClick={() =>
+              void invoke("open_url", { url: RELEASES_URL }).catch((e) => toast.error(String(e)))
+            }
+          >
+            <Download size={14} />
+            {t("settings.update_open")}
+          </PillButton>
+        )}
+        {(state.kind === "idle" || state.kind === "latest" || state.kind === "failed") && (
+          <PillButton onClick={() => void check()}>
+            <RefreshCw size={14} />
+            {t("settings.update_check")}
+          </PillButton>
+        )}
+      </div>
+    </div>
   );
 }
 

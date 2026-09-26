@@ -5,6 +5,8 @@ mod legacy;
 
 mod commands;
 mod db;
+mod disk;
+mod dupes;
 mod media_server;
 mod scan;
 mod thumbs;
@@ -137,6 +139,8 @@ pub fn run() {
       commands::list_folders,
       commands::library_stats,
       commands::library_summary,
+      dupes::find_duplicates,
+      disk::disk_usage,
       commands::cancel_scan,
       commands::set_tray_mode,
       commands::db_exec,

@@ -8,6 +8,10 @@ import StylePage from "./pages/StylePage";
 import OnboardingPage from "./pages/OnboardingRoute";
 import { SetupWizard } from "./pages/SetupWizard";
 import SettingsPage from "./pages/SettingsPage";
+import SlideshowPage from "./pages/SlideshowPage";
+import DuplicatesPage from "./pages/DuplicatesPage";
+import ToolsPage from "./pages/ToolsPage";
+import DiskSpacePage from "./pages/DiskSpacePage";
 import AssetTest from "./pages/AssetTest";
 import GridDemo from "./pages/GridDemo";
 import MiniPlayer from "./components/miniplayer/MiniPlayer";
@@ -118,6 +122,14 @@ async function bootstrap() {
               }
             />
             <Route path="/settings" element={<SettingsPage />} />
+            {/* hands-off playback of the current view (photos only) */}
+            <Route path="/slideshow" element={<SlideshowPage />} />
+            {/* read-only duplicate finder, with the recycle-bin cleanup */}
+            <Route path="/duplicates" element={<DuplicatesPage />} />
+            {/* instruments hub: every tool gets a card here */}
+            <Route path="/tools" element={<ToolsPage />} />
+            {/* disk space: heaviest files / formats / libraries */}
+            <Route path="/disk" element={<DiskSpacePage />} />
             <Route path="/asset-test" element={<AssetTest />} />
             {/* dev-only grid QA surface (synthetic rows, no Tauri calls) */}
             <Route path="/grid-demo" element={<GridDemo />} />
