@@ -6,7 +6,19 @@
       "webviewInstallMode": {
         "type": "offlineInstaller"
       },
+      "signCommand": {
+        "cmd": "powershell",
+        "args": [
+          "-NoProfile",
+          "-ExecutionPolicy",
+          "Bypass",
+          "-File",
+          "../scripts/sign-file.ps1",
+          "%1"
+        ]
+      },
       "nsis": {
+        "installMode": "currentUser",
         "displayLanguageSelector": false,
         "languages": ["English", "Russian"]
       }

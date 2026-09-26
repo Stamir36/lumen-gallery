@@ -38,6 +38,7 @@
     "e2e": "playwright test",
     "e2e:update": "playwright test --update-snapshots",
     "site": "python -m http.server 4173 --directory site",
+    "build:msix": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-msix.ps1",
     "build:store": "tauri build --no-bundle && tauri bundle --config src-tauri/tauri.microsoftstore.conf.json"
   },
   "dependencies": {
@@ -77,6 +78,7 @@
     "@vitejs/plugin-react": "^4.3.4",
     "tailwindcss": "^4.0.0",
     "typescript": "~5.6.3",
-    "vite": "^6.0.5"
+    "vite": "^6.0.5",
+    "ws": "^8.21.3"
   }
 }

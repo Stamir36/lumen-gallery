@@ -151,7 +151,7 @@ src-tauri/src/        Rust backend
   media_server.rs       loopback CORS server for the VR dome
   tray.rs assoc.rs      background mode, file associations
 e2e/                  Playwright specs + pixel baselines
-docs/                 DESIGN.md, SPEC.md, audits
+docs/                 DESIGN.md, SPEC.md, BUILD-MSIX.md, audits
 ```
 
 ## Development notes
@@ -190,7 +190,8 @@ HTML — no build step — and are published to GitHub Pages by
 
 Preview it locally with `pnpm site`. How to deploy it, and how the URL is formed,
 is in [docs/WEBSITE.md](docs/WEBSITE.md); publishing to the Microsoft Store is
-covered in [docs/MICROSOFT-STORE.md](docs/MICROSOFT-STORE.md).
+covered in [docs/MICROSOFT-STORE.md](docs/MICROSOFT-STORE.md), and building the
+package itself in [docs/BUILD-MSIX.md](docs/BUILD-MSIX.md).
 
 ## Roadmap
 

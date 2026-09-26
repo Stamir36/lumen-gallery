@@ -14,6 +14,11 @@ jobs:
   windows:
     name: Windows installer
     runs-on: windows-latest
+    env:
+      # Optional. With no certificate the installers are still built, but they
+      # stay unsigned and the Microsoft Store will reject them.
+      LUMEN_SIGN_PFX_BASE64: ${{ secrets.LUMEN_SIGN_PFX_BASE64 }}
+      LUMEN_SIGN_PASSWORD: ${{ secrets.LUMEN_SIGN_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
 
@@ -43,3 +48,33 @@ jobs:
             Windows installer (`LUMEN_*_x64-setup.exe`) — see README for what's new.
           releaseDraft: true
           prerelease: false
+
+      # ── The Microsoft Store package ────────────────────────────────────────
+      # The Store route for LUMEN is MSIX, not the linked installer above:
+      # Microsoft signs an MSIX for free and hosts it, so there is no
+      # certificate to buy and no download URL to keep alive. The package
+      # carries nothing but lumen.exe -- a packaged app uses the machine's
+      # Evergreen WebView2 runtime, so setup downloads and bundles nothing.
+      # See docs/MICROSOFT-STORE.md for the one-time identity values that have
+      # to be pasted into src-tauri/msix/Package.appxmanifest.
+      - name: Build the Microsoft Store MSIX
+        shell: pwsh
+        run: |
+          $options = @{}
+          if ($env:LUMEN_SIGN_PFX_BASE64) {
+            $pfx = Join-Path $env:RUNNER_TEMP 'lumen-signing.pfx'
+            [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:LUMEN_SIGN_PFX_BASE64))
+            $options = @{ CertificatePath = $pfx; CertificatePassword = $env:LUMEN_SIGN_PASSWORD }
+          } else {
+            # A throwaway certificate whose subject matches the manifest
+            # Publisher: the package still has to be signed, and Partner Center
+            # only checks that the signature agrees with the identity.
+            $options = @{ DevCert = $true }
+          }
+          ./scripts/build-msix.ps1 @options
+
+      - name: Attach the MSIX to the release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${GITHUB_REF_NAME}" src-tauri/target/msix/LUMEN_*_x64.msix --clobber

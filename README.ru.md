@@ -150,7 +150,7 @@ src-tauri/src/        Rust-бэкенд
   media_server.rs       локальный CORS-сервер для VR-купола
   tray.rs assoc.rs      фоновый режим, ассоциации файлов
 e2e/                  спеки Playwright + пиксельные базлайны
-docs/                 DESIGN.md, SPEC.md, аудиты
+docs/                 DESIGN.md, SPEC.md, BUILD-MSIX.md, аудиты
 ```
 
 ## Разработка
@@ -189,7 +189,8 @@ pnpm site             # локальный показ страницы из site
 
 Посмотреть локально: `pnpm site`. Как развернуть и как получается адрес — в
 [docs/WEBSITE.md](docs/WEBSITE.md); публикация в Microsoft Store — в
-[docs/MICROSOFT-STORE.md](docs/MICROSOFT-STORE.md).
+[docs/MICROSOFT-STORE.md](docs/MICROSOFT-STORE.md), а сама сборка пакета — в
+[docs/BUILD-MSIX.md](docs/BUILD-MSIX.md).
 
 ## План развития
 
