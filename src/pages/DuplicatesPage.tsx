@@ -4,7 +4,16 @@ import { useTranslation } from "react-i18next";
 import { listen } from "@tauri-apps/api/event";
 import { useQuery } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
-import { ArrowLeft, Copy, FolderSearch, RefreshCw, Trash2 } from "lucide-react";
+import { motion } from "framer-motion";
+import {
+  ArrowLeft,
+  Copy,
+  FolderSearch,
+  HardDrive,
+  RefreshCw,
+  Sparkles,
+  Trash2,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { IconButton } from "@/components/ui/IconButton";
 import { Segmented } from "@/components/ui/Segmented";
@@ -22,6 +31,12 @@ import { tauriAvailable } from "@/lib/assets";
  * page decides what to do about them. The only write it performs is the
  * existing "delete forever" path, which puts files in the OS Recycle Bin and
  * drops their rows — nothing here ever unlinks a file.
+ *
+ * DESIGN.md v2.5 pass: the header is a WindowTitleBar-backed editorial bar
+ * (micro-label + big reclaimable number instead of a raw counter row), groups
+ * are tonal elev-1 cards with the hero stat on the left of each group header,
+ * keep-state on an item is a ring + tinted caption, not a badge. Accent stays
+ * inside the §3.3 anchors: progress bar, active keep state, one summary number.
  */
 
 interface DupeItem {
@@ -175,14 +190,15 @@ export default function DuplicatesPage() {
 
   return (
     <div className="flex h-full flex-col bg-surface-1">
-      {/* header */}
+      {/* titlebar row: identical chrome to the other tool pages (tools, disk) */}
       <header className="flex h-14 shrink-0 items-center gap-3 border-b border-hairline px-4">
-        <IconButton label={t("actions.back")} onClick={() => navigate("/")}>
+        <IconButton label={t("actions.back")} onClick={() => navigate(-1)}>
           <ArrowLeft size={18} />
         </IconButton>
-        <span className="micro-label flex-1">{t("dupes.title")}</span>
+        <span className="micro-label">{t("dupes.title")}</span>
         <Segmented
           aria-label={t("dupes.threshold")}
+          className="ml-2"
           value={threshold}
           onChange={(v) => {
             setThreshold(v as Threshold);
@@ -195,65 +211,87 @@ export default function DuplicatesPage() {
             { value: "10mb", label: "10 MB+" },
           ]}
         />
-        <IconButton
-          label={t("dupes.rescan")}
-          onClick={() => void report.refetch()}
-          className={cn(scanning && "text-accent")}
-        >
-          <RefreshCw size={18} className={cn(scanning && "animate-spin")} />
-        </IconButton>
+        <div className="ml-auto flex items-center gap-2">
+          <IconButton
+            label={t("dupes.rescan")}
+            onClick={() => void report.refetch()}
+            className={cn(scanning && "text-accent")}
+          >
+            <RefreshCw size={18} className={cn(scanning && "animate-spin")} />
+          </IconButton>
+        </div>
       </header>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
-        {/* summary */}
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        {/* hero summary: the reclaimable number IS the page headline; the two
+            counters sit beside it in mono metadata, no micro-label spam */}
         {groups.length > 0 && (
-          <div className="mb-5 flex flex-wrap items-end gap-x-8 gap-y-3">
-            <div>
-              <div className="micro-label mb-1">{t("dupes.groups")}</div>
-              <div className="font-mono text-2xl text-tprimary">{formatCount(groups.length)}</div>
+          <div className="px-6 pb-6 pt-7">
+            <div className="flex flex-wrap items-end gap-x-10 gap-y-4">
+              <div>
+                <div className="micro-label mb-1.5">{t("dupes.reclaimable")}</div>
+                <div className="font-mono text-[34px] font-medium leading-none text-accent">
+                  {formatBytes(totalWasted)}
+                </div>
+              </div>
+              <div className="flex gap-8 pb-0.5">
+                <div>
+                  <div className="font-mono text-lg leading-tight text-tprimary">
+                    {formatCount(groups.length)}
+                  </div>
+                  <div className="mt-0.5 text-[11px] text-ttertiary">{t("dupes.groups")}</div>
+                </div>
+                <div>
+                  <div className="font-mono text-lg leading-tight text-tsecondary">
+                    {formatCount(totalFiles)}
+                  </div>
+                  <div className="mt-0.5 text-[11px] text-ttertiary">{t("dupes.files")}</div>
+                </div>
+              </div>
+              {report.data && (
+                <div className="ml-auto max-w-[30ch] pb-1 text-right font-mono text-[11px] leading-relaxed text-ttertiary">
+                  {t("dupes.scanned", {
+                    candidates: formatCount(report.data.candidates),
+                    hashed: formatCount(report.data.hashed),
+                  })}
+                </div>
+              )}
             </div>
-            <div>
-              <div className="micro-label mb-1">{t("dupes.files")}</div>
-              <div className="font-mono text-2xl text-tsecondary">{formatCount(totalFiles)}</div>
-            </div>
-            <div>
-              <div className="micro-label mb-1">{t("dupes.reclaimable")}</div>
-              <div className="font-mono text-2xl text-accent">{formatBytes(totalWasted)}</div>
-            </div>
-            {report.data && (
-              <div className="ml-auto font-mono text-[11px] text-ttertiary">
-                {t("dupes.scanned", {
-                  candidates: formatCount(report.data.candidates),
-                  hashed: formatCount(report.data.hashed),
-                })}
+
+            {/* live scan progress: the bar is exact (Rust knows both totals) and
+                shows which of the two passes is running; the pending state below
+                still covers the SQL phase before the first event arrives */}
+            {scanning && (
+              <div className="mt-5">
+                <div className="mb-1.5 flex items-baseline justify-between gap-4">
+                  <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-tsecondary">
+                    {progress
+                      ? progress.stage === "head"
+                        ? t("dupes.stage_head")
+                        : t("dupes.stage_full")
+                      : t("dupes.running")}
+                  </span>
+                  {progress && (
+                    <span className="font-mono text-[11px] tabular-nums text-ttertiary">
+                      {formatCount(progress.done)} / {formatCount(progress.total)}
+                    </span>
+                  )}
+                </div>
+                <div className="h-[4px] w-full overflow-hidden rounded-pill bg-surface-2">
+                  <div
+                    className={cn(
+                      "h-full rounded-pill transition-[width] duration-150 ease-out",
+                      progress ? "bg-accent" : "animate-pulse bg-accent/50",
+                    )}
+                    style={{
+                      width: progress
+                        ? `${Math.max(1.5, (progress.done / progress.total) * 100)}%`
+                        : "100%",
+                    }}
+                  />
+                </div>
               </div>
             )}
-          </div>
-        )}
-
-        {/* live scan progress: the bar is exact (Rust knows both totals) and
-            shows which of the two passes is running; the pending state below
-            still covers the SQL phase before the first event arrives */}
-        {report.isFetching && progress && (
-          <div className="mb-5">
-            <div className="mb-1.5 flex items-baseline justify-between gap-4">
-              <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-tsecondary">
-                {progress.stage === "head" ? t("dupes.stage_head") : t("dupes.stage_full")}
-              </span>
-              <span className="font-mono text-[11px] tabular-nums text-ttertiary">
-                {formatCount(progress.done)} / {formatCount(progress.total)}
-              </span>
-            </div>
-            <div className="h-[4px] w-full overflow-hidden rounded-pill bg-surface-2">
-              <div
-                className="h-full rounded-pill bg-accent transition-[width] duration-150 ease-out"
-                style={{
-                  width: `${
-                    progress.total > 0 ? Math.max(1.5, (progress.done / progress.total) * 100) : 0
-                  }%`,
-                }}
-              />
-            </div>
           </div>
         )}
 
@@ -285,29 +323,34 @@ export default function DuplicatesPage() {
 
         {!report.isPending && !report.isError && groups.length === 0 && (
           <div className="flex flex-col items-center gap-3 py-24 text-center">
-            <Copy size={28} className="text-ttertiary" />
+            <Sparkles size={28} className="text-ttertiary" />
             <p className="text-sm text-tprimary">{t("dupes.empty_title")}</p>
             <p className="max-w-[46ch] text-[13px] text-ttertiary">{t("dupes.empty_hint")}</p>
           </div>
         )}
 
         {/* groups */}
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 px-6 pb-8">
           {groups.map((group, index) => {
             const kept = keptIdOf(index, group);
             const isArmed = armed === index;
             const freed = group.size * (group.items.length - 1);
             return (
-              <section
+              <motion.section
                 key={`${group.size}-${group.items[0]?.id ?? index}`}
-                className="overflow-hidden rounded-control border border-hairline bg-surface-1"
+                layout={false}
+                initial={false}
+                className="overflow-hidden rounded-card bg-surface-2 shadow-[0_8px_24px_rgba(0,0,0,.35)]"
               >
-                <div className="flex items-center gap-3 border-b border-hairline px-4 py-2.5">
-                  <span className="font-mono text-[12px] text-tsecondary">
+                {/* group header: tonal (no hairline between header and items) —
+                    the hero stat "N × size" leads, accent frees-figure after */}
+                <div className="flex items-center gap-3 px-5 pb-3 pt-4">
+                  <HardDrive size={15} className="shrink-0 text-ttertiary" />
+                  <span className="font-mono text-[13px] tabular-nums text-tprimary">
                     {group.items.length} × {formatBytes(group.size)}
                   </span>
-                  <span className="font-mono text-[12px] text-accent">
-                    {t("dupes.frees", { size: formatBytes(freed) })}
+                  <span className="font-mono text-[12px] tabular-nums text-accent">
+                    +{formatBytes(freed)}
                   </span>
                   <div className="ml-auto flex items-center gap-2">
                     <button
@@ -315,10 +358,10 @@ export default function DuplicatesPage() {
                       disabled={working}
                       onClick={() => setArmed(isArmed ? null : index)}
                       className={cn(
-                        "rounded-pill px-3 py-1.5 text-[12px] transition-colors disabled:opacity-50",
+                        "rounded-pill px-3.5 py-1.5 text-[12px] transition-colors disabled:opacity-50",
                         isArmed
                           ? "bg-surface-3 text-tsecondary"
-                          : "text-tsecondary hover:bg-surface-2 hover:text-tprimary",
+                          : "text-tsecondary hover:bg-surface-3 hover:text-tprimary",
                       )}
                     >
                       {isArmed ? t("dupes.cancel") : t("dupes.arm")}
@@ -328,9 +371,9 @@ export default function DuplicatesPage() {
                       disabled={working}
                       onClick={() => void recycleExtra(index, group)}
                       className={cn(
-                        "flex items-center gap-1.5 rounded-pill px-3 py-1.5 text-[12px] transition-colors disabled:opacity-50",
+                        "flex items-center gap-1.5 rounded-pill px-3.5 py-1.5 text-[12px] transition-colors disabled:opacity-50",
                         isArmed
-                          ? "bg-accent/15 text-accent hover:bg-accent/25"
+                          ? "bg-accent text-black hover:bg-accent/85"
                           : "pointer-events-none opacity-40",
                       )}
                     >
@@ -340,7 +383,7 @@ export default function DuplicatesPage() {
                   </div>
                 </div>
 
-                <div className="flex flex-wrap gap-3 p-3">
+                <div className="flex flex-wrap gap-3 px-4 pb-4">
                   {group.items.map((item) => {
                     const known = thumbs[item.id];
                     const rawPath =
@@ -350,18 +393,30 @@ export default function DuplicatesPage() {
                       <figure
                         key={item.id}
                         className={cn(
-                          "w-[176px] shrink-0 overflow-hidden rounded-control border transition-colors",
-                          isKept ? "border-accent/60 bg-accent/[.06]" : "border-hairline bg-surface-2",
+                          "w-[176px] shrink-0 overflow-hidden rounded-control transition-all duration-[160ms]",
+                          // keep-state is a ring + tint, not a floating badge —
+                          // the badge fought the thumbnail for attention
+                          isKept
+                            ? "bg-surface-3 ring-1 ring-accent/60"
+                            : "bg-surface-1 ring-1 ring-white/[.04] hover:ring-white/[.12]",
                         )}
                       >
-                        <div className="relative h-[112px] bg-surface-2">
+                        <button
+                          type="button"
+                          onClick={() => setKeep((k) => ({ ...k, [index]: item.id }))}
+                          className="relative block h-[112px] w-full cursor-pointer bg-surface-1 text-left"
+                          title={t("dupes.keep_this")}
+                        >
                           {rawPath ? (
                             <img
                               src={thumbSrc(rawPath)}
                               alt=""
                               loading="lazy"
                               draggable={false}
-                              className="h-full w-full select-none object-cover"
+                              className={cn(
+                                "h-full w-full select-none object-cover transition-opacity",
+                                !isKept && "opacity-[.92]",
+                              )}
                             />
                           ) : (
                             <div className="flex h-full w-full items-center justify-center font-mono text-[10px] text-ttertiary">
@@ -369,11 +424,11 @@ export default function DuplicatesPage() {
                             </div>
                           )}
                           {isKept && (
-                            <span className="absolute left-2 top-2 rounded-pill bg-accent px-2 py-0.5 font-mono text-[10px] text-black">
+                            <span className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-1 bg-gradient-to-t from-black/70 to-transparent pb-1.5 pt-4 font-mono text-[10px] uppercase tracking-[0.1em] text-white">
                               {t("dupes.keep")}
                             </span>
                           )}
-                        </div>
+                        </button>
 
                         <figcaption className="flex flex-col gap-1 p-2.5">
                           <span className="truncate text-[12px] text-tprimary" title={item.path}>
@@ -385,7 +440,7 @@ export default function DuplicatesPage() {
                           >
                             {shortDir(item.path)}
                           </span>
-                          <span className="font-mono text-[10px] text-ttertiary">
+                          <span className="font-mono text-[10px] tabular-nums text-ttertiary">
                             {new Date(item.mtime * 1000).toLocaleDateString()}
                             {formatResolution(item.width, item.height)
                               ? ` · ${formatResolution(item.width, item.height)}`
@@ -400,7 +455,7 @@ export default function DuplicatesPage() {
                                 "flex-1 rounded-pill px-2 py-1 text-[11px] transition-colors",
                                 isKept
                                   ? "bg-accent/15 text-accent"
-                                  : "bg-surface-3 text-tsecondary hover:text-tprimary",
+                                  : "bg-surface-2 text-tsecondary hover:text-tprimary",
                               )}
                             >
                               {t("dupes.keep_this")}
@@ -419,7 +474,7 @@ export default function DuplicatesPage() {
                     );
                   })}
                 </div>
-              </section>
+              </motion.section>
             );
           })}
         </div>

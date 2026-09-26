@@ -15,6 +15,8 @@ export interface SidebarItem {
   capacity?: { ratio: number; caption: string };
   active?: boolean;
   onSelect?: () => void;
+  /** render an editorial hairline above the row — separates groups */
+  divider?: boolean;
   /** optional trailing action (e.g. rescan a root) */
   action?: { label: string; icon: ReactNode; onClick: () => void };
 }
@@ -164,6 +166,7 @@ function SidebarRow({ item, wide }: { item: SidebarItem; wide: boolean }) {
 
   return (
     <div>
+      {item.divider && wide && <div className="mx-3 my-1.5 border-t border-hairline" />}
       {wide ? (
         row
       ) : (

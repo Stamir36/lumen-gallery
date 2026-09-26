@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { WindowTitleBar } from "@/components/WindowTitleBar";
 import { SidebarRail, type SidebarItem } from "@/components/ui/SidebarRail";
-import { LanguageDropdown, LanguageDropdownIcon } from "@/components/LanguageSwitcher";
+import { LanguageDropdownIcon } from "@/components/LanguageSwitcher";
 import { NavTooltip } from "@/components/ui/NavTooltip";
 import { IconButton } from "@/components/ui/IconButton";
 import { Onboarding } from "@/pages/Onboarding";
@@ -311,10 +311,12 @@ export default function App() {
     // A hub, not a view: tools live on their own screen so the sidebar stays
     // a pure library list (drives + smart views). One row instead of one row
     // per tool — new instruments land on the Tools page, not here.
+    // `divider` keeps it visually apart: library section ends above this line.
     {
       id: "tools",
       label: t("tools.title"),
       icon: <Wand2Icon />,
+      divider: true,
       onSelect: () => selectAndLeave(() => navigate("/tools")),
     } satisfies SidebarItem,
   ];
@@ -466,7 +468,9 @@ export default function App() {
             items={items}
             bottom={
               <div className="flex flex-col gap-0.5">
-                <LanguageDropdown />
+                {/* language lives in Settings (SettingRow "Language") — a
+                    second dropdown here was a duplicate control the sidebar
+                    did not need (user note: menu is overloaded) */}
                 <button
                   onClick={onboarding.open}
                   className="flex h-10 w-full items-center gap-3 rounded-control px-3 text-left text-sm text-tsecondary transition-all duration-[160ms] hover:bg-white/[.06] hover:text-tprimary"

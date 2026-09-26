@@ -94,9 +94,9 @@ export default function ToolsPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
         >
-          {/* editorial header: micro-label + display title + one-line hint */}
-          <span className="micro-label">{t("tools.title")}</span>
-          <h1 className="mt-3 text-4xl font-bold leading-tight tracking-tight text-tprimary">
+          {/* editorial header: display title + one-line hint (the sidebar row
+              is the micro-label surface for this section — no dup label here) */}
+          <h1 className="text-4xl font-bold leading-tight tracking-tight text-tprimary">
             {t("tools.heading")}
           </h1>
           <p className="mt-3 max-w-[62ch] text-[14px] leading-relaxed text-tsecondary">

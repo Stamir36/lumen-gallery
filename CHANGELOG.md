@@ -86,6 +86,13 @@ All notable changes to LUMEN are recorded here. The format follows
 
 ### Fixed
 
+- **The sidebar's tools row was labelled "Library"** — the `tools.title` string
+  carried the wrong text in both locales, so the wand row duplicated the app
+  section header instead of naming the hub. It now reads *Tools /
+  Инструменты*, and the tools page dropped its redundant micro-label (the
+  sidebar row is the section marker).
+- **The language switcher no longer appears twice** — it was a sidebar footer
+  dropdown *and* a Settings row; the sidebar copy is gone (Settings keeps it).
 - **The Store listing could not be submitted** — the installer behind the linked
   URL was a plain `pnpm tauri build` artifact, whose WebView2 "download
   bootstrapper" fetches the runtime while setup runs. Microsoft classifies that
@@ -120,6 +127,19 @@ All notable changes to LUMEN are recorded here. The format follows
   section was trimmed and Behavior extracted.
 - Masonry tiles glide to their new slots when the layout re-packs instead of
   snapping.
+- **Tools hub cards redesigned** per DESIGN.md: oversized thin accent numbers
+  ("01", "02"), live per-card library metadata (file count / indexed bytes)
+  in mono, arrow affordance on hover, and a dashed "coming soon" placeholder
+  for future tools.
+- **Duplicates page redesigned**: the reclaimable-bytes figure is now the page
+  headline (hero summary with group/file counters beside it), duplicate groups
+  are tonal elev-1 cards with a leading "N × size" stat, the kept copy is a
+  ring + bottom caption instead of a floating badge, thumbnails are clickable
+  to switch the keep choice, and the pending scan shows an indeterminate
+  accent bar until the first progress event arrives.
+- **The sidebar groups library from tools** — the tools row is separated by an
+  editorial hairline (`SidebarItem.divider`), so the menu reads as two
+  sections instead of one undifferentiated list.
 
 ## [0.2.0]
 

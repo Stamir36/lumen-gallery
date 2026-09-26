@@ -62,7 +62,7 @@
     "hint": "Esc exits · Space pauses · ← → move · S shuffles"
   },
   "tools": {
-    "title": "Library",
+    "title": "Tools",
     "heading": "Tools",
     "hint": "Instruments that work on the whole library rather than one file. New tools will appear here as they are added.",
     "open": "Open",
