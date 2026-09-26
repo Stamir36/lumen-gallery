@@ -479,7 +479,10 @@
     "dev_mode_on": "Developer mode unlocked",
     "nav_sidebar": "Sidebar",
     "nav_sidebar_hint": "Choose which views appear in the left menu. Drives and Tools always stay.",
-    "nav_show_all": "Show all"
+    "nav_show_all": "Show all",
+    "search_placeholder": "Search settings…",
+    "search_hint": "{{count}} sections match",
+    "search_clear": "Clear search"
   },
   "setup": {
     "title": "Welcome to LUMEN",
@@ -587,5 +590,20 @@
   "tray": {
     "open": "Open LUMEN",
     "exit": "Exit"
+  },
+  "play": {
+    "title": "Memory",
+    "desc": "A hidden round of memory played with your own photos. Flip two cards, keep the pairs.",
+    "meta": "{{count}} photos in the deck pool",
+    "pairs": "Pairs",
+    "moves": "{{count}} moves",
+    "restart": "Restart",
+    "card_open": "Face up card",
+    "card_closed": "Face down card",
+    "loading": "Dealing the deck…",
+    "need_photos": "This view has no photos to play with — open a library with images first.",
+    "won": "Cleared in {{count}} moves!",
+    "again": "Again",
+    "hint": "Hidden round: it deals from the library view you were just in. Change the grid to change the deck."
   }
 }

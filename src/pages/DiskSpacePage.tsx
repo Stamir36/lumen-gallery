@@ -156,6 +156,8 @@ export default function DiskSpacePage() {
         <span className="micro-label">{t("disk.title")}</span>
         <Segmented
           aria-label={t("disk.view")}
+          size="sm"
+          tone="quiet"
           className="ml-2"
           value={view}
           onChange={(v) => setView(v as typeof view)}

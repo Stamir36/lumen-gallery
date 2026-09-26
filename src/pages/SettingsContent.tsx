@@ -10,6 +10,7 @@ import {
   FolderOpen,
   Palette,
   RefreshCw,
+  Search,
   Trash2,
   Gauge,
   Cpu,
@@ -17,6 +18,7 @@ import {
   MousePointerClick,
   Info,
   Download,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -38,7 +40,13 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { AccentPicker } from "@/components/ui/AccentPicker";
 import { PillButton } from "@/components/ui/PillButton";
 import { IconButton } from "@/components/ui/IconButton";
-import { PillChoice, SettingRow, Toggle } from "@/components/settings/Primitives";
+import {
+  PillChoice,
+  SettingRow,
+  SettingsFilterProvider,
+  Toggle,
+  useRowMatches,
+} from "@/components/settings/Primitives";
 import { NAV_TOGGLE_IDS, type NavToggleId } from "@/lib/settings";
 import { LayoutDiagram } from "@/components/settings/LayoutDiagram";
 import { DiagramCard } from "@/components/settings/DiagramCard";
@@ -185,6 +193,28 @@ export function SettingsContent() {
   const setBackgroundMode = useAppSettings((s) => s.setBackgroundMode);
   const hiddenNav = useAppSettings((s) => s.hiddenNav);
   const setNavHidden = useAppSettings((s) => s.setNavHidden);
+  /** Settings search — filters rows through SettingsFilterProvider. */
+  const [query, setQuery] = useState("");
+  const [visibleSections, setVisibleSections] = useState(0);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  // A section whose rows all filtered themselves out would otherwise leave its
+  // number + title standing over an empty card, so the page walks its own
+  // sections after each keystroke and hides the ones with nothing left. The
+  // walk is over marked rows only ([data-settings-row]); cards that never had
+  // rows (the library list, the About identity block) hide with their section.
+  useEffect(() => {
+    const root = contentRef.current;
+    if (!root) return;
+    const q = query.trim();
+    let shown = 0;
+    root.querySelectorAll<HTMLElement>("section[id]").forEach((sec) => {
+      const hasRows = !q || sec.querySelector("[data-settings-row]") !== null;
+      sec.style.display = hasRows ? "" : "none";
+      if (hasRows) shown += 1;
+    });
+    setVisibleSections(shown);
+  }, [query]);
 
   useEffect(() => {
     void readSetting(CURSOR_KEY).then((v) => setCursorPointer(v === "true"));
@@ -310,7 +340,8 @@ export function SettingsContent() {
   }, []);
 
   return (
-    <div className="flex items-start gap-10">
+    <SettingsFilterProvider query={query}>
+      <div className="flex items-start gap-10">
       {/* sticky section nav — never scrolls out of view */}
       <nav className="sticky top-0 hidden w-[240px] shrink-0 flex-col gap-1 self-start md:flex">
         {navItems.map((n) => (
@@ -341,7 +372,42 @@ export function SettingsContent() {
       </nav>
 
       {/* content cards fill the full column width */}
-      <div className="min-w-0 flex-1 space-y-12">
+      <div ref={contentRef} className="min-w-0 flex-1 space-y-12">
+        {/* search: the page grows every release, so finding a row must not mean
+            scrolling the whole thing. Sticky, so it stays reachable while the
+            filtered list is short. */}
+        <div className="sticky -top-px z-20 -mt-2 bg-canvas/85 pb-2 pt-2 backdrop-blur-[6px]">
+          <div className="relative">
+            <Search
+              size={16}
+              className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ttertiary"
+            />
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={t("settings.search_placeholder")}
+              aria-label={t("settings.search_placeholder")}
+              className="h-11 w-full rounded-pill bg-surface-2 pl-10 pr-10 text-sm text-tprimary outline-none placeholder:text-ttertiary focus-visible:ring-2 focus-visible:ring-accent/40"
+            />
+            {query && (
+              <button
+                type="button"
+                aria-label={t("settings.search_clear")}
+                onClick={() => setQuery("")}
+                className="absolute right-2.5 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-pill text-ttertiary transition-colors hover:bg-white/[.08] hover:text-tprimary"
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
+          {query.trim() && (
+            <p className="mt-2 font-mono text-[11px] text-ttertiary">
+              {t("settings.search_hint", { count: visibleSections })}
+            </p>
+          )}
+        </div>
+
         {/* 01 Libraries */}
         <Section index="01" id="libraries" title={t("settings.nav_libraries")}>
           <GlassCard>
@@ -827,7 +893,8 @@ export function SettingsContent() {
           </p>
         )}
       </div>
-    </div>
+      </div>
+    </SettingsFilterProvider>
   );
 }
 
@@ -863,6 +930,12 @@ type UpdateState =
 function UpdateRow() {
   const { t } = useTranslation();
   const [state, setState] = useState<UpdateState>({ kind: "idle" });
+  // searchable like every other row (the page filter counts marked rows)
+  const visible = useRowMatches(
+    t("settings.about_update"),
+    t("settings.update_check"),
+    "github release version update",
+  );
 
   async function check() {
     setState({ kind: "checking" });
@@ -876,10 +949,17 @@ function UpdateRow() {
     else setState({ kind: "latest" });
   }
 
+  if (!visible) return null;
   return (
-    <div className="flex items-center justify-between gap-3 py-3">
-      <span className="text-[13px] text-tsecondary">{t("settings.about_update")}</span>
-      <div className="flex items-center gap-2">
+    // the same rhythm as every other Row (min 64px, py-4) — the button cluster
+    // used to sit on a 12px padding, which read as cramped next to the
+    // hairlines above and below it (user note)
+    <div
+      data-settings-row=""
+      className="flex min-h-[64px] flex-wrap items-center justify-between gap-x-6 gap-y-3 border-b border-hairline py-4"
+    >
+      <span className="text-sm text-tprimary">{t("settings.about_update")}</span>
+      <div className="flex flex-wrap items-center justify-end gap-2">
         {state.kind === "available" && (
           <span className="font-mono text-[11px] text-ttertiary">
             {t("settings.update_available", { version: state.version })}
@@ -932,8 +1012,13 @@ function UpdateRow() {
  * editorial hairline — the only border DESIGN v2.4 allows.
  */
 function AboutRow({ label, children }: { label: string; children: React.ReactNode }) {
+  const visible = useRowMatches(label);
+  if (!visible) return null;
   return (
-    <div className="flex items-center justify-between gap-6 border-b border-hairline py-4 last:border-b-0">
+    <div
+      data-settings-row=""
+      className="flex min-h-[56px] items-center justify-between gap-6 border-b border-hairline py-4 last:border-b-0"
+    >
       <span className="shrink-0 text-sm text-tprimary">{label}</span>
       <span className="min-w-0 text-right text-[13px] text-tsecondary">{children}</span>
     </div>

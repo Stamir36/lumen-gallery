@@ -1,7 +1,9 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
-import { ArrowLeft, ArrowRight, Copy, HardDrive } from "lucide-react";
+import { ArrowLeft, ArrowRight, Copy, HardDrive, Sparkles } from "lucide-react";
+import { readSetting } from "@/i18n";
 import { WindowTitleBar } from "@/components/WindowTitleBar";
 import { IconButton } from "@/components/ui/IconButton";
 import { formatBytes, formatCount } from "@/lib/api";
@@ -23,6 +25,7 @@ import { useAppSettings } from "@/lib/settings";
 interface SummaryShape {
   total: number;
   bytes: number;
+  images: number;
 }
 
 interface ToolCard {
@@ -34,6 +37,21 @@ interface ToolCard {
   descKey: string;
   meta: (t: (key: string, opts?: Record<string, unknown>) => string, s: SummaryShape | undefined) => string;
 }
+
+/**
+ * The easter egg: revealed only after the About logo has been clicked 5×
+ * (the same gesture that unlocks dev mode). It is a game, not a tool — hence
+ * the separate list and the separate section on the page.
+ */
+const SECRET: ToolCard = {
+  id: "memory",
+  route: "/play",
+  index: "03",
+  icon: <Sparkles size={20} strokeWidth={1.7} />,
+  titleKey: "play.title",
+  descKey: "play.desc",
+  meta: (t, s) => t("play.meta", { count: formatCount(s?.images ?? 0) }),
+};
 
 const TOOLS: ToolCard[] = [
   {
@@ -67,6 +85,12 @@ export default function ToolsPage() {
   const navigate = useNavigate();
   const summary = useLibrarySummary(true);
   const uiMotion = useAppSettings((s) => s.uiMotion);
+  // the secret card appears only after the 5-logo-click gesture in About
+  const [secretUnlocked, setSecretUnlocked] = useState(false);
+  useEffect(() => {
+    void readSetting("ui.dev_unlocked").then((v) => setSecretUnlocked(v === "true"));
+  }, []);
+  const cards = secretUnlocked ? [...TOOLS, SECRET] : TOOLS;
 
   return (
     <div className="flex h-full flex-col">
@@ -104,7 +128,7 @@ export default function ToolsPage() {
           </p>
 
           <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {TOOLS.map((tool, i) => (
+            {cards.map((tool, i) => (
               <motion.button
                 key={tool.id}
                 type="button"

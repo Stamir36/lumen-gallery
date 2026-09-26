@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { CheckCircle2, CircleAlert, ExternalLink, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { PillButton } from "@/components/ui/PillButton";
+import { useRowMatches } from "@/components/settings/Primitives";
 import { tauriAvailable } from "@/lib/assets";
 
 /**
@@ -27,6 +28,12 @@ type Dialog = "register" | "unregister" | null;
 
 export function FileAssociations() {
   const { t } = useTranslation();
+  // searchable: the row is one of the harder things to find on this page
+  const visible = useRowMatches(
+    t("settings.associations"),
+    t("settings.assoc_hint"),
+    "default app open with associations",
+  );
   const [status, setStatus] = useState<AssocStatus | null>(null);
   const [busy, setBusy] = useState(false);
   const [dialog, setDialog] = useState<Dialog>(null);
@@ -73,10 +80,15 @@ export function FileAssociations() {
       .finally(() => setBusy(false));
   };
 
+  if (!visible) return null;
+
   return (
     <>
-      <div className="border-t border-hairline py-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+      <div
+        data-settings-row=""
+        className="flex min-h-[64px] flex-wrap items-center justify-between gap-x-6 gap-y-3 border-t border-hairline py-4"
+      >
+        <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
           <span className="flex flex-col gap-0.5">
             <span className="flex items-center gap-2 text-sm text-tprimary">
               <ShieldCheck size={16} className="text-tsecondary" />
@@ -86,7 +98,7 @@ export function FileAssociations() {
               {t("settings.assoc_hint")}
             </span>
           </span>
-          <span className="flex items-center gap-3">
+          <span className="flex shrink-0 items-center gap-3">
             <span
               className={
                 "flex items-center gap-1.5 font-mono text-[12px] " +

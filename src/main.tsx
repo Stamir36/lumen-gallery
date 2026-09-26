@@ -9,6 +9,7 @@ import OnboardingPage from "./pages/OnboardingRoute";
 import { SetupWizard } from "./pages/SetupWizard";
 import SettingsPage from "./pages/SettingsPage";
 import SlideshowPage from "./pages/SlideshowPage";
+import PlayPage from "./pages/PlayPage";
 import DuplicatesPage from "./pages/DuplicatesPage";
 import ToolsPage from "./pages/ToolsPage";
 import DiskSpacePage from "./pages/DiskSpacePage";
@@ -124,6 +125,8 @@ async function bootstrap() {
             <Route path="/settings" element={<SettingsPage />} />
             {/* hands-off playback of the current view (photos only) */}
             <Route path="/slideshow" element={<SlideshowPage />} />
+            {/* easter egg: the photo memory game (Tools card, dev-unlocked) */}
+            <Route path="/play" element={<PlayPage />} />
             {/* read-only duplicate finder, with the recycle-bin cleanup */}
             <Route path="/duplicates" element={<DuplicatesPage />} />
             {/* instruments hub: every tool gets a card here */}

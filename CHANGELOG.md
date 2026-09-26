@@ -8,6 +8,14 @@ All notable changes to LUMEN are recorded here. The format follows
 
 ### Added
 
+- **Settings search** — one field filters the whole page: every row matches on
+  its own label and hint, sections with nothing left hide themselves, and the
+  sticky field keeps working while the filtered list is short. This was the
+  first thing needed as the page kept growing.
+- **Hidden photo-memory game** («Память») — an easter egg behind the About-logo
+  gesture (5 clicks): a card board dealt from the library view you were just
+  in, CSS-3D flips, pairs / moves counter and a win state. It is a game, so it
+  lives on its own screen and its Tools card only renders once unlocked.
 - **Android build preparation** — the Rust dependencies are split per platform
   (tray icon, HKCU associations, the OS recycle bin and single-instance are
   desktop-only and leave the mobile dependency graph entirely), the desktop-only
@@ -151,6 +159,13 @@ All notable changes to LUMEN are recorded here. The format follows
 
 ### Changed
 
+- **Tool page headers are quiet now** — `Segmented` gained `size="sm"` (32px) and
+  `tone="quiet"` (active segment is tonal, not a solid accent pill), the
+  duplicates header keeps one small size group plus a compact sort menu instead
+  of two chunky pill groups, and the disk view switch shrank to match.
+- **Rows that carry buttons breathe** — the update check and the file
+  associations rows now follow the same 64px / py-4 rhythm as every other
+  settings row instead of a cramped one-off padding.
 - **Disk space tool restyled** to match the duplicates finder: the total is the
   page headline in the hero slot, every list lives in a tonal elev-1 card, bars
   share one accent gradient, a row armed for deletion wears a ring instead of

@@ -5,11 +5,15 @@ import { listen } from "@tauri-apps/api/event";
 import { useQuery } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
 import { motion } from "framer-motion";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import {
+  ArrowDownWideNarrow,
   ArrowLeft,
+  Check,
   Copy,
   FolderSearch,
   HardDrive,
+  Layers,
   RefreshCw,
   Sparkles,
   Trash2,
@@ -87,6 +91,66 @@ interface ScanProgress {
   stage: "head" | "full";
   done: number;
   total: number;
+}
+
+/**
+ * Sort picker: one quiet icon button that opens a small menu.
+ *
+ * Two chunky segmented groups sat in this header before, and together they
+ * outweighed everything else on the screen (user note: "слишком большие и
+ * бросаются в глаза"). A menu says the same thing with one 40px control, and
+ * the label tells you which order is active without opening it.
+ */
+function SortPicker({
+  value,
+  onChange,
+}: {
+  value: SortMode;
+  onChange: (v: SortMode) => void;
+}) {
+  const { t } = useTranslation();
+  const options: { value: SortMode; labelKey: string; icon: React.ReactNode }[] = [
+    { value: "saved", labelKey: "dupes.sort_saved", icon: <ArrowDownWideNarrow size={15} /> },
+    { value: "copies", labelKey: "dupes.sort_copies", icon: <Layers size={15} /> },
+  ];
+  const active = options.find((o) => o.value === value) ?? options[0];
+
+  return (
+    <DropdownMenu.Root>
+      <DropdownMenu.Trigger asChild>
+        <button
+          type="button"
+          aria-label={`${t("dupes.sort")}: ${t(active.labelKey)}`}
+          title={`${t("dupes.sort")}: ${t(active.labelKey)}`}
+          className="flex h-8 items-center gap-2 rounded-pill bg-white/[.04] px-3 text-[12px] text-tsecondary transition-colors duration-[160ms] hover:bg-white/[.08] hover:text-tprimary"
+        >
+          {active.icon}
+          <span className="whitespace-nowrap">{t(active.labelKey)}</span>
+        </button>
+      </DropdownMenu.Trigger>
+      <DropdownMenu.Portal>
+        <DropdownMenu.Content
+          align="end"
+          sideOffset={8}
+          className="z-50 min-w-[200px] rounded-[18px] border border-hairline bg-surface-2 p-1.5 shadow-popover"
+        >
+          <DropdownMenu.Label className="px-3 py-2 font-mono text-[10px] uppercase tracking-[0.12em] text-ttertiary">
+            {t("dupes.sort")}
+          </DropdownMenu.Label>
+          {options.map((o) => (
+            <DropdownMenu.Item
+              key={o.value}
+              onSelect={() => onChange(o.value)}
+              className="flex h-10 cursor-default items-center gap-3 rounded-[12px] px-3 text-sm text-tsecondary outline-none transition-colors data-[highlighted]:bg-white/[.07] data-[highlighted]:text-tprimary"
+            >
+              <Check size={15} className={cn(value === o.value ? "opacity-100" : "opacity-0")} />
+              {t(o.labelKey)}
+            </DropdownMenu.Item>
+          ))}
+        </DropdownMenu.Content>
+      </DropdownMenu.Portal>
+    </DropdownMenu.Root>
+  );
 }
 
 function shortDir(path: string) {
@@ -259,6 +323,8 @@ export default function DuplicatesPage() {
         <span className="micro-label">{t("dupes.title")}</span>
         <Segmented
           aria-label={t("dupes.threshold")}
+          size="sm"
+          tone="quiet"
           className="ml-2"
           value={threshold}
           onChange={(v) => {
@@ -273,17 +339,10 @@ export default function DuplicatesPage() {
             { value: "10mb", label: "10 MB+" },
           ]}
         />
-        {/* sort order: the default is "biggest win", the other hunts repeats */}
-        <Segmented
-          aria-label={t("dupes.sort")}
-          value={sort}
-          onChange={(v) => setSort(v as SortMode)}
-          options={[
-            { value: "saved", label: t("dupes.sort_saved") },
-            { value: "copies", label: t("dupes.sort_copies") },
-          ]}
-        />
         <div className="ml-auto flex items-center gap-2">
+          {/* sort order as a small menu, not a second pill group: two chunky
+              segmented controls in one header read as a wall of buttons */}
+          <SortPicker value={sort} onChange={setSort} />
           <IconButton
             label={t("dupes.rescan")}
             onClick={() => void report.refetch()}
