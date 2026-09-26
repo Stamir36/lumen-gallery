@@ -165,7 +165,9 @@ function SidebarRow({ item, wide }: { item: SidebarItem; wide: boolean }) {
   );
 
   return (
-    <div>
+    // group/row on the wrapper: hovering the row OR the bar lights both —
+    // capacity belongs to the drive row, they read as one control (user note)
+    <div className="group/row">
       {item.divider && wide && <div className="mx-3 my-1.5 border-t border-hairline" />}
       {wide ? (
         row
@@ -176,13 +178,25 @@ function SidebarRow({ item, wide }: { item: SidebarItem; wide: boolean }) {
       )}
       {wide && item.capacity && (
         <div className="mb-1 mt-1.5 px-3">
-          <div className="h-1.5 w-full overflow-hidden rounded-pill bg-surface-2">
+          <div
+            className={cn(
+              // hover on the ROW lights the bar too: capacity belongs to the
+              // drive row, they read as one control (user note)
+              "h-1.5 w-full overflow-hidden rounded-pill bg-surface-2 transition-colors duration-[160ms]",
+              "group-hover/row:bg-surface-3",
+            )}
+          >
             <div
-              className="h-full rounded-pill bg-gradient-to-r from-accent/60 to-accent"
+              className="h-full rounded-pill bg-gradient-to-r from-accent/60 to-accent transition-shadow duration-[160ms] group-hover/row:shadow-[0_0_8px_var(--accent-soft)]"
               style={{ width: `${Math.round(item.capacity.ratio * 100)}%` }}
             />
           </div>
-          <div className="mt-1.5 font-mono text-[10px] text-ttertiary">
+          <div
+            className={cn(
+              "mt-1.5 font-mono text-[10px] transition-colors duration-[160ms]",
+              item.active ? "text-accent" : "text-ttertiary group-hover/row:text-tsecondary",
+            )}
+          >
             {item.capacity.caption}
           </div>
         </div>

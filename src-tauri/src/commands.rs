@@ -300,6 +300,97 @@ pub fn open_url(url: String) -> Result<(), String> {
   }
 }
 
+/// Latest release tag of the given GitHub repo, resolved WITHOUT the API.
+///
+/// Why not `api.github.com`: it is rate-limited per IP (60/h unauthenticated),
+/// and a shared exit IP (VPN/CGNAT) burns the quota for everyone — the user
+/// sees "check failed" with a full quota left. Instead a HEAD request to
+/// `releases/latest` is followed to its final URL, which always ends in
+/// `/releases/tag/<tag>` — no rate limit applies. Done in Rust because
+/// `github.com` sends no CORS headers, so the webview cannot do this itself.
+#[tauri::command]
+pub async fn latest_release_tag(repo: Option<String>) -> Result<String, String> {
+    let repo = repo.unwrap_or_else(|| "Stamir36/lumen-gallery".into());
+    if !repo.chars().all(|c| c.is_alphanumeric() || c == '/' || c == '-' || c == '_' || c == '.') {
+        return Err("invalid repo".into());
+    }
+    let url = format!("https://github.com/{repo}/releases/latest");
+    let final_url = http_follow(&url).await?;
+    let tag = final_url.rsplit('/').next().unwrap_or("");
+    if tag.is_empty() || tag == "latest" {
+        return Err(format!("no tag in final url: {final_url}"));
+    }
+    Ok(tag.to_string())
+}
+
+/// HEAD `url`, follow up to 5 redirects, return the final URL. A 302 body is
+/// irrelevant; only the Location chain matters. Errors collapse to a string.
+async fn http_follow(url: &str) -> Result<String, String> {
+    let url = url.to_string();
+    // one request with a hard cap; blocking is fine inside spawn_blocking
+    tauri::async_runtime::spawn_blocking(move || {
+        let mut current = url.to_string();
+        for _ in 0..5 {
+            let resp = http_head(&current)?;
+            if let Some(loc) = resp {
+                // Location may be relative — resolve against the current URL
+                current = resolve_url(&current, &loc);
+                continue;
+            }
+            return Ok(current);
+        }
+        Ok(current)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+/// One HEAD request. The transport is `curl` — present on every Windows 10+
+/// (System32\curl.exe) and everywhere the dev toolchain runs; std has no TLS
+/// and reqwest is only a transitive dependency. Returns None when the response
+/// is final (no Location header).
+#[cfg(windows)]
+fn http_head(url: &str) -> Result<Option<String>, String> {
+    use std::os::windows::process::CommandExt;
+    let out = std::process::Command::new("curl")
+        .args([
+            "-sI",
+            "-o",
+            "NUL",
+            "-w",
+            "%{http_code} %{redirect_url}",
+            "--max-time",
+            "8",
+            url,
+        ])
+        .creation_flags(0x0800_0000) // CREATE_NO_WINDOW
+        .output()
+        .map_err(|e| e.to_string())?;
+    let text = String::from_utf8_lossy(&out.stdout);
+    let mut parts = text.splitn(2, ' ');
+    let code = parts.next().unwrap_or("");
+    let redirect = parts.next().unwrap_or("").trim().to_string();
+    if code.starts_with('3') && !redirect.is_empty() {
+        Ok(Some(redirect))
+    } else if code.starts_with('2') {
+        Ok(None)
+    } else {
+        Err(format!("http {code}"))
+    }
+}
+
+/// Resolve a possibly-relative Location against the request URL (https only).
+fn resolve_url(base: &str, loc: &str) -> String {
+    if loc.starts_with("https://") || loc.starts_with("http://") {
+        loc.to_string()
+    } else if let Some(rest) = base.strip_prefix("https://") {
+        let (host, _) = rest.split_once('/').unwrap_or((rest, ""));
+        format!("https://{host}{loc}")
+    } else {
+        loc.to_string()
+    }
+}
+
 #[tauri::command]
 pub async fn open_external(app: AppHandle, path: String) -> Result<(), String> {
     let pool = pool_for(&app).await?;

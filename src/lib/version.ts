@@ -1,6 +1,9 @@
 /** App version — kept in sync with tauri.conf.json / Cargo.toml (0.2.0). */
 export const APP_VERSION = "0.2.0";
 
+import { invoke } from "@tauri-apps/api/core";
+import { tauriAvailable } from "@/lib/assets";
+
 /** The one place releases are published. */
 export const RELEASES_URL = "https://github.com/Stamir36/lumen-gallery/releases";
 
@@ -31,22 +34,18 @@ export function compareWithLatest(
 /**
  * Latest published release tag, or null when GitHub is unreachable.
  *
- * The releases API sends `Access-Control-Allow-Origin: *`, so a webview fetch
- * works — but it is rate-limited per IP (60/h unauthenticated), which a shared
- * network can burn without us. That case degrades gracefully in the UI (the
- * failed state offers the releases page itself); no HTML-URL fallback exists
- * because github.com does not send CORS headers, so the webview cannot read it.
+ * Goes through the Rust `latest_release_tag` command: a HEAD to
+ * `releases/latest` follows its redirect, and the tag is read from the final
+ * URL. The REST API was dropped on purpose — it is rate-limited per IP, and a
+ * shared exit IP (VPN/CGNAT) burns the quota for everyone; the redirect URL
+ * has no limit. Outside Tauri (plain browser) there is no IPC, so null.
  */
 export async function fetchLatestTag(
   repo = "Stamir36/lumen-gallery",
 ): Promise<string | null> {
+  if (!tauriAvailable()) return null;
   try {
-    const res = await fetch(`https://api.github.com/repos/${repo}/releases/latest`, {
-      headers: { Accept: "application/vnd.github+json" },
-    });
-    if (!res.ok) return null;
-    const data = (await res.json()) as { tag_name?: string };
-    return data.tag_name ?? null;
+    return await invoke<string>("latest_release_tag", { repo });
   } catch {
     return null;
   }

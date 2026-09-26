@@ -226,7 +226,7 @@ export default function DuplicatesPage() {
         {/* hero summary: the reclaimable number IS the page headline; the two
             counters sit beside it in mono metadata, no micro-label spam */}
         {groups.length > 0 && (
-          <div className="px-6 pb-6 pt-7">
+          <div className="px-6 pb-2 pt-7">
             <div className="flex flex-wrap items-end gap-x-10 gap-y-4">
               <div>
                 <div className="micro-label mb-1.5">{t("dupes.reclaimable")}</div>
@@ -257,41 +257,44 @@ export default function DuplicatesPage() {
                 </div>
               )}
             </div>
+          </div>
+        )}
 
-            {/* live scan progress: the bar is exact (Rust knows both totals) and
-                shows which of the two passes is running; the pending state below
-                still covers the SQL phase before the first event arrives */}
-            {scanning && (
-              <div className="mt-5">
-                <div className="mb-1.5 flex items-baseline justify-between gap-4">
-                  <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-tsecondary">
-                    {progress
-                      ? progress.stage === "head"
-                        ? t("dupes.stage_head")
-                        : t("dupes.stage_full")
-                      : t("dupes.running")}
-                  </span>
-                  {progress && (
-                    <span className="font-mono text-[11px] tabular-nums text-ttertiary">
-                      {formatCount(progress.done)} / {formatCount(progress.total)}
-                    </span>
-                  )}
-                </div>
-                <div className="h-[4px] w-full overflow-hidden rounded-pill bg-surface-2">
-                  <div
-                    className={cn(
-                      "h-full rounded-pill transition-[width] duration-150 ease-out",
-                      progress ? "bg-accent" : "animate-pulse bg-accent/50",
-                    )}
-                    style={{
-                      width: progress
-                        ? `${Math.max(1.5, (progress.done / progress.total) * 100)}%`
-                        : "100%",
-                    }}
-                  />
-                </div>
-              </div>
-            )}
+        {/* live scan progress: OUTSIDE the summary block so it is visible on
+            the very first scan, before any group exists to render; the bar is
+            exact (Rust knows both totals) and names the pass in flight, while
+            the indeterminate pulse covers the SQL phase before the first event */}
+        {scanning && (
+          <div className={cn("px-6", groups.length > 0 ? "pb-5" : "pb-2 pt-7")}>
+            <div className="mb-1.5 flex items-baseline justify-between gap-4">
+              <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-tsecondary">
+                {progress
+                  ? progress.stage === "head"
+                    ? t("dupes.stage_head")
+                    : t("dupes.stage_full")
+                  : t("dupes.running")}
+              </span>
+              {progress ? (
+                <span className="font-mono text-[11px] tabular-nums text-ttertiary">
+                  {formatCount(progress.done)} / {formatCount(progress.total)}
+                </span>
+              ) : (
+                <span className="font-mono text-[11px] text-ttertiary">{t("dupes.running_hint")}</span>
+              )}
+            </div>
+            <div className="h-[5px] w-full overflow-hidden rounded-pill bg-surface-2">
+              <div
+                className={cn(
+                  "h-full rounded-pill transition-[width] duration-150 ease-out",
+                  progress ? "bg-gradient-to-r from-accent/60 to-accent" : "animate-pulse bg-accent/50",
+                )}
+                style={{
+                  width: progress
+                    ? `${Math.max(1.5, (progress.done / progress.total) * 100)}%`
+                    : "100%",
+                }}
+              />
+            </div>
           </div>
         )}
 

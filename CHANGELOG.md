@@ -86,6 +86,16 @@ All notable changes to LUMEN are recorded here. The format follows
 
 ### Fixed
 
+- **The update check failed with a full quota left** — it called the GitHub
+  REST API, which is rate-limited per IP, and a shared exit IP (VPN/CGNAT)
+  burns the 60/h allowance for everyone behind it. The check now runs through
+  a Rust command that HEADs `releases/latest` and reads the tag from the
+  redirect's final URL — no API, no rate limit, no CORS.
+- **The duplicate-scan progress bar was invisible on the first scan** — it
+  rendered inside the summary block that only exists after groups arrive; the
+  bar now lives above the results and is visible from the first moment.
+- **The sidebar drive capacity bar ignored hover** — the track, fill and
+  caption now light up together with the drive row (one `group/row`).
 - **The sidebar's tools row was labelled "Library"** — the `tools.title` string
   carried the wrong text in both locales, so the wand row duplicated the app
   section header instead of naming the hub. It now reads *Tools /

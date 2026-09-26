@@ -154,6 +154,7 @@ pub fn run() {
       commands::save_snapshot,
       commands::open_external,
       commands::open_url,
+      commands::latest_release_tag,
       commands::open_file,
       commands::open_mini_player,
       commands::mini_return,
