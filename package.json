@@ -1,7 +1,7 @@
 {
   "name": "lumen",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Local-first photo & video gallery for Windows — Tauri v2 + React + Rust",
   "license": "GPL-3.0-or-later",
   "author": "Stanislav Miroshnichenko (Unesell Studio)",
@@ -39,7 +39,11 @@
     "e2e:update": "playwright test --update-snapshots",
     "site": "python -m http.server 4173 --directory site",
     "build:msix": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-msix.ps1",
-    "build:store": "tauri build --no-bundle && tauri bundle --config src-tauri/tauri.microsoftstore.conf.json"
+    "build:store": "tauri build --no-bundle && tauri bundle --config src-tauri/tauri.microsoftstore.conf.json",
+    "android:init": "tauri android init",
+    "android:dev": "tauri android dev",
+    "android:build": "tauri android build --apk",
+    "android:build:debug": "tauri android build --apk --debug"
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.1.0",

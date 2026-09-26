@@ -30,6 +30,37 @@ export const CARD_HOVER_KEY = "card_hover";
 export const TEXT_SELECTION_KEY = "ui_text_selection";
 
 /**
+ * NAVIGATION VISIBILITY (Settings › Behavior) — comma-separated ids of the
+ * sidebar rows the user hid. Stored as the HIDDEN set, not the visible one, so
+ * every row added in a future release shows up for existing users by default.
+ * The drives and "Tools" are not hideable (one is the library itself, the
+ * other is the only way to the tool screens).
+ */
+export const NAV_HIDDEN_KEY = "ui_nav_hidden";
+
+/** The rows a user may hide, in sidebar order — mirrors App.tsx's list. */
+export const NAV_TOGGLE_IDS = [
+  "folders",
+  "all",
+  "images",
+  "videos",
+  "favorites",
+  "recents",
+  "trash",
+] as const;
+export type NavToggleId = (typeof NAV_TOGGLE_IDS)[number];
+
+/** An unknown id in the stored value is dropped, never trusted. */
+export function readHiddenNav(raw: string | undefined): NavToggleId[] {
+  if (!raw) return [];
+  const known = new Set<string>(NAV_TOGGLE_IDS);
+  return raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s): s is NavToggleId => known.has(s));
+}
+
+/**
  * BACKGROUND (tray) MODE — OPT-IN, default OFF.
  *
  * OFF = the native contract: closing the window ends the process and hands the
@@ -181,6 +212,8 @@ interface AppSettingsState {
   uiMotion: boolean;
   /** corner language: sharp | default | round */
   uiRadius: UiRadius;
+  /** sidebar rows the user chose to hide (Settings › Behavior) */
+  hiddenNav: NavToggleId[];
   loaded: boolean;
   load: () => Promise<void>;
   setVideoScrubRate: (rate: number) => Promise<void>;
@@ -203,6 +236,7 @@ interface AppSettingsState {
   setBackgroundMode: (on: boolean) => Promise<void>;
   setUiMotion: (on: boolean) => Promise<void>;
   setUiRadius: (preset: UiRadius) => Promise<void>;
+  setNavHidden: (id: NavToggleId, hidden: boolean) => Promise<void>;
 }
 
 export const useAppSettings = create<AppSettingsState>((set) => ({
@@ -229,13 +263,14 @@ export const useAppSettings = create<AppSettingsState>((set) => ({
   backgroundMode: false,
   uiMotion: true,
   uiRadius: DEFAULT_RADIUS,
+  hiddenNav: [],
   loaded: false,
 
   load: async () => {
     try {
       const db = await getDb();
       const rows = await db.select<{ key: string; value: string }[]>(
-        "SELECT key, value FROM settings WHERE key IN ('video_scrub_rate', 'hover_captions', 'video_autoplay', 'viewer_swipe', 'viewer_pill_align', 'perf_show_fps', 'show_excluded', 'thumb_workers', 'accent', 'grid_density', 'video_saturation', 'video_sharpness', 'collage_fit', 'direct_playback', 'appearance.main_layout', 'card_hover', 'ui_text_selection', 'app.background_mode', 'ui_motion', 'ui_radius')",
+        "SELECT key, value FROM settings WHERE key IN ('video_scrub_rate', 'hover_captions', 'video_autoplay', 'viewer_swipe', 'viewer_pill_align', 'perf_show_fps', 'show_excluded', 'thumb_workers', 'accent', 'grid_density', 'video_saturation', 'video_sharpness', 'collage_fit', 'direct_playback', 'appearance.main_layout', 'card_hover', 'ui_text_selection', 'app.background_mode', 'ui_motion', 'ui_radius', 'ui_nav_hidden')",
       );
       const byKey = new Map(rows.map((r) => [r.key, r.value]));
       const raw = Number(byKey.get(SCRUB_RATE_KEY));
@@ -266,6 +301,7 @@ export const useAppSettings = create<AppSettingsState>((set) => ({
         backgroundMode: byKey.get(BACKGROUND_MODE_KEY) === "true",
         uiMotion: byKey.get(UI_MOTION_KEY) !== "false",
         uiRadius: readRadius(byKey.get(RADIUS_KEY)),
+        hiddenNav: readHiddenNav(byKey.get(NAV_HIDDEN_KEY)),
         loaded: true,
       });
       // the stored accent wins over the pre-paint cache
@@ -495,6 +531,22 @@ export const useAppSettings = create<AppSettingsState>((set) => ({
       await writeSetting(RADIUS_KEY, uiRadius);
     } catch (e) {
       console.error("ui radius save failed", e);
+      toast.error(i18n.t("errors.action_failed"));
+    }
+  },
+
+  setNavHidden: async (id, hidden) => {
+    const current = useAppSettings.getState().hiddenNav;
+    // keep NAV_TOGGLE_IDS order so the stored string is stable across toggles
+    const set_ = new Set(current);
+    if (hidden) set_.add(id);
+    else set_.delete(id);
+    const next = NAV_TOGGLE_IDS.filter((x) => set_.has(x));
+    set({ hiddenNav: next });
+    try {
+      await writeSetting(NAV_HIDDEN_KEY, next.join(","));
+    } catch (e) {
+      console.error("nav visibility save failed", e);
       toast.error(i18n.t("errors.action_failed"));
     }
   },

@@ -99,6 +99,8 @@ export default function App() {
   // P4: classic (sidebar + library bar) or rail (header + 64px icon rail)
   const mainLayout = useAppSettings((s) => s.mainLayout);
   const uiMotion = useAppSettings((s) => s.uiMotion);
+  // Settings › Behavior: rows the user hid (empty = everything visible)
+  const hiddenNav = useAppSettings((s) => s.hiddenNav);
   const rail = mainLayout === "rail";
   /** explorer = file manager: folder tree + only the open folder's contents */
   const explorer = browse === "explorer";
@@ -274,7 +276,7 @@ export default function App() {
     })),
     // discoverable entry into the folder shelf of the active root (FIX 5):
     // clicking a drive still opens it, this makes the mode obvious
-    ...(roots.length > 0
+    ...(roots.length > 0 && !hiddenNav.includes("folders")
       ? [
           {
             id: "folders",
@@ -288,7 +290,9 @@ export default function App() {
           } satisfies SidebarItem,
         ]
       : []),
-    ...SMART_ITEMS.map((s) => {
+    // hidden smart views are filtered HERE, not in SMART_ITEMS: the list stays
+    // the single source of order, and the Settings toggles walk it.
+    ...SMART_ITEMS.filter((s) => !hiddenNav.includes(s.id as (typeof hiddenNav)[number])).map((s) => {
       const badge =
         s.id === "all"
           ? summary.data?.total

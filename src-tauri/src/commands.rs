@@ -250,7 +250,19 @@ pub async fn reveal_path(path: String) -> Result<(), String> {
 /// failures are collected — rows without a successful file delete are KEPT,
 /// so the library never loses track of a file that still exists.
 #[tauri::command]
-pub async fn trash_delete(paths: Vec<String>) -> Result<usize, String> {
+pub async fn trash_delete(app: tauri::AppHandle, paths: Vec<String>) -> Result<usize, String> {
+    // Desktop: hand each file to the OS recycle bin. Mobile has no recycle bin
+    // (and its scoped storage has no such API), so the command refuses instead
+    // of unlinking — data loss is never a fallback.
+    #[cfg(not(desktop))]
+    {
+        let _ = (&app, &paths);
+        return Err("the recycle bin is not available on this platform".into());
+    }
+
+    #[cfg(desktop)]
+    {
+    let _ = &app;
     let mut deleted = 0usize;
     let mut failed: Vec<String> = Vec::new();
     for p in &paths {
@@ -271,6 +283,7 @@ pub async fn trash_delete(paths: Vec<String>) -> Result<usize, String> {
         ));
     }
     Ok(deleted)
+    }
 }
 
 /// Open an http(s) URL in the user's default browser (About card link).

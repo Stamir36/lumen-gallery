@@ -39,6 +39,7 @@ import { AccentPicker } from "@/components/ui/AccentPicker";
 import { PillButton } from "@/components/ui/PillButton";
 import { IconButton } from "@/components/ui/IconButton";
 import { PillChoice, SettingRow, Toggle } from "@/components/settings/Primitives";
+import { NAV_TOGGLE_IDS, type NavToggleId } from "@/lib/settings";
 import { LayoutDiagram } from "@/components/settings/LayoutDiagram";
 import { DiagramCard } from "@/components/settings/DiagramCard";
 import { api, formatBytes, type RootRow } from "@/lib/api";
@@ -52,6 +53,18 @@ import { readSetting, writeSetting, CURSOR_KEY, setCustomCursor, CUSTOM_CURSOR_K
 
 /** Density presets in the order the segmented control shows them (FIX 4b). */
 const DENSITY_ORDER: GridDensity[] = ["comfort", "medium", "compact"];
+
+/** Sidebar row -> label string. Reuses the sidebar's own keys on purpose: the
+ *  toggle must say exactly what the row says, or the setting gets confusing. */
+const NAV_LABEL_KEYS: Record<NavToggleId, string> = {
+  folders: "sidebar.folders",
+  all: "sidebar.all",
+  images: "sidebar.images",
+  videos: "sidebar.videos",
+  favorites: "sidebar.favorites",
+  recents: "sidebar.recents",
+  trash: "sidebar.trash",
+};
 
 /** Layout choice card in Settings = the wizard's OptionCard + shared diagram. */
 function LayoutCard({
@@ -170,6 +183,8 @@ export function SettingsContent() {
   const setUiRadius = useAppSettings((s) => s.setUiRadius);
   const backgroundMode = useAppSettings((s) => s.backgroundMode);
   const setBackgroundMode = useAppSettings((s) => s.setBackgroundMode);
+  const hiddenNav = useAppSettings((s) => s.hiddenNav);
+  const setNavHidden = useAppSettings((s) => s.setNavHidden);
 
   useEffect(() => {
     void readSetting(CURSOR_KEY).then((v) => setCursorPointer(v === "true"));
@@ -586,6 +601,30 @@ export function SettingsContent() {
                 options={THUMB_WORKER_OPTIONS.map((n) => ({ value: n, label: String(n) }))}
               />
             </SettingRow>
+          </GlassCard>
+
+          {/* sidebar composition: the drives and the tools hub are structural,
+              everything else is the user's to trim (default = all visible) */}
+          <GlassCard className="mt-4">
+            <SettingRow label={t("settings.nav_sidebar")} hint={t("settings.nav_sidebar_hint")}>
+              <PillButton
+                variant="ghost"
+                disabled={hiddenNav.length === 0}
+                onClick={() => {
+                  for (const id of hiddenNav) void setNavHidden(id, false);
+                }}
+              >
+                {t("settings.nav_show_all")}
+              </PillButton>
+            </SettingRow>
+            {NAV_TOGGLE_IDS.map((id) => (
+              <Toggle
+                key={id}
+                label={t(NAV_LABEL_KEYS[id])}
+                on={!hiddenNav.includes(id)}
+                onChange={(visible) => void setNavHidden(id, !visible)}
+              />
+            ))}
           </GlassCard>
         </Section>
 

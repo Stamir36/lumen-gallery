@@ -4,10 +4,28 @@ All notable changes to LUMEN are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [semantic versioning](https://semver.org).
 
-## [Unreleased]
+## [0.3.0]
 
 ### Added
 
+- **Android build preparation** — the Rust dependencies are split per platform
+  (tray icon, HKCU associations, the OS recycle bin and single-instance are
+  desktop-only and leave the mobile dependency graph entirely), the desktop-only
+  modules get stubs with the same signatures (`src/mobile_stubs.rs`), so no
+  `#[cfg]` leaks into shared code, and `commands::trash_delete` refuses on
+  mobile rather than unlinking. `scripts/setup-android.ps1` installs the
+  toolchain (JDK check, cmdline-tools, platform 35, build-tools, NDK, Rust
+  targets), `pnpm android:init | android:dev | android:build` drive the APK, and
+  [docs/ANDROID.md](docs/ANDROID.md) documents the whole path plus the gaps that
+  remain (SAF folder picking, intent-filter associations, own trash folder).
+- **Sidebar visibility setting** (Settings › Behavior) — a switch per row.
+  Drives and the tools hub are structural and stay; everything else is the
+  user's to trim, and future rows default to visible because the stored value
+  is the hidden set, not the visible one.
+- **Duplicates convenience pass** — sort by biggest win or by copy count,
+  big groups collapse behind a "+N more" tile, and a floating glass bar offers
+  "keep one in each group" for the whole report with a per-group progress
+  readout.
 - **Project website** — a dependency-free landing page in `site/` (English and
   Russian, plus the privacy policy), published to GitHub Pages by
   `.github/workflows/pages.yml`: <https://stamir36.github.io/lumen-gallery/>.
@@ -133,6 +151,11 @@ All notable changes to LUMEN are recorded here. The format follows
 
 ### Changed
 
+- **Disk space tool restyled** to match the duplicates finder: the total is the
+  page headline in the hero slot, every list lives in a tonal elev-1 card, bars
+  share one accent gradient, a row armed for deletion wears a ring instead of
+  turning into a red box, and the fetch shows an indeterminate bar while the
+  single SQL pass runs.
 - Settings page rebuilt on shared row/switch/pill primitives; the Appearance
   section was trimmed and Behavior extracted.
 - Masonry tiles glide to their new slots when the layout re-packs instead of

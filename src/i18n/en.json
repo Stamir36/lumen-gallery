@@ -115,7 +115,17 @@
     "recycle": "Recycle {{count}}",
     "keep": "KEEP",
     "keep_this": "Keep this",
-    "reveal": "Show in Explorer"
+    "reveal": "Show in Explorer",
+    "sort": "Sort order",
+    "sort_saved": "Biggest win",
+    "sort_copies": "Most copies",
+    "show_more": "show all copies",
+    "show_less": "collapse",
+    "bulk_hint": "{{groups}} groups · {{size}} reclaimable",
+    "bulk_arm": "Keep one in each",
+    "bulk_confirm": "Recycle the extras",
+    "bulk_progress": "Group {{done}} / {{total}}…",
+    "bulk_done": "Processed {{count}} groups"
   },
   "topbar": {
     "slideshow": "Slideshow",
@@ -466,7 +476,10 @@
     "about_issues_cta": "Report an issue",
     "custom_cursor": "Use custom cursor",
     "custom_cursor_hint": "The rounded LUMEN pointer instead of the system one. Off: the system cursor",
-    "dev_mode_on": "Developer mode unlocked"
+    "dev_mode_on": "Developer mode unlocked",
+    "nav_sidebar": "Sidebar",
+    "nav_sidebar_hint": "Choose which views appear in the left menu. Drives and Tools always stay.",
+    "nav_show_all": "Show all"
   },
   "setup": {
     "title": "Welcome to LUMEN",

@@ -1,7 +1,22 @@
+// Tray and file associations are desktop concepts (a tray icon, HKCU). The
+// wrapper keeps ONE code path above them: mobile swaps in stubs with the same
+// signatures, so the shared files need no `#[cfg]` of their own.
+#[cfg(desktop)]
 mod assoc;
 mod assets;
 mod cache;
 mod legacy;
+#[cfg(not(desktop))]
+#[path = "mobile_stubs.rs"]
+mod mobile;
+#[cfg(desktop)]
+mod tray;
+// On mobile both desktop modules resolve to the stub, so `tray::…` and
+// `assoc::…` below keep working with no cfg at the call sites.
+#[cfg(not(desktop))]
+use self::mobile as assoc;
+#[cfg(not(desktop))]
+use self::mobile as tray;
 
 mod commands;
 mod db;
@@ -10,13 +25,44 @@ mod dupes;
 mod media_server;
 mod scan;
 mod thumbs;
-mod tray;
 mod volumes;
 mod watch;
 mod writer;
 
 use tauri::{Emitter, Manager};
 use tauri_plugin_sql::{Migration, MigrationKind};
+
+/// Re-registers the debounced rescan watcher for every stored root (S1.11).
+/// Only `add_root` used to do this, so after a restart nothing was watched and
+/// new files stayed invisible until a manual rescan.
+/// Desktop-only plugins, folded in behind one cfg so the builder chain in
+/// `run()` stays a single expression on every platform.
+///
+/// single instance MUST be the first plugin (docs): the callback runs on the
+/// PRIMARY instance when a second launch arrives — focus the window and forward
+/// any file argument straight to the viewer pipeline (STEP 3). Android/iOS are
+/// single-instance by the OS, so the mobile build simply has no such plugin.
+#[cfg(desktop)]
+fn desktop_plugins(builder: tauri::Builder<tauri::Wry>) -> tauri::Builder<tauri::Wry> {
+  builder.plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
+    use tauri::Manager;
+    if let Some(w) = app.get_webview_window("main") {
+      let _ = w.show();
+      let _ = w.unminimize();
+      let _ = w.set_focus();
+    }
+    // argv[0] is the exe; the first arg that is an existing FILE wins.
+    if let Some(file) = argv.iter().skip(1).find(|a| std::path::Path::new(a).is_file()) {
+      let _ = tauri::Emitter::emit(app, "open-file", file.clone());
+      log::info!("single-instance: forwarded file arg: {file}");
+    }
+  }))
+}
+
+#[cfg(not(desktop))]
+fn desktop_plugins(builder: tauri::Builder<tauri::Wry>) -> tauri::Builder<tauri::Wry> {
+  builder
+}
 
 /// Re-registers the debounced rescan watcher for every stored root (S1.11).
 /// Only `add_root` used to do this, so after a restart nothing was watched and
@@ -104,23 +150,7 @@ pub fn run() {
     },
   ];
 
-  tauri::Builder::default()
-    // single instance MUST be the first plugin (docs): the callback runs on the
-    // PRIMARY instance when a second launch arrives — focus the window and
-    // forward any file argument straight to the viewer pipeline (STEP 3).
-    .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
-      use tauri::Manager;
-      if let Some(w) = app.get_webview_window("main") {
-        let _ = w.show();
-        let _ = w.unminimize();
-        let _ = w.set_focus();
-      }
-      // argv[0] is the exe; the first arg that is an existing FILE wins.
-      if let Some(file) = argv.iter().skip(1).find(|a| std::path::Path::new(a).is_file()) {
-        let _ = tauri::Emitter::emit(app, "open-file", file.clone());
-        log::info!("single-instance: forwarded file arg: {file}");
-      }
-    }))
+  desktop_plugins(tauri::Builder::default())
     .plugin(tauri_plugin_dialog::init())
     .plugin(tauri_plugin_fs::init())
     .plugin(

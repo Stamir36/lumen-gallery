@@ -1,5 +1,5 @@
-/** App version — kept in sync with tauri.conf.json / Cargo.toml (0.2.0). */
-export const APP_VERSION = "0.2.0";
+/** App version — kept in sync with tauri.conf.json / Cargo.toml (0.3.0). */
+export const APP_VERSION = "0.3.0";
 
 import { invoke } from "@tauri-apps/api/core";
 import { tauriAvailable } from "@/lib/assets";

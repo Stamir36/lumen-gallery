@@ -22,6 +22,7 @@ import { baseName, formatResolution } from "@/lib/format";
 import { enqueueThumbs, thumbSrc, useThumbStore } from "@/lib/thumbs";
 import { deleteForever } from "@/lib/mediaActions";
 import { tauriAvailable } from "@/lib/assets";
+import { toast } from "sonner";
 
 /**
  * Duplicate finder.
@@ -63,6 +64,15 @@ interface DupeReport {
   minBytes: number;
 }
 
+/**
+ * Group ordering. "saved" is the default — the biggest win first; "copies" is
+ * for hunting shots that got duplicated again and again.
+ */
+type SortMode = "saved" | "copies";
+
+/** Copies shown before a group collapses behind a "+N more" row. */
+const GROUP_PREVIEW = 6;
+
 /** Size floors: 4 KB UI sprites are duplicates in the least useful sense. */
 const THRESHOLDS = [
   { value: "all", bytes: 0 },
@@ -91,13 +101,20 @@ export default function DuplicatesPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [threshold, setThreshold] = useState<Threshold>("1mb");
-  /** group index -> the id the user chose to keep */
-  const [keep, setKeep] = useState<Record<number, number>>({});
-  /** group index armed for removal — the second click is the confirmation */
-  const [armed, setArmed] = useState<number | null>(null);
+  /** group KEY (not index — sorting must not shuffle choices) -> kept id */
+  const [keep, setKeep] = useState<Record<string, number>>({});
+  /** group key armed for removal — the second click is the confirmation */
+  const [armed, setArmed] = useState<string | null>(null);
   const [working, setWorking] = useState(false);
   /** live scan progress (null = no scan in flight or not in the app) */
   const [progress, setProgress] = useState<ScanProgress | null>(null);
+  const [sort, setSort] = useState<SortMode>("saved");
+  /** group keys whose copies are fully expanded (big groups start collapsed) */
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  /** bulk pass in flight: the floating bar reports how far it got */
+  const [bulk, setBulk] = useState<{ done: number; total: number } | null>(null);
+  /** bulk action armed — the second press is the confirmation */
+  const [bulkArmed, setBulkArmed] = useState(false);
 
   const bytes = THRESHOLDS.find((x) => x.value === threshold)?.bytes ?? 0;
 
@@ -113,7 +130,15 @@ export default function DuplicatesPage() {
     refetchOnReconnect: false,
   });
 
-  const groups = report.data?.groups ?? [];
+  const groups = useMemo(() => {
+    const list = [...(report.data?.groups ?? [])];
+    if (sort === "copies") {
+      list.sort(
+        (a, b) => b.items.length - a.items.length || b.wastedBytes - a.wastedBytes,
+      );
+    }
+    return list;
+  }, [report.data, sort]);
   const thumbs = useThumbStore((s) => s.thumbs);
 
   // the scan reports its two stages from the blocking thread; the listener is
@@ -164,11 +189,15 @@ export default function DuplicatesPage() {
     if (missing.length > 0) enqueueThumbs(missing);
   }, [groups, thumbs]);
 
-  const keptIdOf = (index: number, group: DupeGroup) =>
-    keep[index] ?? group.items[0]?.id ?? -1;
+  /** Stable identity of a group across sorts/filters: size + oldest id. */
+  const keyOf = (group: DupeGroup, index: number) =>
+    `${group.size}-${group.items[0]?.id ?? index}`;
 
-  async function recycleExtra(index: number, group: DupeGroup) {
-    const kept = keptIdOf(index, group);
+  const keptIdOf = (key: string, group: DupeGroup) =>
+    keep[key] ?? group.items[0]?.id ?? -1;
+
+  async function recycleExtra(group: DupeGroup, key: string) {
+    const kept = keptIdOf(key, group);
     const doomed = group.items.filter((i) => i.id !== kept).map((i) => ({ id: i.id, path: i.path }));
     if (doomed.length === 0) return;
     setWorking(true);
@@ -177,11 +206,43 @@ export default function DuplicatesPage() {
       setArmed(null);
       setKeep((k) => {
         const next = { ...k };
-        delete next[index];
+        delete next[key];
         return next;
       });
       await report.refetch();
     } finally {
+      setWorking(false);
+    }
+  }
+
+  /**
+   * The whole report at once: keep the user's pick (or the oldest copy) in
+   * every group and recycle the rest. Sequential on purpose — a group that
+   * fails leaves the remaining groups untouched and the counter shows where
+   * it stopped, which a fire-and-forget Promise.all could not.
+   */
+  async function recycleAll() {
+    setWorking(true);
+    setBulk({ done: 0, total: groups.length });
+    try {
+      for (let i = 0; i < groups.length; i += 1) {
+        const group = groups[i];
+        const key = keyOf(group, i);
+        const kept = keptIdOf(key, group);
+        const doomed = group.items
+          .filter((it) => it.id !== kept)
+          .map((it) => ({ id: it.id, path: it.path }));
+        if (doomed.length > 0) await deleteForever(doomed, { silent: true });
+        setBulk({ done: i + 1, total: groups.length });
+      }
+      toast.success(t("dupes.bulk_done", { count: groups.length }));
+      setKeep({});
+      setBulkArmed(false);
+      await report.refetch();
+    } catch (e) {
+      toast.error(String(e));
+    } finally {
+      setBulk(null);
       setWorking(false);
     }
   }
@@ -204,11 +265,22 @@ export default function DuplicatesPage() {
             setThreshold(v as Threshold);
             setKeep({});
             setArmed(null);
+            setExpanded(new Set());
           }}
           options={[
             { value: "all", label: t("dupes.size_all") },
             { value: "1mb", label: "1 MB+" },
             { value: "10mb", label: "10 MB+" },
+          ]}
+        />
+        {/* sort order: the default is "biggest win", the other hunts repeats */}
+        <Segmented
+          aria-label={t("dupes.sort")}
+          value={sort}
+          onChange={(v) => setSort(v as SortMode)}
+          options={[
+            { value: "saved", label: t("dupes.sort_saved") },
+            { value: "copies", label: t("dupes.sort_copies") },
           ]}
         />
         <div className="ml-auto flex items-center gap-2">
@@ -333,14 +405,18 @@ export default function DuplicatesPage() {
         )}
 
         {/* groups */}
-        <div className="flex flex-col gap-4 px-6 pb-8">
+        <div className={cn("flex flex-col gap-4 px-6", groups.length > 0 ? "pb-28" : "pb-8")}>
           {groups.map((group, index) => {
-            const kept = keptIdOf(index, group);
-            const isArmed = armed === index;
+            const key = keyOf(group, index);
+            const kept = keptIdOf(key, group);
+            const isArmed = armed === key;
             const freed = group.size * (group.items.length - 1);
+            const isOpen = expanded.has(key);
+            const shown = isOpen ? group.items : group.items.slice(0, GROUP_PREVIEW);
+            const hidden = group.items.length - shown.length;
             return (
               <motion.section
-                key={`${group.size}-${group.items[0]?.id ?? index}`}
+                key={key}
                 layout={false}
                 initial={false}
                 className="overflow-hidden rounded-card bg-surface-2 shadow-[0_8px_24px_rgba(0,0,0,.35)]"
@@ -359,7 +435,7 @@ export default function DuplicatesPage() {
                     <button
                       type="button"
                       disabled={working}
-                      onClick={() => setArmed(isArmed ? null : index)}
+                      onClick={() => setArmed(isArmed ? null : key)}
                       className={cn(
                         "rounded-pill px-3.5 py-1.5 text-[12px] transition-colors disabled:opacity-50",
                         isArmed
@@ -372,7 +448,7 @@ export default function DuplicatesPage() {
                     <button
                       type="button"
                       disabled={working}
-                      onClick={() => void recycleExtra(index, group)}
+                      onClick={() => void recycleExtra(group, key)}
                       className={cn(
                         "flex items-center gap-1.5 rounded-pill px-3.5 py-1.5 text-[12px] transition-colors disabled:opacity-50",
                         isArmed
@@ -387,7 +463,7 @@ export default function DuplicatesPage() {
                 </div>
 
                 <div className="flex flex-wrap gap-3 px-4 pb-4">
-                  {group.items.map((item) => {
+                  {shown.map((item) => {
                     const known = thumbs[item.id];
                     const rawPath =
                       known && known.status === "ok" ? (known.path ?? null) : item.thumbPath;
@@ -406,7 +482,7 @@ export default function DuplicatesPage() {
                       >
                         <button
                           type="button"
-                          onClick={() => setKeep((k) => ({ ...k, [index]: item.id }))}
+                          onClick={() => setKeep((k) => ({ ...k, [key]: item.id }))}
                           className="relative block h-[112px] w-full cursor-pointer bg-surface-1 text-left"
                           title={t("dupes.keep_this")}
                         >
@@ -453,7 +529,7 @@ export default function DuplicatesPage() {
                           <div className="mt-1.5 flex items-center gap-1.5">
                             <button
                               type="button"
-                              onClick={() => setKeep((k) => ({ ...k, [index]: item.id }))}
+                              onClick={() => setKeep((k) => ({ ...k, [key]: item.id }))}
                               className={cn(
                                 "flex-1 rounded-pill px-2 py-1 text-[11px] transition-colors",
                                 isKept
@@ -476,12 +552,91 @@ export default function DuplicatesPage() {
                       </figure>
                     );
                   })}
+
+                  {/* big groups start collapsed: 20 copies of one clip should
+                      not push every other group off the screen */}
+                  {hidden > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setExpanded((s) => new Set(s).add(key))}
+                      className="flex w-[176px] shrink-0 flex-col items-center justify-center gap-2 rounded-control border border-dashed border-hairline text-ttertiary transition-colors duration-[160ms] hover:bg-surface-1 hover:text-tsecondary"
+                    >
+                      <span className="font-mono text-[15px] tabular-nums">+{hidden}</span>
+                      <span className="px-3 text-center text-[11px] leading-snug">
+                        {t("dupes.show_more")}
+                      </span>
+                    </button>
+                  )}
+                  {isOpen && group.items.length > GROUP_PREVIEW && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setExpanded((s) => {
+                          const next = new Set(s);
+                          next.delete(key);
+                          return next;
+                        })
+                      }
+                      className="flex h-[112px] w-[176px] shrink-0 items-center justify-center rounded-control border border-dashed border-hairline font-mono text-[11px] text-ttertiary transition-colors duration-[160ms] hover:bg-surface-1 hover:text-tsecondary"
+                    >
+                      {t("dupes.show_less")}
+                    </button>
+                  )}
                 </div>
               </motion.section>
             );
           })}
         </div>
       </div>
+
+      {/* floating bulk bar: glass is allowed on exactly this kind of overlay
+          (DESIGN.md §3 whitelist — "floating selection action bar") */}
+      {groups.length > 0 && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-4 z-20 flex justify-center">
+          <div className="pointer-events-auto flex items-center gap-3 rounded-pill border border-white/[.08] px-2 py-2 pl-5 shadow-[inset_0_1px_0_rgba(255,255,255,.10),0_8px_24px_rgba(0,0,0,.45)] backdrop-blur-[28px] backdrop-saturate-150" style={{ background: "linear-gradient(180deg, rgba(14,14,18,.68), rgba(14,14,18,.55))" }}>
+            {bulk ? (
+              <span className="font-mono text-[11px] tabular-nums text-tsecondary">
+                {t("dupes.bulk_progress", {
+                  done: formatCount(bulk.done),
+                  total: formatCount(bulk.total),
+                })}
+              </span>
+            ) : (
+              <>
+                <span className="font-mono text-[11px] tabular-nums text-tsecondary">
+                  {t("dupes.bulk_hint", {
+                    groups: formatCount(groups.length),
+                    size: formatBytes(totalWasted),
+                  })}
+                </span>
+                {bulkArmed && (
+                  <button
+                    type="button"
+                    onClick={() => setBulkArmed(false)}
+                    className="rounded-pill px-3 py-1.5 text-[12px] text-tsecondary transition-colors hover:bg-white/[.08] hover:text-tprimary"
+                  >
+                    {t("dupes.cancel")}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  disabled={working}
+                  onClick={() => (bulkArmed ? void recycleAll() : setBulkArmed(true))}
+                  className={cn(
+                    "flex items-center gap-1.5 rounded-pill px-4 py-1.5 text-[12px] transition-colors disabled:opacity-50",
+                    bulkArmed
+                      ? "bg-accent text-black hover:bg-accent/85"
+                      : "bg-white/[.10] text-tprimary hover:bg-white/[.16]",
+                  )}
+                >
+                  <Trash2 size={14} />
+                  {bulkArmed ? t("dupes.bulk_confirm") : t("dupes.bulk_arm")}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -19,8 +19,12 @@ import { toast } from "sonner";
  *
  * A view over `disk_usage` (src-tauri/src/disk.rs): the heaviest files, the
  * same bytes bucketed by extension, and per-library totals. Read-only; the
- * only action it offers is "open the folder" — deleting lives in the library,
- * where context menus and the recycle bin already work.
+ * only write it performs is the existing recycle-bin path (arm → confirm).
+ *
+ * DESIGN pass: same language as the duplicates finder — the total is the page
+ * headline in the hero slot, every list lives in a tonal elev-1 card, progress
+ * bars are the shared accent gradient, and a row armed for deletion wears a
+ * ring instead of turning into a red box.
  */
 
 interface DiskItem {
@@ -66,6 +70,18 @@ function shortDir(path: string) {
   cut.pop();
   const dir = cut.join("\\");
   return dir.length > 44 ? `…${dir.slice(-43)}` : dir;
+}
+
+/** The shared bar: 5px track, accent gradient fill, min 1.5% so it is visible. */
+function Bar({ ratio, className }: { ratio: number; className?: string }) {
+  return (
+    <div className={cn("h-[5px] w-full overflow-hidden rounded-pill bg-surface-1", className)}>
+      <div
+        className="h-full rounded-pill bg-gradient-to-r from-accent/60 to-accent"
+        style={{ width: `${Math.max(1.5, Math.min(100, ratio * 100))}%` }}
+      />
+    </div>
+  );
 }
 
 export default function DiskSpacePage() {
@@ -134,12 +150,13 @@ export default function DiskSpacePage() {
     <div className="flex h-full flex-col bg-surface-1">
       {/* header: back + title + range switch + rescan (mirrors the finder) */}
       <header className="flex h-14 shrink-0 items-center gap-3 border-b border-hairline px-4">
-        <IconButton label={t("actions.back")} onClick={() => navigate("/tools")}>
+        <IconButton label={t("actions.back")} onClick={() => navigate(-1)}>
           <ArrowLeft size={18} />
         </IconButton>
-        <span className="micro-label flex-1">{t("disk.title")}</span>
+        <span className="micro-label">{t("disk.title")}</span>
         <Segmented
           aria-label={t("disk.view")}
+          className="ml-2"
           value={view}
           onChange={(v) => setView(v as typeof view)}
           options={[
@@ -148,40 +165,62 @@ export default function DiskSpacePage() {
             { value: "drives", label: t("disk.view_drives") },
           ]}
         />
-        <IconButton
-          label={t("disk.rescan")}
-          onClick={() => void report.refetch()}
-          className={cn(scanning && "text-accent")}
-        >
-          <RefreshCw size={18} className={cn(scanning && "animate-spin")} />
-        </IconButton>
+        <div className="ml-auto flex items-center gap-2">
+          <IconButton
+            label={t("disk.rescan")}
+            onClick={() => void report.refetch()}
+            className={cn(scanning && "text-accent")}
+          >
+            <RefreshCw size={18} className={cn(scanning && "animate-spin")} />
+          </IconButton>
+        </div>
       </header>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-10 py-8">
-        {/* summary strip: three figures, hairline-separated (editorial) */}
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        {/* hero summary: the total is the headline, the file count sits beside
+            it as a mono figure, the top-30 note closes the right edge */}
         {groups && (
-          <div className="mb-8 flex flex-wrap items-end gap-x-10 gap-y-3 border-b border-hairline pb-6">
-            <div>
-              <div className="micro-label mb-1.5">{t("disk.total")}</div>
-              <div className="text-3xl font-[650] tabular-nums tracking-[-0.02em] text-tprimary">
-                {formatBytes(groups.totalBytes)}
+          <div className="px-6 pb-4 pt-7">
+            <div className="flex flex-wrap items-end gap-x-10 gap-y-4">
+              <div>
+                <div className="micro-label mb-1.5">{t("disk.total")}</div>
+                <div className="font-mono text-[34px] font-medium leading-none text-tprimary">
+                  {formatBytes(groups.totalBytes)}
+                </div>
               </div>
+              <div className="flex gap-8 pb-0.5">
+                <div>
+                  <div className="font-mono text-lg leading-tight text-tsecondary">
+                    {formatCount(groups.fileCount)}
+                  </div>
+                  <div className="mt-0.5 text-[11px] text-ttertiary">{t("disk.files")}</div>
+                </div>
+              </div>
+              {view === "files" && (
+                <div className="ml-auto max-w-[30ch] pb-1 text-right font-mono text-[11px] leading-relaxed text-ttertiary">
+                  {t("disk.top_share", { count: TOP_N, percent: topShare })}
+                </div>
+              )}
             </div>
-            <div>
-              <div className="micro-label mb-1.5">{t("disk.files")}</div>
-              <div className="text-3xl font-[650] tabular-nums tracking-[-0.02em] text-tsecondary">
-                {formatCount(groups.fileCount)}
-              </div>
-            </div>
-            {view === "files" && (
-              <div className="ml-auto font-mono text-[11px] tabular-nums text-ttertiary">
-                {t("disk.top_share", { count: TOP_N, percent: topShare })}
-              </div>
-            )}
           </div>
         )}
 
-        {report.isPending && (
+        {/* the scan is one SQL pass with no progress events, so the bar is the
+            indeterminate kind — same slot and shape as the finder's */}
+        {scanning && (
+          <div className="px-6 pb-5">
+            <div className="mb-1.5 flex items-baseline justify-between gap-4">
+              <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-tsecondary">
+                {t("disk.loading")}
+              </span>
+            </div>
+            <div className="h-[5px] w-full overflow-hidden rounded-pill bg-surface-2">
+              <div className="h-full w-full animate-pulse rounded-pill bg-accent/50" />
+            </div>
+          </div>
+        )}
+
+        {report.isPending && !scanning && (
           <div className="flex flex-col items-center gap-3 py-24 text-center">
             <HardDrive size={28} strokeWidth={1.5} className="text-ttertiary" />
             <p className="text-sm text-tsecondary">{t("disk.loading")}</p>
@@ -203,167 +242,163 @@ export default function DiskSpacePage() {
 
         {/* ——— heaviest files ——— */}
         {groups && view === "files" && (
-          <div className="flex flex-col">
-            {groups.topFiles.map((item, i) => {
-              const known = thumbs[item.id];
-              const rawPath =
-                known && known.status === "ok" ? (known.path ?? null) : item.thumbPath;
-              return (
-                <div
-                  key={item.id}
-                  className="group flex items-center gap-4 border-b border-hairline py-3 pr-2 transition-colors last:border-b-0 hover:bg-surface-2/60"
-                >
-                  <span className="w-7 shrink-0 text-right text-[13px] tabular-nums text-ttertiary">
-                    {i + 1}
-                  </span>
-                  <div className="h-12 w-12 shrink-0 overflow-hidden rounded-[12px] bg-surface-2">
-                    {rawPath ? (
-                      <img
-                        src={thumbSrc(rawPath)}
-                        alt=""
-                        loading="lazy"
-                        draggable={false}
-                        className="h-full w-full select-none object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center font-mono text-[9px] uppercase text-ttertiary">
-                        {item.ext}
-                      </div>
+          <div className="px-6 pb-8">
+            <div className="rounded-card bg-surface-2 p-1.5 shadow-[0_8px_24px_rgba(0,0,0,.35)]">
+              {groups.topFiles.map((item, i) => {
+                const known = thumbs[item.id];
+                const rawPath =
+                  known && known.status === "ok" ? (known.path ?? null) : item.thumbPath;
+                const isArmed = armedId === item.id;
+                return (
+                  <div
+                    key={item.id}
+                    className={cn(
+                      "group flex items-center gap-4 rounded-control px-3 py-3 transition-colors duration-[160ms]",
+                      // armed = ring + tint (same language as the finder's keep
+                      // state), so the row does not jump into a red box
+                      isArmed
+                        ? "bg-danger/[.08] ring-1 ring-danger/45"
+                        : "hover:bg-surface-3/60",
                     )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-baseline gap-3">
-                      <span className="truncate text-[14px] text-tprimary" title={item.path}>
-                        {baseName(item.path)}
-                      </span>
-                      <span className="shrink-0 font-mono text-[11px] tabular-nums text-tsecondary">
-                        {formatBytes(item.size)}
-                      </span>
-                    </div>
-                    <div
-                      className="mt-1.5 h-[3px] w-full overflow-hidden rounded-pill bg-surface-2"
-                      role="presentation"
-                    >
-                      <div
-                        className="h-full rounded-pill bg-accent/70"
-                        style={{ width: `${maxFile > 0 ? Math.max(2, (item.size / maxFile) * 100) : 0}%` }}
-                      />
-                    </div>
-                    <span
-                      className="mt-1 block truncate font-mono text-[10px] text-ttertiary"
-                      title={item.path}
-                    >
-                      {shortDir(item.path)}
+                  >
+                    <span className="w-6 shrink-0 text-right font-mono text-[11px] tabular-nums text-ttertiary">
+                      {i + 1}
                     </span>
+                    <div className="h-12 w-12 shrink-0 overflow-hidden rounded-[12px] bg-surface-1">
+                      {rawPath ? (
+                        <img
+                          src={thumbSrc(rawPath)}
+                          alt=""
+                          loading="lazy"
+                          draggable={false}
+                          className="h-full w-full select-none object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center font-mono text-[9px] uppercase text-ttertiary">
+                          {item.ext}
+                        </div>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-baseline gap-3">
+                        <span className="truncate text-[14px] text-tprimary" title={item.path}>
+                          {baseName(item.path)}
+                        </span>
+                        <span className="shrink-0 font-mono text-[11px] tabular-nums text-tsecondary">
+                          {formatBytes(item.size)}
+                        </span>
+                      </div>
+                      <Bar
+                        ratio={maxFile > 0 ? item.size / maxFile : 0}
+                        className="mt-1.5 bg-surface-1 transition-colors duration-[160ms] group-hover:bg-surface-1/60"
+                      />
+                      <span
+                        className="mt-1 block truncate font-mono text-[10px] text-ttertiary"
+                        title={item.path}
+                      >
+                        {shortDir(item.path)}
+                      </span>
+                    </div>
+                    {/* two-step delete: the first click arms, the second sends
+                        to the recycle bin (never an unlink) */}
+                    <div className="flex shrink-0 items-center gap-1">
+                      {isArmed ? (
+                        <>
+                          <button
+                            type="button"
+                            disabled={deleting}
+                            onClick={() => void recycleItem(item)}
+                            className="flex items-center gap-1.5 rounded-pill bg-danger px-3.5 py-1.5 text-[12px] text-white transition-colors hover:bg-danger/85 disabled:opacity-50"
+                          >
+                            <Trash2 size={13} />
+                            {t("disk.delete_confirm")}
+                          </button>
+                          <IconButton
+                            label={t("disk.delete_cancel")}
+                            onClick={() => setArmedId(null)}
+                            className="h-8 w-8"
+                          >
+                            <X size={14} />
+                          </IconButton>
+                        </>
+                      ) : (
+                        <>
+                          <IconButton
+                            label={t("disk.delete_arm", { size: formatBytes(item.size) })}
+                            disabled={deleting}
+                            onClick={() => setArmedId(item.id)}
+                            className="opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+                          >
+                            <Trash2 size={16} />
+                          </IconButton>
+                          <IconButton
+                            label={t("disk.reveal")}
+                            onClick={() =>
+                              void invoke("reveal_path", { path: item.path }).catch(() => undefined)
+                            }
+                            className="opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+                          >
+                            <FolderSearch size={16} />
+                          </IconButton>
+                        </>
+                      )}
+                    </div>
                   </div>
-                  {/* two-step delete: the first click arms, the second sends
-                      to the recycle bin (never an unlink) */}
-                  <div className="flex shrink-0 items-center gap-1">
-                    {armedId === item.id ? (
-                      <>
-                        <button
-                          type="button"
-                          disabled={deleting}
-                          onClick={() => void recycleItem(item)}
-                          className="flex items-center gap-1.5 rounded-pill bg-danger/15 px-3 py-1.5 text-[12px] text-danger transition-colors hover:bg-danger/25 disabled:opacity-50"
-                        >
-                          <Trash2 size={13} />
-                          {t("disk.delete_confirm")}
-                        </button>
-                        <IconButton
-                          label={t("disk.delete_cancel")}
-                          onClick={() => setArmedId(null)}
-                          className="h-8 w-8"
-                        >
-                          <X size={14} />
-                        </IconButton>
-                      </>
-                    ) : (
-                      <>
-                        <IconButton
-                          label={t("disk.delete_arm", { size: formatBytes(item.size) })}
-                          disabled={deleting}
-                          onClick={() => setArmedId(item.id)}
-                          className="opacity-0 transition-opacity group-hover:opacity-100"
-                        >
-                          <Trash2 size={16} />
-                        </IconButton>
-                        <IconButton
-                          label={t("disk.reveal")}
-                          onClick={() =>
-                            void invoke("reveal_path", { path: item.path }).catch(() => undefined)
-                          }
-                          className="opacity-0 transition-opacity group-hover:opacity-100"
-                        >
-                          <FolderSearch size={16} />
-                        </IconButton>
-                      </>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         )}
 
         {/* ——— by extension ——— */}
         {groups && view === "types" && (
-          <div className="flex flex-col gap-5">
-            {groups.byExtension.map((ext) => (
-              <div key={ext.ext}>
-                <div className="mb-2 flex items-baseline justify-between gap-4">
-                  <span className="flex items-baseline gap-3">
-                    <span className="font-mono text-[13px] uppercase text-tprimary">
-                      .{ext.ext}
+          <div className="px-6 pb-8">
+            <div className="rounded-card bg-surface-2 px-6 py-5 shadow-[0_8px_24px_rgba(0,0,0,.35)]">
+              {groups.byExtension.map((ext, i) => (
+                <div
+                  key={ext.ext}
+                  className={cn("py-3", i > 0 && "border-t border-hairline")}
+                >
+                  <div className="mb-2 flex items-baseline justify-between gap-4">
+                    <span className="flex items-baseline gap-3">
+                      <span className="font-mono text-[13px] uppercase text-tprimary">
+                        .{ext.ext}
+                      </span>
+                      <span className="text-[12px] text-ttertiary">
+                        {t("disk.ext_files", { count: ext.fileCount })}
+                      </span>
                     </span>
-                    <span className="text-[12px] text-ttertiary">
-                      {t("disk.ext_files", { count: ext.fileCount })}
+                    <span className="font-mono text-[12px] tabular-nums text-tsecondary">
+                      {formatBytes(ext.totalBytes)}
                     </span>
-                  </span>
-                  <span className="font-mono text-[12px] tabular-nums text-tsecondary">
-                    {formatBytes(ext.totalBytes)}
-                  </span>
+                  </div>
+                  <Bar ratio={maxExt > 0 ? ext.totalBytes / maxExt : 0} />
                 </div>
-                <div className="h-[6px] w-full overflow-hidden rounded-pill bg-surface-2">
-                  <div
-                    className="h-full rounded-pill bg-accent/70"
-                    style={{
-                      width: `${maxExt > 0 ? Math.max(1.5, (ext.totalBytes / maxExt) * 100) : 0}%`,
-                    }}
-                  />
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         )}
 
         {/* ——— per library ——— */}
         {groups && view === "drives" && (
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-4 px-6 pb-8">
             {groups.byRoot.map((root) => (
               <div
                 key={root.rootId}
-                className="rounded-card border border-hairline bg-surface-2/40 p-5"
+                className="rounded-card bg-surface-2 p-5 shadow-[0_8px_24px_rgba(0,0,0,.35)]"
               >
                 <div className="mb-3 flex items-baseline justify-between gap-4">
                   <span className="flex min-w-0 items-baseline gap-2.5">
                     <HardDrive size={15} className="shrink-0 text-tsecondary" />
-                    <span className="truncate text-[14px] font-[600] text-tprimary">
+                    <span className="truncate text-[15px] font-[600] text-tprimary">
                       {root.label || root.path}
                     </span>
                   </span>
-                  <span className="shrink-0 font-mono text-[12px] tabular-nums text-tsecondary">
+                  <span className="shrink-0 font-mono text-[13px] tabular-nums text-tprimary">
                     {formatBytes(root.totalBytes)}
                   </span>
                 </div>
-                <div className="h-[6px] w-full overflow-hidden rounded-pill bg-surface-3">
-                  <div
-                    className="h-full rounded-pill bg-accent/70"
-                    style={{
-                      width: `${maxRoot > 0 ? Math.max(1.5, (root.totalBytes / maxRoot) * 100) : 0}%`,
-                    }}
-                  />
-                </div>
+                <Bar ratio={maxRoot > 0 ? root.totalBytes / maxRoot : 0} />
                 <div className="mt-2 flex items-center justify-between">
                   <span className="truncate font-mono text-[10px] text-ttertiary" title={root.path}>
                     {root.path}

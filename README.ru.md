@@ -150,7 +150,7 @@ src-tauri/src/        Rust-бэкенд
   media_server.rs       локальный CORS-сервер для VR-купола
   tray.rs assoc.rs      фоновый режим, ассоциации файлов
 e2e/                  спеки Playwright + пиксельные базлайны
-docs/                 DESIGN.md, SPEC.md, BUILD-MSIX.md, аудиты
+docs/                 DESIGN.md, SPEC.md, BUILD-MSIX.md, ANDROID.md, аудиты
 ```
 
 ## Разработка

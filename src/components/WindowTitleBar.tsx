@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { listen } from "@tauri-apps/api/event";
 import { tauriAvailable } from "@/lib/assets";
+import { isDesktop } from "@/lib/platform";
 import { APP_VERSION } from "@/lib/version";
 import appIcon from "@/../assets/icon.svg";
 
@@ -111,12 +112,14 @@ export function WindowTitleBar({
         </div>
       )}
 
-      {/* drag spacer — empty area only; drags the window via startDragging() */}
+      {/* drag spacer — empty area only; drags the window via startDragging().
+          On mobile the OS owns window management, so this is a plain spacer
+          and no touch is swallowed by a drag handler. */}
       <div
-        data-tauri-drag-region="true"
+        data-tauri-drag-region={isDesktop ? "true" : undefined}
         className="h-full flex-1 cursor-default"
-        onMouseDown={startDrag}
-        onDoubleClick={toggleMaximize}
+        onMouseDown={isDesktop ? startDrag : undefined}
+        onDoubleClick={isDesktop ? toggleMaximize : undefined}
       />
 
       {/* app-level actions: kept out of the drag region */}
@@ -126,8 +129,8 @@ export function WindowTitleBar({
         </div>
       )}
 
-      {/* right cluster: window controls */}
-      <div className="flex h-full items-center gap-0.5 pr-2">
+      {/* right cluster: window controls — desktop only, Android has none */}
+      <div className={cn("h-full items-center gap-0.5 pr-2", isDesktop ? "flex" : "hidden")}>
         <button
           aria-label={t("titlebar.minimize")}
           title={t("titlebar.minimize")}

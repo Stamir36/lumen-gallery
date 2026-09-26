@@ -1,6 +1,6 @@
 [package]
 name = "lumen"
-version = "0.2.0"
+version = "0.3.0"
 description = "LUMEN — local-first photo & video gallery for Windows"
 authors = ["Stanislav Miroshnichenko <https://github.com/Stamir36>"]
 license = "GPL-3.0-or-later"
@@ -22,22 +22,26 @@ tauri-build = { version = "2.6.3", features = [] }
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 log = "0.4"
-tauri = { version = "2.11.3", features = ["protocol-asset", "tray-icon"] }
+tauri = { version = "2.11.3", features = ["protocol-asset"] }
   tauri-plugin-log = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
-# Phase 6 STEP 3: second launch focuses the running window + forwards file args
-tauri-plugin-single-instance = "2"
 image = { version = "0.25", default-features = false, features = ["jpeg", "png", "gif", "webp", "bmp", "avif"] }
 tauri-plugin-sql = { version = "2", features = ["sqlite"] }
 sysinfo = "0.33"
 walkdir = "2"
 notify = "6"
 tiny_http = "0.12"
-# OS recycle bin for real trash deletion (P6): no std::fs::remove anywhere.
-trash = "5"
-# Phase 6 STEP 4: opt-in file associations — HKCU ONLY, never HKLM, no admin
-winreg = "0.55"
 thiserror = "2"
 sqlx = { version = "0.8", default-features = false, features = ["sqlite", "runtime-tokio", "macros"] }
 tokio = { version = "1.53.1", features = ["sync"] }
+
+# ---------------------------------------------------------------- desktop
+# Desktop-only: a tray icon, HKCU file associations, the OS recycle bin and
+# the single-instance contract. Starting the Android/iOS build, the mobile
+# targets pick up the base `tauri` above plus src/mobile_stubs.rs.
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri = { version = "2.11.3", features = ["protocol-asset", "tray-icon"] }
+tauri-plugin-single-instance = "2"
+trash = "5"
+winreg = "0.55"

@@ -151,7 +151,7 @@ src-tauri/src/        Rust backend
   media_server.rs       loopback CORS server for the VR dome
   tray.rs assoc.rs      background mode, file associations
 e2e/                  Playwright specs + pixel baselines
-docs/                 DESIGN.md, SPEC.md, BUILD-MSIX.md, audits
+docs/                 DESIGN.md, SPEC.md, BUILD-MSIX.md, ANDROID.md, audits
 ```
 
 ## Development notes

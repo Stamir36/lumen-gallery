@@ -189,7 +189,11 @@ export async function restoreTrash(ids: number[]) {
  * per-file failure aborts with rows kept, so the library never loses track of
  * a file that still exists on disk.
  */
-export async function deleteForever(rows: { id: number; path: string }[]) {
+export async function deleteForever(
+  rows: { id: number; path: string }[],
+  /** `silent` skips the per-call toast — a bulk pass reports once instead. */
+  options: { silent?: boolean } = {},
+) {
   if (rows.length === 0) return;
   try {
     await invoke<number>("trash_delete", { paths: rows.map((r) => r.path) });
@@ -201,7 +205,7 @@ export async function deleteForever(rows: { id: number; path: string }[]) {
       );
     }
     await invalidateAfterWrite();
-    toast.success(i18n.t("trash.deleted", { count: affected }));
+    if (!options.silent) toast.success(i18n.t("trash.deleted", { count: affected }));
   } catch (e) {
     console.error("delete forever failed", e);
     toast.error(String(e));
