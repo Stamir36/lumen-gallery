@@ -245,6 +245,43 @@ pub async fn reveal_path(path: String) -> Result<(), String> {
     }
 }
 
+/// True when the OS recycle bin actually covers this path.
+///
+/// Windows keeps a recycle bin per FIXED drive (a hidden `$Recycle.Bin` at the
+/// root, created on demand). REMOVABLE drives (USB sticks, card readers, some
+/// external SSDs) have none: `SHFileOperation(FOF_ALLOWUNDO)` — and therefore
+/// the `trash` crate — silently DELETES PERMANENTLY there while still reporting
+/// success. The user experienced exactly this: files vanished and the bin stayed
+/// empty. Verified on this machine (D: = DriveType 2, no `$Recycle.Bin`, even
+/// the Shell COM delete nukes). Such a delete must be REFUSED, not faked —
+/// data loss is never a silent fallback (see the confirm dialog's promise).
+#[cfg(all(desktop, windows))]
+fn drive_has_recycle_bin(path: &std::path::Path) -> bool {
+    use std::os::windows::fs::MetadataExt;
+    // root of the volume the file lives on ("D:\...")
+    let root = path
+        .ancestors()
+        .last()
+        .map(|p| p.to_path_buf())
+        .unwrap_or_default();
+    if !root.as_os_str().is_empty() {
+        if let Ok(meta) = std::fs::metadata(&root) {
+            // FILE_ATTRIBUTE_REMOVABLE_MEDIA = 0x400 (works for USB/card readers
+            // where GetDriveTypeW alone can lie); fixed drives answer false
+            const FILE_ATTRIBUTE_REMOVABLE_MEDIA: u32 = 0x400;
+            if meta.file_attributes() & FILE_ATTRIBUTE_REMOVABLE_MEDIA != 0 {
+                return false;
+            }
+        }
+    }
+    true
+}
+
+#[cfg(all(desktop, not(windows)))]
+fn drive_has_recycle_bin(_path: &std::path::Path) -> bool {
+    true
+}
+
 /// Real trash deletion (P6): hand every file to the OS recycle bin via the
 /// `trash` crate, then drop its DB row through the single writer. Per-item
 /// failures are collected — rows without a successful file delete are KEPT,
@@ -266,6 +303,14 @@ pub async fn trash_delete(app: tauri::AppHandle, paths: Vec<String>) -> Result<u
     let mut deleted = 0usize;
     let mut failed: Vec<String> = Vec::new();
     for p in &paths {
+        if !drive_has_recycle_bin(std::path::Path::new(p)) {
+            // REFUSE instead of permanently deleting: the UI promises a
+            // recoverable delete and this volume cannot keep that promise.
+            failed.push(format!(
+                "{p}: removable drive has no recycle bin — file would be lost forever"
+            ));
+            continue;
+        }
         match trash::delete(std::path::Path::new(p)) {
             Ok(()) => deleted += 1,
             Err(e) => failed.push(format!("{p}: {e}")),
@@ -276,10 +321,29 @@ pub async fn trash_delete(app: tauri::AppHandle, paths: Vec<String>) -> Result<u
         for f in failed.iter().take(5) {
             log::warn!("trash_delete: {f}");
         }
+        // Partial success is still an error for the caller: the rows that DID
+        // reach the bin were dropped by the frontend only after this Err, so a
+        // mixed batch reports the refusal and keeps the DB honest.
+        if deleted > 0 {
+            return Err(format!(
+                "{} of {} file(s) moved to the recycle bin, {} refused (removable drive — permanent delete is not allowed)",
+                deleted,
+                paths.len(),
+                failed.len()
+            ));
+        }
         return Err(format!(
-            "{} of {} file(s) could not be moved to the recycle bin",
+            "{} of {} file(s) could not be moved to the recycle bin{}",
             failed.len(),
-            paths.len()
+            paths.len(),
+            if failed
+                .iter()
+                .any(|f| f.contains("removable drive"))
+            {
+                " — the drive has no recycle bin"
+            } else {
+                ""
+            }
         ));
     }
     Ok(deleted)

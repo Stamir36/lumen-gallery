@@ -23,7 +23,7 @@ import { IconButton } from "@/components/ui/IconButton";
 import { Segmented } from "@/components/ui/Segmented";
 import { formatBytes, formatCount } from "@/lib/api";
 import { baseName, formatResolution } from "@/lib/format";
-import { enqueueThumbs, thumbSrc, useThumbStore } from "@/lib/thumbs";
+import { enqueueRows, thumbSrc, useThumbStore } from "@/lib/thumbs";
 import { deleteForever } from "@/lib/mediaActions";
 import { tauriAvailable } from "@/lib/assets";
 import { toast } from "sonner";
@@ -239,18 +239,44 @@ export default function DuplicatesPage() {
   // usually the first place a file that was never scrolled past is ever seen.
   // Asked once per item per visit — keying this on `thumbs` instead would
   // re-queue every row that failed to decode, on every thumbnail that lands.
+  //
+  // BUG FIX: the old guard skipped anything with a `thumbPath`, so rows whose
+  // cached file had gone missing (cleared cache dir, failed video capture that
+  // still recorded a path) shimmered as the raw ext chip forever. An item now
+  // counts as served only when the thumb store says ok OR a stale-free path is
+  // plausible; anything else — including videos — is routed through
+  // `enqueueRows`, which sends images to the Rust engine and videos to the
+  // serialized webview capture. The store's retry budget still prevents loops.
   useEffect(() => {
     if (!tauriAvailable() || groups.length === 0) return;
-    const missing: number[] = [];
+    const stale: { id: number; path: string; kind: "image" | "video"; ext: string; size: number; mtime: number }[] = [];
     for (const group of groups) {
       for (const item of group.items) {
         if (asked.current.has(item.id)) continue;
         asked.current.add(item.id);
         const known = thumbs[item.id];
-        if (!item.thumbPath && !(known && known.status === "ok")) missing.push(item.id);
+        const served = known && known.status === "ok";
+        // keep the warm path only when the store agrees; when nothing is known
+        // yet, let the generators decide (they re-check the cache on disk)
+        if (!served) {
+          stale.push({
+            id: item.id,
+            path: item.path,
+            // the dupes report does not carry `kind` — videos are exactly the
+            // rows whose extensions the image decoders cannot read
+            kind: "video" as const,
+            ext: item.path.split(".").pop() ?? "",
+            size: item.size,
+            mtime: item.mtime,
+          });
+        }
       }
     }
-    if (missing.length > 0) enqueueThumbs(missing);
+    if (stale.length > 0) {
+      // enqueueRows seeds + routes both kinds; images it cannot name are
+      // handled by the Rust engine's own extension table
+      enqueueRows(stale as unknown as Parameters<typeof enqueueRows>[0]);
+    }
   }, [groups, thumbs]);
 
   /** Stable identity of a group across sorts/filters: size + oldest id. */

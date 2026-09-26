@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
@@ -14,16 +14,22 @@ import { useAppSettings } from "@/lib/settings";
 
 /**
  * EASTER EGG — «Память» (the mini-game behind the 5-logo-click gesture).
+ * HIDDEN on purpose: no card on the Tools hub, no link anywhere in the UI —
+ * it is reachable only by typing the /play route. Do not surface it.
  *
  * The deck is the user's OWN library: thumbnails that already exist in the
  * cache, so a round costs no disk reads beyond the previews the grid would
  * have generated anyway. The 3D comes from CSS transforms only (perspective on
- * the board, `rotateY` per card, a small pointer parallax on the board) — no
- * 3D engine, nothing to load, and it collapses to a plain fade when the user
- * turned micro-motion off.
+ * the board, `rotateY` per card) — no 3D engine, and it collapses to a plain
+ * fade when the user turned micro-motion off.
  *
- * Reached from the Tools hub, where the card is only rendered when
- * `ui.dev_unlocked` is set — that keeps the gesture a real secret.
+ * STABILITY CONTRACT: the deck is SNAPSHOT INTO STATE when a round starts and
+ * is never rebuilt from live query data. A background media refetch (window
+ * focus, thumb patches, keepPreviousData) changes the `media.data` identity
+ * every few seconds, and a deck derived via useMemo from that identity was
+ * re-dealt mid-game — the user saw the board reshuffle "by itself". The query
+ * below is only the POOL a new round deals from; the round itself owns its
+ * cards.
  */
 
 type Card = {
@@ -64,18 +70,20 @@ export default function PlayPage() {
   const desc = useLibraryUi((s) => s.desc);
 
   const [pairs, setPairs] = useState<Board>(8);
+  /** the round's cards — set once per deal, never derived from live data */
+  const [deck, setDeck] = useState<Card[]>([]);
   /** ids of the cards currently face up (max 2) */
   const [flipped, setFlipped] = useState<string[]>([]);
   /** ids already matched — they stay face up and stop answering clicks */
   const [matched, setMatched] = useState<Set<string>>(new Set());
   const [moves, setMoves] = useState(0);
-  const [round, setRound] = useState(0);
+  /** re-deal has to wait until the library rows are actually available */
+  const [dealWhenReady, setDealWhenReady] = useState(false);
   /** keeps the flip-back timer honest when the user restarts mid-turn */
   const timeout = useRef<number | null>(null);
 
-  // The deck source: images from the CURRENT library view (whatever the user
-  // was looking at), so the game plays with the photos on screen — not a
-  // random archive slice. Same query the grid runs, so it is already cached.
+  // The POOL the game deals from: images from the CURRENT library view. Only
+  // read when (re)dealing — identity churn here must never touch the board.
   const media = useMediaRows({
     filter: filterForRoute(route, chip),
     sort,
@@ -88,24 +96,55 @@ export default function PlayPage() {
 
   const thumbs = useThumbStore((s) => s.thumbs);
 
-  /** one deck per round / size change; re-cut when the library rows arrive */
-  const deck = useMemo<Card[]>(() => {
-    const rows = (media.data ?? []).filter((r) => r.kind === "image" && !r.trashed);
-    if (rows.length < 2) return [];
-    const need = pairs;
-    const picked = shuffle(rows).slice(0, Math.min(need, rows.length));
-    if (picked.length < need) return [];
-    const cards: Card[] = [];
-    picked.forEach((row, i) => {
-      // two cards per photo; the key carries the pair index so React never
-      // reuses a DOM node across the pair (that would kill the flip animation)
-      cards.push({ key: `a${i}-${row.id}`, id: row.id, path: row.path });
-      cards.push({ key: `b${i}-${row.id}`, id: row.id, path: row.path });
-    });
-    return shuffle(cards);
-    // `media.data` identity changes on refetch; `round` re-deals on demand
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [media.data, pairs, round]);
+  /** Deal a fresh round from the current pool. */
+  const deal = useCallback(
+    (want: Board) => {
+      const rows = (media.data ?? []).filter((r) => r.kind === "image" && !r.trashed);
+      if (rows.length < 2) {
+        setDeck([]);
+        setDealWhenReady(true); // rows may still be loading — try again when they land
+        return;
+      }
+      const picked = shuffle(rows).slice(0, Math.min(want, rows.length));
+      if (picked.length < want) {
+        setDeck([]);
+        return;
+      }
+      const cards: Card[] = [];
+      picked.forEach((row, i) => {
+        // two cards per photo; the key carries the pair index so React never
+        // reuses a DOM node across the pair (that would kill the flip animation)
+        cards.push({ key: `a${i}-${row.id}`, id: row.id, path: row.path });
+        cards.push({ key: `b${i}-${row.id}`, id: row.id, path: row.path });
+      });
+      setDeck(shuffle(cards));
+      setFlipped([]);
+      setMatched(new Set());
+      setMoves(0);
+      setDealWhenReady(false);
+    },
+    [media.data],
+  );
+
+  // Board-size change deals immediately with the NEW count (the Segmented
+  // callback passes it explicitly — setState alone would race `deal`).
+  const changePairs = (next: Board) => {
+    setPairs(next);
+    deal(next);
+  };
+
+  // First deal: once the pool first has enough rows (covers the cold start,
+  // where the query answer lands after mount). Later pool changes are IGNORED
+  // — that was the self-restart bug.
+  const poolSize = (media.data ?? []).filter((r) => r.kind === "image" && !r.trashed).length;
+  const dealtRef = useRef(false);
+  useEffect(() => {
+    if (dealtRef.current || deck.length > 0) return;
+    if (dealWhenReady && poolSize >= 2) {
+      dealtRef.current = true;
+      deal(pairs);
+    }
+  }, [dealWhenReady, poolSize, deal, pairs, deck.length]);
 
   // previews for the deck: the finder/slideshow contract — ask once per id
   const asked = useRef<Set<number>>(new Set());
@@ -119,22 +158,6 @@ export default function PlayPage() {
     }
     if (missing.length > 0) enqueueThumbs(missing);
   }, [deck, thumbs]);
-
-  /**
-   * A new deck IS a new game.
-   *
-   * Without this the board could deadlock: `flipped` holds card keys, and if
-   * the media query refetched mid-turn the fresh deck no longer contained those
-   * keys — the two stored keys rendered as at most one open card while the
-   * `flipped.length === 2` guard kept refusing every further click. Keying the
-   * reset on the deck's own composition (not on the array identity) means a
-   * background refetch that returns the same photos does not wipe progress.
-   */
-  const deckKey = useMemo(() => deck.map((c) => c.key).join("|"), [deck]);
-  useEffect(() => {
-    setFlipped([]);
-    setMatched(new Set());
-  }, [deckKey]);
 
   // a wrong pair turns back after a beat the player can actually see
   useEffect(() => {
@@ -154,12 +177,8 @@ export default function PlayPage() {
   }, [flipped, deck]);
 
   const start = useCallback(() => {
-    setFlipped([]);
-    setMatched(new Set());
-    setMoves(0);
-    setRound((r) => r + 1);
-    asked.current = new Set();
-  }, []);
+    deal(pairs);
+  }, [deal, pairs]);
 
   const reveal = (card: Card) => {
     if (matched.has(card.key) || flipped.includes(card.key) || flipped.length === 2) return;
@@ -185,12 +204,7 @@ export default function PlayPage() {
           tone="quiet"
           className="ml-2"
           value={String(pairs)}
-          onChange={(v) => {
-            setPairs(Number(v) as Board);
-            setMatched(new Set());
-            setFlipped([]);
-            setMoves(0);
-          }}
+          onChange={(v) => changePairs(Number(v) as Board)}
           options={BOARDS.map((b) => ({ value: String(b.value), label: b.label }))}
         />
         <div className="ml-auto flex items-center gap-2">
@@ -230,7 +244,9 @@ export default function PlayPage() {
                     initial={uiMotion ? { opacity: 0, y: 8 } : false}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: uiMotion ? Math.min(i * 0.02, 0.3) : 0, duration: 0.2 }}
-                    whileHover={uiMotion && !faceUp ? { y: -3 } : undefined}
+                    // NO whileHover y-lift: framer owns `transform` on the
+                    // button, and the lift read as the board "jumping" between
+                    // re-renders. The shadow is the hover affordance now.
                     whileTap={uiMotion ? { scale: 0.97 } : undefined}
                     className={cn(
                       "relative aspect-[3/4] rounded-card outline-none",
@@ -240,8 +256,8 @@ export default function PlayPage() {
                     )}
                   >
                     {/* the flip lives on an INNER layer on purpose: framer-motion
-                        owns `transform` on the button (lift + tap), so a rotateY
-                        set there was overwritten and the cards never turned */}
+                        owns `transform` on the button, so a rotateY set there was
+                        overwritten and the cards never turned */}
                     <span
                       className="absolute inset-0 block"
                       style={{

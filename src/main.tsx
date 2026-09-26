@@ -25,6 +25,7 @@ import { queryClient } from "./lib/queryClient";
 import { useAppSettings } from "./lib/settings";
 import { MotionConfig } from "framer-motion";
 import { startPerfWatchdog } from "./lib/perf";
+import { ProfilerOverlay } from "./components/settings/ProfilerOverlay";
 import { initExternalOpen } from "./lib/externalOpen";
 import "./index.css";
 
@@ -103,6 +104,9 @@ async function bootstrap() {
       <QueryClientProvider client={queryClient}>
         <HashRouter>
           <MotionScope>
+          {/* dev-only FPS/heap overlay: every route (the main App mounts its
+              own copy; this one covers the standalone pages like /settings) */}
+          <ProfilerOverlay />
           <Routes>
             <Route path="/" element={<App />} />
             {/* hidden living style sheet */}

@@ -28,6 +28,7 @@ import { RailShell } from "@/components/library/RailShell";
 import { MediaGrid } from "@/components/library/MediaGrid";
 import { FolderGrid } from "@/components/library/FolderCards";
 import { StatusLine } from "@/components/library/StatusLine";
+import { ProfilerOverlay } from "@/components/settings/ProfilerOverlay";
 import { ViewModeSwitch } from "@/components/library/ViewModeSwitch";
 import { BrowseModeSwitch } from "@/components/library/BrowseModeSwitch";
 import { FolderTree } from "@/components/library/FolderTree";
@@ -536,6 +537,8 @@ export default function App() {
       <ContextMenuHost />
       {/* P6: "?" — one panel, every shortcut, grouped by surface */}
       <HotkeySheet />
+      {/* dev-only FPS/heap overlay (Settings › Developer, easter egg) */}
+      <ProfilerOverlay />
     </div>
   );
 }

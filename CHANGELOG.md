@@ -4,6 +4,43 @@ All notable changes to LUMEN are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [semantic versioning](https://semver.org).
 
+## [Unreleased]
+
+### Added
+
+- **Hidden Developer section** (Settings, after the 5-logo-click easter egg) —
+  a profiler toggle with an in-viewport overlay: live FPS, worst frame, long
+  tasks, blocked time and JS heap, plus an automatic diagnostics block that
+  turns the counters into plain-language findings and hints. The overlay docks
+  to any corner (picker in the section), and the developer-only "allow text
+  selection" and "FPS counter" switches moved here from Appearance.
+- **Recycle-bin honesty on removable drives** — Windows keeps a recycle bin on
+  fixed drives only; on a removable volume (verified: D:, DriveType 2, no
+  `$Recycle.Bin`) the shell API deletes permanently while reporting success,
+  which silently violated the app's "recoverable delete" promise. `trash_delete`
+  now refuses such deletes with an explicit error instead of losing data.
+
+### Changed
+
+- **Settings search redesigned** — the field moved into the left section nav
+  (quiet, tone-matched, no floating bar over the page content). Row filtering
+  and self-hiding sections work as before.
+
+### Fixed
+
+- **Memory game restarts by itself** — the deck was derived from the live media
+  query, so every background refetch re-dealt the board mid-game. The deck is
+  now snapshotted into state when a round starts and is never rebuilt from
+  query data; the hover y-lift (read as "cards jumping") is replaced by a
+  shadow-only hover affordance.
+- **Duplicates page thumbnails** — items with a stale/missing cached thumb and
+  videos were never enqueued (the old guard skipped anything with a `thumbPath`
+  and only ever called the image engine). All items now route through the
+  shared generator pipeline, so video captures regenerate instead of showing
+  the bare "MP4" chip forever.
+- The memory game card no longer appears on the Tools hub at all — the easter
+  egg stays reachable only by typing the /play route.
+
 ## [0.3.0]
 
 ### Added

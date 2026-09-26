@@ -28,6 +28,19 @@ export const CARD_HOVER_KEY = "card_hover";
 /** Text is selectable anywhere (search/path fields always keep it). OFF =
  *  nothing in the app hints at a web page — no I-beam, no selection. */
 export const TEXT_SELECTION_KEY = "ui_text_selection";
+/**
+ * PROFILER OVERLAY — developer-only (Settings › Developer, hidden until the
+ * About logo easter egg). ON = an in-viewport overlay publishes FPS, worst
+ * frame, long tasks and JS heap size from the same watchdog the status line
+ * uses. Not user-facing: the key is read once at load and flipped live.
+ */
+export const PROFILER_KEY = "dev_profiler";
+/** Which viewport corner the profiler overlay docks to ("tl"|"tr"|"bl"|"br"). */
+export const PROFILER_CORNER_KEY = "dev_profiler_corner";
+export type ProfilerCorner = "tl" | "tr" | "bl" | "br";
+export const DEFAULT_PROFILER_CORNER: ProfilerCorner = "bl";
+/** Picker order in Settings › Developer. */
+export const PROFILER_CORNERS: ProfilerCorner[] = ["tl", "tr", "bl", "br"];
 
 /**
  * NAVIGATION VISIBILITY (Settings › Behavior) — comma-separated ids of the
@@ -180,6 +193,10 @@ interface AppSettingsState {
   cardHover: boolean;
   /** text selection outside inputs (F13), default OFF (native-app feel) */
   textSelection: boolean;
+  /** in-viewport profiler overlay (dev-only, hidden without the easter egg) */
+  profiler: boolean;
+  /** which corner the profiler docks to (dev-only) */
+  profilerCorner: ProfilerCorner;
   /** a freshly opened video starts playing at once (Settings › Appearance) */
   videoAutoplay: boolean;
   /** horizontal swipe walks the photo queue (Settings › Appearance) */
@@ -220,6 +237,8 @@ interface AppSettingsState {
   setHoverCaptions: (on: boolean) => Promise<void>;
   setCardHover: (on: boolean) => Promise<void>;
   setTextSelection: (on: boolean) => Promise<void>;
+  setProfiler: (on: boolean) => Promise<void>;
+  setProfilerCorner: (corner: ProfilerCorner) => Promise<void>;
   setVideoAutoplay: (on: boolean) => Promise<void>;
   setSwipeNavigate: (on: boolean) => Promise<void>;
   setPillAlign: (align: PillAlign) => Promise<void>;
@@ -246,6 +265,8 @@ export const useAppSettings = create<AppSettingsState>((set) => ({
   // hover language; only an explicit OFF in the DB turns them off
   cardHover: true,
   textSelection: false,
+  profiler: false,
+  profilerCorner: DEFAULT_PROFILER_CORNER,
   videoAutoplay: true,
   swipeNavigate: true,
   pillAlign: DEFAULT_PILL_ALIGN,
@@ -270,7 +291,7 @@ export const useAppSettings = create<AppSettingsState>((set) => ({
     try {
       const db = await getDb();
       const rows = await db.select<{ key: string; value: string }[]>(
-        "SELECT key, value FROM settings WHERE key IN ('video_scrub_rate', 'hover_captions', 'video_autoplay', 'viewer_swipe', 'viewer_pill_align', 'perf_show_fps', 'show_excluded', 'thumb_workers', 'accent', 'grid_density', 'video_saturation', 'video_sharpness', 'collage_fit', 'direct_playback', 'appearance.main_layout', 'card_hover', 'ui_text_selection', 'app.background_mode', 'ui_motion', 'ui_radius', 'ui_nav_hidden')",
+        "SELECT key, value FROM settings WHERE key IN ('video_scrub_rate', 'hover_captions', 'video_autoplay', 'viewer_swipe', 'viewer_pill_align', 'perf_show_fps', 'show_excluded', 'thumb_workers', 'accent', 'grid_density', 'video_saturation', 'video_sharpness', 'collage_fit', 'direct_playback', 'appearance.main_layout', 'card_hover', 'ui_text_selection', 'dev_profiler', 'dev_profiler_corner', 'app.background_mode', 'ui_motion', 'ui_radius', 'ui_nav_hidden')",
       );
       const byKey = new Map(rows.map((r) => [r.key, r.value]));
       const raw = Number(byKey.get(SCRUB_RATE_KEY));
@@ -282,6 +303,8 @@ export const useAppSettings = create<AppSettingsState>((set) => ({
         // ABSENT = first run: card animation ON by default
         cardHover: byKey.get(CARD_HOVER_KEY) !== "false",
         textSelection: byKey.get(TEXT_SELECTION_KEY) === "true",
+        profiler: byKey.get(PROFILER_KEY) === "true",
+        profilerCorner: readProfilerCorner(byKey.get(PROFILER_CORNER_KEY)),
         videoAutoplay: byKey.get(VIDEO_AUTOPLAY_KEY) !== "false",
         swipeNavigate: byKey.get(SWIPE_NAVIGATE_KEY) !== "false",
         pillAlign: readPillAlign(byKey.get(PILL_ALIGN_KEY)),
@@ -363,6 +386,26 @@ export const useAppSettings = create<AppSettingsState>((set) => ({
       await writeSetting(TEXT_SELECTION_KEY, String(on));
     } catch (e) {
       console.error("text selection save failed", e);
+      toast.error(i18n.t("errors.action_failed"));
+    }
+  },
+
+  setProfiler: async (on) => {
+    set({ profiler: on }); // the overlay mounts/unmounts live
+    try {
+      await writeSetting(PROFILER_KEY, String(on));
+    } catch (e) {
+      console.error("profiler save failed", e);
+      toast.error(i18n.t("errors.action_failed"));
+    }
+  },
+
+  setProfilerCorner: async (profilerCorner) => {
+    set({ profilerCorner }); // the overlay jumps to the new corner instantly
+    try {
+      await writeSetting(PROFILER_CORNER_KEY, profilerCorner);
+    } catch (e) {
+      console.error("profiler corner save failed", e);
       toast.error(i18n.t("errors.action_failed"));
     }
   },
@@ -589,4 +632,9 @@ function readPillAlign(raw: string | undefined): PillAlign {
 function readWorkers(raw: string | undefined): number {
   const n = Number(raw);
   return Number.isFinite(n) && n >= 1 && n <= 16 ? n : DEFAULT_THUMB_WORKERS;
+}
+
+/** Anything unexpected in the stored corner falls back to the bottom-left. */
+function readProfilerCorner(raw: string | undefined): ProfilerCorner {
+  return raw === "tl" || raw === "tr" || raw === "br" ? raw : DEFAULT_PROFILER_CORNER;
 }

@@ -1,9 +1,7 @@
-import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
-import { ArrowLeft, ArrowRight, Copy, HardDrive, Sparkles } from "lucide-react";
-import { readSetting } from "@/i18n";
+import { ArrowLeft, ArrowRight, Copy, HardDrive } from "lucide-react";
 import { WindowTitleBar } from "@/components/WindowTitleBar";
 import { IconButton } from "@/components/ui/IconButton";
 import { formatBytes, formatCount } from "@/lib/api";
@@ -39,20 +37,10 @@ interface ToolCard {
 }
 
 /**
- * The easter egg: revealed only after the About logo has been clicked 5×
- * (the same gesture that unlocks dev mode). It is a game, not a tool — hence
- * the separate list and the separate section on the page.
+ * NOTE: the memory game ("/play") is a hidden easter egg — it must NOT appear
+ * here, not even for dev-unlocked users. It is reachable only by typing the
+ * route (see PlayPage). Do not add it back to this list.
  */
-const SECRET: ToolCard = {
-  id: "memory",
-  route: "/play",
-  index: "03",
-  icon: <Sparkles size={20} strokeWidth={1.7} />,
-  titleKey: "play.title",
-  descKey: "play.desc",
-  meta: (t, s) => t("play.meta", { count: formatCount(s?.images ?? 0) }),
-};
-
 const TOOLS: ToolCard[] = [
   {
     id: "duplicates",
@@ -85,12 +73,6 @@ export default function ToolsPage() {
   const navigate = useNavigate();
   const summary = useLibrarySummary(true);
   const uiMotion = useAppSettings((s) => s.uiMotion);
-  // the secret card appears only after the 5-logo-click gesture in About
-  const [secretUnlocked, setSecretUnlocked] = useState(false);
-  useEffect(() => {
-    void readSetting("ui.dev_unlocked").then((v) => setSecretUnlocked(v === "true"));
-  }, []);
-  const cards = secretUnlocked ? [...TOOLS, SECRET] : TOOLS;
 
   return (
     <div className="flex h-full flex-col">
@@ -128,7 +110,7 @@ export default function ToolsPage() {
           </p>
 
           <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {cards.map((tool, i) => (
+            {TOOLS.map((tool, i) => (
               <motion.button
                 key={tool.id}
                 type="button"

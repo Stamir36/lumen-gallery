@@ -2,17 +2,23 @@ import { createContext, useContext } from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * Settings search.
+ * Settings primitives (UI audit).
  *
- * The page grows with every release, and scrolling it became the cost of
- * finding anything. Instead of a search box that would have to know every row,
- * each row asks this context whether it should render: the query is matched
- * against the row's own label + hint + optional `keywords`. Rows that do not
- * match simply disappear — no DOM walks, no duplicated index to keep in sync
- * with the UI.
+ * The settings page had grown ten hand-copied switch blocks with slightly
+ * different paddings and three near-identical pill groups. These pieces are
+ * the shared vocabulary: one row rhythm, one switch, one segmented pill group.
+ * Every row keeps its ARIA contract (`role="switch"` + accessible name).
+ *
+ * SEARCH lives in the LEFT nav column now (a quiet field under the section
+ * list) — the old sticky search bar fought the page background and stuck
+ * badly (user note: "поиску не место" — it belonged in the menu, not on the
+ * page). Rows ask `useRowMatches` whether to render; empty sections hide
+ * themselves in SettingsContent via a DOM walk over marked rows.
  */
+
 const FilterContext = createContext<string>("");
 
+/** Provides the active search query to every row on the page. */
 export function SettingsFilterProvider({
   query,
   children,
@@ -25,9 +31,8 @@ export function SettingsFilterProvider({
 
 /**
  * True when the row should be visible for the active query. Every word in the
- * query must appear somewhere in the row's text, so "кэш очистить" finds the
- * cache row while "кэш яблоко" finds nothing — AND, not OR, is what people
- * expect when they type a second word to narrow the list.
+ * query must appear in the row's label/hint/keywords — AND, not OR, is what
+ * people expect when they type a second word to narrow the list.
  */
 export function useRowMatches(...parts: (string | undefined | false)[]) {
   const query = useContext(FilterContext);
@@ -39,16 +44,6 @@ export function useRowMatches(...parts: (string | undefined | false)[]) {
     .filter(Boolean)
     .every((word) => haystack.includes(word));
 }
-
-/**
- * Settings primitives (UI audit).
- *
- * The settings page had grown ten hand-copied switch blocks with slightly
- * different paddings and three near-identical pill groups. These four pieces
- * are the shared vocabulary: one row rhythm, one switch, one segmented pill
- * group. Every row keeps its ARIA contract (`role="switch"` + accessible name),
- * which is what the e2e specs and keyboard users read.
- */
 
 /** A labelled row: label + optional hint on the left, control on the right. */
 export function SettingRow({
@@ -62,7 +57,7 @@ export function SettingRow({
   hint?: string;
   children?: React.ReactNode;
   className?: string;
-  /** extra search terms that are not literally on screen (e.g. "tray", "saF") */
+  /** extra search terms that are not literally on screen (e.g. "tray", "safe") */
   keywords?: string;
 }) {
   const visible = useRowMatches(label, hint, keywords);

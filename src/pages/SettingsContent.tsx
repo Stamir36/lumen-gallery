@@ -18,11 +18,13 @@ import {
   MousePointerClick,
   Info,
   Download,
+  Terminal,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   DENSITY_PARAMS,
+  PROFILER_CORNERS,
   RADIUS_PRESETS,
   SCRUB_RATES,
   THUMB_WORKER_OPTIONS,
@@ -30,6 +32,7 @@ import {
   type GridDensity,
   type MainLayout,
   type PillAlign,
+  type ProfilerCorner,
   type UiRadius,
 } from "@/lib/settings";
 import { ACCENTS } from "@/lib/accent";
@@ -193,28 +196,10 @@ export function SettingsContent() {
   const setBackgroundMode = useAppSettings((s) => s.setBackgroundMode);
   const hiddenNav = useAppSettings((s) => s.hiddenNav);
   const setNavHidden = useAppSettings((s) => s.setNavHidden);
-  /** Settings search — filters rows through SettingsFilterProvider. */
-  const [query, setQuery] = useState("");
-  const [visibleSections, setVisibleSections] = useState(0);
-  const contentRef = useRef<HTMLDivElement>(null);
-
-  // A section whose rows all filtered themselves out would otherwise leave its
-  // number + title standing over an empty card, so the page walks its own
-  // sections after each keystroke and hides the ones with nothing left. The
-  // walk is over marked rows only ([data-settings-row]); cards that never had
-  // rows (the library list, the About identity block) hide with their section.
-  useEffect(() => {
-    const root = contentRef.current;
-    if (!root) return;
-    const q = query.trim();
-    let shown = 0;
-    root.querySelectorAll<HTMLElement>("section[id]").forEach((sec) => {
-      const hasRows = !q || sec.querySelector("[data-settings-row]") !== null;
-      sec.style.display = hasRows ? "" : "none";
-      if (hasRows) shown += 1;
-    });
-    setVisibleSections(shown);
-  }, [query]);
+  const profiler = useAppSettings((s) => s.profiler);
+  const setProfiler = useAppSettings((s) => s.setProfiler);
+  const profilerCorner = useAppSettings((s) => s.profilerCorner);
+  const setProfilerCorner = useAppSettings((s) => s.setProfilerCorner);
 
   useEffect(() => {
     void readSetting(CURSOR_KEY).then((v) => setCursorPointer(v === "true"));
@@ -307,6 +292,11 @@ export function SettingsContent() {
     { id: "system", icon: <Cpu size={18} />, label: t("settings.nav_system") },
     // BUGS 29.09: About existed only as a section — the left nav never listed it
     { id: "about", icon: <Info size={18} />, label: t("settings.nav_about") },
+    // easter egg nav row: only after the 5-logo-click gesture (mirrors the
+    // section below — without it the section is unreachable from the nav)
+    ...(devUnlocked
+      ? [{ id: "developer", icon: <Terminal size={18} />, label: t("settings.nav_developer") }]
+      : []),
   ];
   /** stable list for the scrollspy observer (navItems is rebuilt per render) */
   const SECTION_IDS = navItems.map((n) => n.id);
@@ -315,6 +305,29 @@ export function SettingsContent() {
     setActive(id);
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
   };
+
+  /**
+   * Settings search — the field lives IN the left nav column (a quiet mono
+   * field under the section list), so nothing sticky ever overlays the page
+   * content. While a query is active, non-matching rows disappear (each row
+   * asks `useRowMatches`), and a section with no matching rows hides itself:
+   * the walk below runs after each keystroke over marked rows only.
+   */
+  const [query, setQuery] = useState("");
+  const [visibleSections, setVisibleSections] = useState(0);
+  const contentRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const root = contentRef.current;
+    if (!root) return;
+    const q = query.trim();
+    let shown = 0;
+    root.querySelectorAll<HTMLElement>("section[id]").forEach((sec) => {
+      const hasRows = !q || sec.querySelector("[data-settings-row]") !== null;
+      sec.style.display = hasRows ? "" : "none";
+      if (hasRows) shown += 1;
+    });
+    setVisibleSections(shown);
+  }, [query]);
 
   // Scrollspy (FIX 2): keep the sticky nav in sync with the section actually
   // in view. The page scroller is the closest <main> ancestor (SettingsPage
@@ -342,7 +355,9 @@ export function SettingsContent() {
   return (
     <SettingsFilterProvider query={query}>
       <div className="flex items-start gap-10">
-      {/* sticky section nav — never scrolls out of view */}
+      {/* sticky section nav — never scrolls out of view. The search field is
+          PART of this column: a quiet input under the list, tone-matched to
+          the nav (no floating bar over the page). */}
       <nav className="sticky top-0 hidden w-[240px] shrink-0 flex-col gap-1 self-start md:flex">
         {navItems.map((n) => (
           <button
@@ -369,44 +384,42 @@ export function SettingsContent() {
             <span className="relative z-10">{n.label}</span>
           </button>
         ))}
+
+        {/* search: lives in the menu, tone-matched (surface-2, hairline ring
+            on focus) — no backdrop, no floating over content */}
+        <div className="relative mt-3 px-1">
+          <Search
+            size={15}
+            className="pointer-events-none absolute left-4.5 top-1/2 -translate-y-1/2 text-ttertiary"
+          />
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={t("settings.search_placeholder")}
+            aria-label={t("settings.search_placeholder")}
+            className="h-9 w-full rounded-control bg-surface-2 pl-9 pr-8 text-[13px] text-tprimary outline-none ring-1 ring-transparent transition-shadow placeholder:text-ttertiary focus-visible:ring-accent/40"
+          />
+          {query && (
+            <button
+              type="button"
+              aria-label={t("settings.search_clear")}
+              onClick={() => setQuery("")}
+              className="absolute right-3 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-pill text-ttertiary transition-colors hover:bg-white/[.08] hover:text-tprimary"
+            >
+              <X size={13} />
+            </button>
+          )}
+        </div>
+        {query.trim() && (
+          <p className="px-2 pt-1 font-mono text-[10px] text-ttertiary">
+            {t("settings.search_hint", { count: visibleSections })}
+          </p>
+        )}
       </nav>
 
       {/* content cards fill the full column width */}
       <div ref={contentRef} className="min-w-0 flex-1 space-y-12">
-        {/* search: the page grows every release, so finding a row must not mean
-            scrolling the whole thing. Sticky, so it stays reachable while the
-            filtered list is short. */}
-        <div className="sticky -top-px z-20 -mt-2 bg-canvas/85 pb-2 pt-2 backdrop-blur-[6px]">
-          <div className="relative">
-            <Search
-              size={16}
-              className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ttertiary"
-            />
-            <input
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={t("settings.search_placeholder")}
-              aria-label={t("settings.search_placeholder")}
-              className="h-11 w-full rounded-pill bg-surface-2 pl-10 pr-10 text-sm text-tprimary outline-none placeholder:text-ttertiary focus-visible:ring-2 focus-visible:ring-accent/40"
-            />
-            {query && (
-              <button
-                type="button"
-                aria-label={t("settings.search_clear")}
-                onClick={() => setQuery("")}
-                className="absolute right-2.5 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-pill text-ttertiary transition-colors hover:bg-white/[.08] hover:text-tprimary"
-              >
-                <X size={14} />
-              </button>
-            )}
-          </div>
-          {query.trim() && (
-            <p className="mt-2 font-mono text-[11px] text-ttertiary">
-              {t("settings.search_hint", { count: visibleSections })}
-            </p>
-          )}
-        </div>
 
         {/* 01 Libraries */}
         <Section index="01" id="libraries" title={t("settings.nav_libraries")}>
@@ -586,22 +599,8 @@ export function SettingsContent() {
               on={customCursor}
               onChange={(v) => void toggleCustomCursor(v)}
             />
-            {/* BUGS 29.09: developer-only switch — hidden until the About logo
-                easter egg (5 clicks) unlocks it for the session. */}
-            {devUnlocked && (
-              <Toggle
-                label={t("settings.text_selection")}
-                hint={t("settings.text_selection_hint")}
-                on={textSelection}
-                onChange={(v) => void setTextSelection(v)}
-              />
-            )}
-            <Toggle
-              label={t("settings.show_fps")}
-              hint={t("settings.show_fps_hint")}
-              on={showFps}
-              onChange={(v) => void setShowFps(v)}
-            />
+            {/* text selection + FPS counter moved to Settings › Developer:
+                they are developer tools, not user preferences */}
             <SettingRow label={t("settings.pill_align")} hint={t("settings.pill_align_hint")}>
               <PillChoice<PillAlign>
                 ariaLabel={t("settings.pill_align")}
@@ -883,6 +882,48 @@ export function SettingsContent() {
             </div>
           </GlassCard>
         </Section>
+
+        {/* 08 Developer — HIDDEN easter egg section: rendered only when the
+            About logo has been clicked 5× (ui.dev_unlocked). Not in the nav
+            for anyone else, not searchable, no other trace. */}
+        {devUnlocked && (
+          <Section index="08" id="developer" title={t("settings.nav_developer")}>
+            <GlassCard>
+              <Toggle
+                label={t("settings.profiler")}
+                hint={t("settings.profiler_hint")}
+                on={profiler}
+                onChange={(v) => void setProfiler(v)}
+              />
+              <SettingRow label={t("settings.profiler_corner")} hint={t("settings.profiler_corner_hint")}>
+                <PillChoice<ProfilerCorner>
+                  ariaLabel={t("settings.profiler_corner")}
+                  value={profilerCorner}
+                  onChange={(c) => void setProfilerCorner(c)}
+                  options={PROFILER_CORNERS.map((c) => ({
+                    value: c,
+                    label: t(`settings.profiler_corner_${c}`),
+                  }))}
+                />
+              </SettingRow>
+              <Toggle
+                label={t("settings.text_selection")}
+                hint={t("settings.text_selection_hint")}
+                on={textSelection}
+                onChange={(v) => void setTextSelection(v)}
+              />
+              <Toggle
+                label={t("settings.show_fps")}
+                hint={t("settings.show_fps_hint")}
+                on={showFps}
+                onChange={(v) => void setShowFps(v)}
+              />
+              <p className="pt-3 font-mono text-[11px] leading-relaxed text-ttertiary">
+                {t("settings.dev_section_note")}
+              </p>
+            </GlassCard>
+          </Section>
+        )}
 
         {message && (
           <p
