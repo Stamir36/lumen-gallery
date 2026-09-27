@@ -623,14 +623,17 @@
     "diagnostics": "Diagnostics",
     "diag_ok_render": "Rendering is smooth",
     "diag_all_ok": "No problems detected",
-    "diag_low_fps": "UI drops frames ({fps} fps) — heavy page or background work",
-    "diag_frame_hitch": "Single frame took {ms} ms — check what just loaded",
-    "diag_blocked": "Main thread blocked for {ms} ms total — a sync operation is too heavy",
-    "diag_long_tasks": "{count} long tasks — some work runs over 300 ms",
-    "diag_heap": "JS heap is large ({mb} MB) — many rows or images in memory",
+    "diag_low_fps": "UI drops frames ({{fps}} fps) — heavy page or background work",
+    "diag_frame_hitch": "Worst frame {{ms}} ms — something blocked the main thread",
+    "diag_blocked": "Main thread blocked for {{ms}} ms total — a sync operation is too heavy",
+    "diag_long_tasks": "{{count}} long tasks — some work runs over 300 ms",
+    "diag_heap": "JS heap is large ({{mb}} MB) — many rows or images in memory",
     "video": "Video",
-    "diag_slow_seek": "Last seek took {ms} ms — source is slow to decode/seek",
-    "diag_slow_video": "Video took {ms} ms to first frame — slow source or storage",
-    "history": "fps · last 30 s"
+    "diag_slow_seek": "Last seek took {{ms}} ms — source is slow to decode/seek",
+    "diag_slow_video": "Video took {{ms}} ms to first frame — slow source or storage",
+    "history": "fps · last 30 s",
+    "diag_decoder_heavy": "The decoder dropped {{dropped}} frames — this format is heavy to decode (4K/60/HEVC), the UI is not the cause",
+    "diag_decoder_starved": "The decoder dropped {{dropped}} frames with only {{sec}} s buffered — the disk/source cannot keep up",
+    "diag_buffer_thin": "Only {{sec}} s of video buffered ahead — a stall is likely if the source slows down"
   }
 }

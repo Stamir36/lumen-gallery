@@ -48,6 +48,7 @@ import { useAppSettings } from "@/lib/settings";
 import {
   videoPerfLoaded,
   videoPerfReset,
+  videoPerfSample,
   videoPerfSeeked,
   videoPerfSeekStart,
   videoPerfWaiting,
@@ -222,6 +223,33 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
   useEffect(() => {
     videoPerfReset();
   }, [row.id]);
+  // CAUSE metrics for the profiler graph (1 Hz, only while mounted): the
+  // DECODER's dropped-frame delta (separates "heavy format" from "UI jank")
+  // and the seconds of video buffered ahead (separates "disk too slow" from
+  // "decoder too slow"). Dead cheap: two property reads per second.
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      const el = video.current;
+      if (!el || el.readyState < 2) {
+        videoPerfSample(null, null);
+        return;
+      }
+      const q = typeof el.getVideoPlaybackQuality === "function" ? el.getVideoPlaybackQuality() : null;
+      let ahead: number | null = null;
+      const b = el.buffered;
+      for (let i = 0; i < b.length; i++) {
+        if (b.start(i) <= el.currentTime && el.currentTime <= b.end(i)) {
+          ahead = b.end(i) - el.currentTime;
+          break;
+        }
+      }
+      videoPerfSample(q, ahead);
+    }, 1000);
+    return () => {
+      window.clearInterval(id);
+      videoPerfSample(null, null); // unmount: stop feeding the graph
+    };
+  }, []);
   const mediaSrcTainted = !srcClean;
   // VR sources are name-driven (the library encodes it in file names): a
   // standalone "VR" token ("… 8K VR.mkv", "VR180 …"), or "SBS 180" PLUS an

@@ -10,14 +10,20 @@ All notable changes to LUMEN are recorded here. The format follows
 
 - **Profiler history graphs** (Developer overlay) — an FPS sparkline over the
   last 30 s (ring buffer, 120 points, 60 fps guide line) plus an event strip
-  marking video loads, seeks and buffering stalls on the same timeline. The
-  history lives outside the React store, so graphing it adds no per-frame
-  re-renders. A screenshot of the overlay now shows the TREND, not just the
-  current numbers.
+  marking video loads, seeks and buffering stalls on the same timeline. Two
+  CAUSE layers sit on the graph: red bars for the DECODER's dropped frames
+  (bars up + fps down = heavy format; bars empty + fps down = the UI thread)
+  and an amber line for seconds of video buffered ahead (a falling line
+  precedes every stall). The history lives outside the React store, so
+  graphing it adds no per-frame re-renders. A screenshot of the overlay now
+  shows the TREND and its cause, not just the current numbers.
 - **Video profiling** (Developer overlay) — the profiler now watches the video
   player: source→first-frame load time, last-seek latency, seek count/worst and
   buffering stalls, each turned into a plain-language diagnostics finding
   ("slow to decode/seek", "slow source or storage") when a threshold is hit.
+- **Fixed the whole profiler diagnostics block never interpolating** — every
+  string used `{ms}`-style placeholders while the app's i18next is configured
+  for `{{ms}}`, so users saw raw `{ms}` in the findings.
 - **"Show in gallery" on the disk page** — every heaviest-files row gets a
   button that jumps into the app's own viewer at that file (route + viewer
   position), not just the Explorer reveal.

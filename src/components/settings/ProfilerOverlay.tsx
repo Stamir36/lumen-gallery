@@ -54,6 +54,14 @@ function formatMb(bytes: number | undefined) {
 const SPARK_W = 224;
 const SPARK_H = 34;
 
+/**
+ * FPS sparkline + cause overlays. Two layers answer WHY the fps line sags:
+ *  - RED BARS: the video DECODER's dropped frames per window (delta of
+ *    droppedVideoFrames). Bars up + fps down = the format is heavy for the
+ *    decoder; bars at zero + fps down = the UI thread, not the video.
+ *  - AMBER LINE: seconds of video buffered ahead of the playhead (right
+ *    axis, 0-20 s). A falling line precedes every decoder stall.
+ */
 function Sparkline({ tick, label }: { tick: number; label: string }) {
   // `tick` is a render nonce: the parent bumps it 1×/s so the polyline tracks
   // the moving ring buffer. perfHistory is read directly on each render.
@@ -61,13 +69,30 @@ function Sparkline({ tick, label }: { tick: number; label: string }) {
   const n = perfHistory.length;
   const step = SPARK_W / Math.max(1, PERF_HISTORY_CAP - 1);
   const left = (PERF_HISTORY_CAP - n) * step; // partial window starts at the left
+  const yFor = (fps: number) => SPARK_H - (Math.min(fps, 80) / 80) * (SPARK_H - 2) - 1;
   const pts = perfHistory
     .map((p, i) => {
       const x = left + i * step;
-      const y = SPARK_H - (Math.min(p.fps, 80) / 80) * (SPARK_H - 2) - 1;
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
+      return `${x.toFixed(1)},${yFor(p.fps).toFixed(1)}`;
     })
     .join(" ");
+  // buffer line: nulls (no video) break the polyline into segments
+  const bufSegs: string[] = [];
+  let seg: string[] = [];
+  for (let i = 0; i < n; i++) {
+    const p = perfHistory[i];
+    if (p.bufferAhead == null) {
+      if (seg.length > 1) bufSegs.push(seg.join(" "));
+      seg = [];
+      continue;
+    }
+    const x = left + i * step;
+    const y = SPARK_H - (Math.min(p.bufferAhead, 20) / 20) * (SPARK_H - 2) - 1;
+    seg.push(`${x.toFixed(1)},${y.toFixed(1)}`);
+  }
+  if (seg.length > 1) bufSegs.push(seg.join(" "));
+  const maxDropped = Math.max(1, ...perfHistory.map((p) => p.dropped));
+  const hasVideo = perfHistory.some((p) => p.bufferAhead != null || p.dropped > 0);
   return (
     <div className="px-3 pb-2">
       <div className="mb-0.5 flex items-baseline justify-between">
@@ -86,13 +111,30 @@ function Sparkline({ tick, label }: { tick: number; label: string }) {
         <line
           x1={0}
           x2={SPARK_W}
-          y1={SPARK_H - (60 / 80) * (SPARK_H - 2) - 1}
-          y2={SPARK_H - (60 / 80) * (SPARK_H - 2) - 1}
+          y1={yFor(60)}
+          y2={yFor(60)}
           stroke="rgba(255,255,255,.12)"
           strokeDasharray="3 3"
           strokeWidth={1}
         />
+        {/* dropped-frame bars: one 2px column per window that lost frames */}
+        {perfHistory.map((p, i) =>
+          p.dropped > 0 ? (
+            <rect
+              key={i}
+              x={left + i * step}
+              y={0}
+              width={1.8}
+              height={Math.min(SPARK_H, 4 + (p.dropped / maxDropped) * (SPARK_H - 6))}
+              fill="rgba(248,113,113,.75)"
+            />
+          ) : null,
+        )}
         {n > 1 && <polyline points={pts} fill="none" stroke="#6ee7b7" strokeWidth={1.4} />}
+        {hasVideo &&
+          bufSegs.map((s, i) => (
+            <polyline key={i} points={s} fill="none" stroke="#fbbf24" strokeWidth={1} opacity={0.8} />
+          ))}
       </svg>
     </div>
   );
@@ -147,10 +189,27 @@ function useDiagnostics(
   longTasks: number,
   blockedMs: number,
   heap: { used: number; limit: number } | null,
+  videoDropped: number,
+  bufferAhead: number | null,
   t: (key: string, opts?: Record<string, unknown>) => string,
 ): Finding[] {
   return useMemo(() => {
     const out: Finding[] = [];
+    // CAUSE split for "fps drops during video": a decoder that dropped frames
+    // recently means the FORMAT is heavy (UI optimization will not help);
+    // zero drops with sagging fps means the UI thread is the culprit. A thin
+    // buffer (starving source) predicts stalls before the fps line even moves.
+    if (videoDropped > 0) {
+      out.push({
+        level: "warn",
+        text:
+          bufferAhead !== null && bufferAhead < 2
+            ? t("profiler.diag_decoder_starved", { dropped: videoDropped, sec: Math.round(bufferAhead * 10) / 10 })
+            : t("profiler.diag_decoder_heavy", { dropped: videoDropped }),
+      });
+    } else if (bufferAhead !== null && bufferAhead < 1.5) {
+      out.push({ level: "warn", text: t("profiler.diag_buffer_thin", { sec: Math.round(bufferAhead * 10) / 10 }) });
+    }
     if (fps > 0 && fps < 40) {
       out.push({ level: "warn", text: t("profiler.diag_low_fps", { fps }) });
     } else if (worstMs > 250) {
@@ -171,7 +230,7 @@ function useDiagnostics(
       out.push({ level: "ok", text: t("profiler.diag_all_ok") });
     }
     return out;
-  }, [fps, worstMs, longTasks, blockedMs, heap, t]);
+  }, [fps, worstMs, longTasks, blockedMs, heap, videoDropped, bufferAhead, t]);
 }
 
 export function ProfilerOverlay() {
@@ -209,7 +268,18 @@ export function ProfilerOverlay() {
     return () => window.clearInterval(id);
   }, [on]);
 
-  const findings = useDiagnostics(fps, worstMs, longTasks, blockedMs, heap, t);
+  const findings = useDiagnostics(
+    fps,
+    worstMs,
+    longTasks,
+    blockedMs,
+    heap,
+    // cause inputs: dropped/buffer over the LAST second of history (the same
+    // window the meters show, without new store fields)
+    perfHistory.length > 0 ? perfHistory[perfHistory.length - 1].dropped : 0,
+    perfHistory.length > 0 ? perfHistory[perfHistory.length - 1].bufferAhead : null,
+    t,
+  );
   // video findings only when a video has actually been opened this session
   if (videoSeekMs !== null && videoSeekMs > 800) {
     findings.push({ level: "warn", text: t("profiler.diag_slow_seek", { ms: videoSeekMs }) });

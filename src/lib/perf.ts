@@ -67,6 +67,15 @@ export interface HistoryPoint {
   fps: number;
   /** worst frame of the window, ms */
   worstMs: number;
+  /** VIDEO DECODER frames dropped in this window (0 = no video open). This is
+   *  the CAUSE metric the fps line only points at: rAF fps can sag because of
+   *  the UI OR because the decoder is behind — droppedVideoFrames separates
+   *  the two (WebView2/Chromium exposes it per <video>). */
+  dropped: number;
+  /** seconds of video buffered ahead of the playhead (null = no video). A
+   *  falling line means the source/disk cannot keep up — the precondition for
+   *  decoder stalls that no amount of UI optimization would fix. */
+  bufferAhead: number | null;
 }
 
 export const perfHistory: HistoryPoint[] = [];
@@ -94,6 +103,35 @@ function pushEvent(kind: HistoryEvent["kind"], ms?: number) {
 }
 
 /**
+ * Per-window accumulators fed by `videoPerfSample` (called from VideoPlayer's
+ * 1 Hz sampler) and drained by the watchdog tick when a history point lands.
+ * Outside the store: only the graph reads these.
+ */
+let pendingDropped = 0;
+let pendingBufferAhead: number | null = null;
+let lastDroppedFrames = 0;
+
+/**
+ * 1 Hz video sample. `quality` is the element's getVideoPlaybackQuality()
+ * result (or null when no video is open); the DELTA of droppedVideoFrames is
+ * accumulated until the next history point. `bufferAheadSec` = how many
+ * seconds of decoded-ahead video sit in `video.buffered`.
+ */
+export function videoPerfSample(
+  quality: { droppedVideoFrames: number; totalVideoFrames: number } | null,
+  bufferAheadSec: number | null,
+) {
+  if (!quality) {
+    lastDroppedFrames = 0;
+    pendingBufferAhead = null;
+    return;
+  }
+  pendingDropped += Math.max(0, quality.droppedVideoFrames - lastDroppedFrames);
+  lastDroppedFrames = quality.droppedVideoFrames;
+  pendingBufferAhead = bufferAheadSec;
+}
+
+/**
  * Video timing probe — the stats live HERE (not in the component) so the
  * profiler overlay and any future console dump read the same numbers.
  * `perf.note` is a plain zustand set, so a burst of events is cheap.
@@ -111,6 +149,8 @@ export function videoPerfReset() {
   videoPerf.loadStart = performance.now();
   videoPerf.seekStart = 0;
   videoPerf.waitingStart = 0;
+  lastDroppedFrames = 0;
+  pendingBufferAhead = null;
   usePerf.getState().note({ videoLoadMs: null, videoSeekMs: null });
 }
 
@@ -219,7 +259,9 @@ export function startPerfWatchdog(): () => void {
       const fps = Math.round((frames * 1000) / (now - windowStart));
       const worstMs = Math.round(worst);
       note({ fps, worstMs });
-      pushHistory({ fps, worstMs });
+      // drain the video sampler's accumulators into the point being filed
+      pushHistory({ fps, worstMs, dropped: pendingDropped, bufferAhead: pendingBufferAhead });
+      pendingDropped = 0;
       frames = 0;
       worst = 0;
       windowStart = now;
