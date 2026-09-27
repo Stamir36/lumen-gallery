@@ -8,6 +8,14 @@ All notable changes to LUMEN are recorded here. The format follows
 
 ### Added
 
+- **Video profiling** (Developer overlay) — the profiler now watches the video
+  player: source→first-frame load time, last-seek latency, seek count/worst and
+  buffering stalls, each turned into a plain-language diagnostics finding
+  ("slow to decode/seek", "slow source or storage") when a threshold is hit.
+- **"Show in gallery" on the disk page** — every heaviest-files row gets a
+  button that jumps into the app's own viewer at that file (route + viewer
+  position), not just the Explorer reveal.
+
 - **Hidden Developer section** (Settings, after the 5-logo-click easter egg) —
   a profiler toggle with an in-viewport overlay: live FPS, worst frame, long
   tasks, blocked time and JS heap, plus an automatic diagnostics block that
@@ -23,8 +31,20 @@ All notable changes to LUMEN are recorded here. The format follows
 ### Changed
 
 - **Settings search redesigned** — the field moved into the left section nav
-  (quiet, tone-matched, no floating bar over the page content). Row filtering
-  and self-hiding sections work as before.
+  (quiet, tone-matched, no floating bar over the page content) and now sits at
+  the TOP of the nav, before the section list. Row filtering and self-hiding
+  sections work as before.
+- **Window drag on every page** — the tool pages with their own slim headers
+  (duplicates, disk, play) and the full-window slideshow route now embed the
+  shared drag region, so the frameless window can be moved from anywhere; it
+  was fixed chrome before (user note).
+- **Easter egg discoverability** — the About screen now says the logo gesture
+  exists (and flips to "developer mode on" once unlocked); the 5-click secret
+  was otherwise unfindable.
+- **Button hovers de-jumped** — the y-lift on IconButton, PillButton, FAB and
+  the EmptyState CTA is replaced by a shadow/scale affordance; buttons no
+  longer "jump" under the cursor (user note). Grid cards keep their optional
+  lift behind the cardHover setting.
 
 ### Fixed
 
@@ -40,6 +60,10 @@ All notable changes to LUMEN are recorded here. The format follows
   the bare "MP4" chip forever.
 - The memory game card no longer appears on the Tools hub at all — the easter
   egg stays reachable only by typing the /play route.
+- **Restored lost search i18n keys** — `settings.search_placeholder` and
+  friends leaked out of en/ru during the redesign and rendered as raw keys
+  (user screenshot); re-added and synced with the new profiler/disk/easter-egg
+  strings in both languages.
 
 ## [0.3.0]
 

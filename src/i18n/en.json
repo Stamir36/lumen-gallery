@@ -91,7 +91,8 @@
     "reveal": "Show in Explorer",
     "delete_arm": "Move to Recycle Bin ({{size}})",
     "delete_confirm": "Delete — are you sure?",
-    "delete_cancel": "Cancel"
+    "delete_cancel": "Cancel",
+    "show_in_gallery": "Show in gallery"
   },
   "dupes": {
     "title": "Duplicates",
@@ -489,7 +490,12 @@
     "profiler_corner_tr": "Top right",
     "profiler_corner_bl": "Bottom left",
     "profiler_corner_br": "Bottom right",
-    "dev_section_note": "Developer options. They change nothing for regular use of the app."
+    "dev_section_note": "Developer options. They change nothing for regular use of the app.",
+    "search_placeholder": "Search settings…",
+    "search_clear": "Clear search",
+    "search_hint": "{{count}} sections match",
+    "easter_egg_hint": "Tip: click the LUMEN logo 5 times — something might happen",
+    "easter_egg_unlocked_hint": "Developer mode is on — see Settings › Developer"
   },
   "setup": {
     "title": "Welcome to LUMEN",
@@ -621,6 +627,9 @@
     "diag_frame_hitch": "Single frame took {ms} ms — check what just loaded",
     "diag_blocked": "Main thread blocked for {ms} ms total — a sync operation is too heavy",
     "diag_long_tasks": "{count} long tasks — some work runs over 300 ms",
-    "diag_heap": "JS heap is large ({mb} MB) — many rows or images in memory"
+    "diag_heap": "JS heap is large ({mb} MB) — many rows or images in memory",
+    "video": "Video",
+    "diag_slow_seek": "Last seek took {ms} ms — source is slow to decode/seek",
+    "diag_slow_video": "Video took {ms} ms to first frame — slow source or storage"
   }
 }

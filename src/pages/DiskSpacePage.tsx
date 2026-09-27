@@ -2,16 +2,19 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { invoke } from "@tauri-apps/api/core";
-import { ArrowLeft, FolderSearch, HardDrive, RefreshCw, Trash2, X } from "lucide-react";
+import { ArrowLeft, FolderSearch, HardDrive, Images, RefreshCw, Trash2, X } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { IconButton } from "@/components/ui/IconButton";
 import { Segmented } from "@/components/ui/Segmented";
-import { formatBytes, formatCount } from "@/lib/api";
+import { DragRegion } from "@/components/WindowTitleBar";
+import { api, formatBytes, formatCount, type MediaRow } from "@/lib/api";
 import { baseName } from "@/lib/format";
 import { enqueueThumbs, thumbSrc, useThumbStore } from "@/lib/thumbs";
 import { tauriAvailable } from "@/lib/assets";
 import { deleteForever } from "@/lib/mediaActions";
+import { useLibraryUi } from "@/state/library-ui";
+import { useViewer } from "@/state/viewer";
 import { toast } from "sonner";
 
 /**
@@ -37,6 +40,8 @@ interface DiskItem {
   width: number | null;
   height: number | null;
   thumbPath: string | null;
+  /** owning library — the "show in gallery" action routes the grid here */
+  rootId: number;
 }
 
 interface ExtUsage {
@@ -88,6 +93,8 @@ export default function DiskSpacePage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [view, setView] = useState<"files" | "types" | "drives">("files");
+  const setRoute = useLibraryUi((s) => s.setRoute);
+  const openViewerAt = useViewer((s) => s.openAt);
 
   const report = useQuery({
     queryKey: ["disk-usage"],
@@ -146,6 +153,29 @@ export default function DiskSpacePage() {
     }
   }
 
+  /**
+   * "Show in gallery": jump to the file's library and open it in the viewer.
+   * Two steps on purpose — the route change re-points the grid at the file's
+   * library, then the viewer opens with that library's queue (internal
+   * session), so swiping walks the library instead of one file.
+   */
+  async function showInGallery(item: DiskItem) {
+    try {
+      const rows = await api.listMedia({ rootId: item.rootId });
+      if (!rows.length) {
+        toast.error(t("errors.action_failed"));
+        return;
+      }
+      setRoute({ kind: "root", rootId: item.rootId, dir: null });
+      const idx = rows.findIndex((r: MediaRow) => r.id === item.id);
+      openViewerAt(rows, idx >= 0 ? idx : 0, "internal");
+      navigate("/");
+    } catch (e) {
+      console.error("show in gallery failed", e);
+      toast.error(String(e));
+    }
+  }
+
   return (
     <div className="flex h-full flex-col bg-surface-1">
       {/* header: back + title + range switch + rescan (mirrors the finder) */}
@@ -154,6 +184,8 @@ export default function DiskSpacePage() {
           <ArrowLeft size={18} />
         </IconButton>
         <span className="micro-label">{t("disk.title")}</span>
+        {/* frameless-window drag: the page header drags the window too */}
+        <DragRegion />
         <Segmented
           aria-label={t("disk.view")}
           size="sm"
@@ -332,6 +364,13 @@ export default function DiskSpacePage() {
                             className="opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
                           >
                             <Trash2 size={16} />
+                          </IconButton>
+                          <IconButton
+                            label={t("disk.show_in_gallery")}
+                            onClick={() => void showInGallery(item)}
+                            className="opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+                          >
+                            <Images size={16} />
                           </IconButton>
                           <IconButton
                             label={t("disk.reveal")}

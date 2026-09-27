@@ -6,6 +6,7 @@ import { ArrowLeft, RotateCcw, Sparkles, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { IconButton } from "@/components/ui/IconButton";
 import { Segmented } from "@/components/ui/Segmented";
+import { DragRegion } from "@/components/WindowTitleBar";
 import { formatCount } from "@/lib/api";
 import { enqueueThumbs, thumbSrc, useThumbStore } from "@/lib/thumbs";
 import { useMediaRows } from "@/lib/queries";
@@ -198,6 +199,8 @@ export default function PlayPage() {
           <ArrowLeft size={18} />
         </IconButton>
         <span className="micro-label">{t("play.title")}</span>
+        {/* frameless-window drag: the page header drags the window too */}
+        <DragRegion />
         <Segmented
           aria-label={t("play.pairs")}
           size="sm"

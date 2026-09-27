@@ -25,6 +25,8 @@ pub struct DiskItem {
     pub width: Option<i64>,
     pub height: Option<i64>,
     pub thumb_path: Option<String>,
+    /// owning library — the "show in gallery" action routes the grid here
+    pub root_id: i64,
 }
 
 #[derive(Debug, Serialize)]
@@ -68,7 +70,7 @@ pub async fn disk_usage(app: AppHandle, top_n: Option<i64>) -> Result<DiskReport
 
     // 1 — the heaviest files
     let rows = sqlx::query(
-        r#"SELECT id, path, kind, ext, size, mtime, width, height, thumb_path
+        r#"SELECT id, path, kind, ext, size, mtime, width, height, thumb_path, root_id
            FROM media
            WHERE trashed = 0 AND excluded = 0 AND offline = 0
            ORDER BY size DESC
@@ -90,6 +92,7 @@ pub async fn disk_usage(app: AppHandle, top_n: Option<i64>) -> Result<DiskReport
             width: r.get("width"),
             height: r.get("height"),
             thumb_path: r.get("thumb_path"),
+            root_id: r.get("root_id"),
         })
         .collect();
 

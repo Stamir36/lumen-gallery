@@ -122,8 +122,8 @@ export default function ToolsPage() {
                   ...cardMotion.transition,
                   delay: uiMotion ? 0.06 * i : 0,
                 }}
-                // hover = lift + glow (DESIGN.md §2/§8); press = .97
-                whileHover={uiMotion ? { y: -2 } : undefined}
+                // NO whileHover y-lift: the jumping button felt wrong
+                // (user note). Glow + shadow carry the hover state; press = .97
                 whileTap={uiMotion ? { scale: 0.97 } : undefined}
                 className="group relative overflow-hidden rounded-card bg-surface-1 p-7 text-left shadow-[0_8px_24px_rgba(0,0,0,.35)] outline-none transition-shadow duration-[160ms] focus-visible:ring-2 focus-visible:ring-accent/40 hover:shadow-[0_12px_28px_rgba(0,0,0,.4),0_0_0_1px_rgba(110,193,255,.18)]"
               >

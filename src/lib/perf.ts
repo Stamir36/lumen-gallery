@@ -24,6 +24,19 @@ export interface PerfState {
   longestMs: number;
   /** total time the main thread spent blocked, measured by timer drift */
   blockedMs: number;
+  /**
+   * VIDEO pipeline stats — answers "why does it think after a seek".
+   * `videoLoadMs`: source → first frame for the LAST video opened.
+   * `videoSeekMs`: seek request → frame painted, LAST seek (null = none yet).
+   * `videoSeeks`: seeks counted since start; `videoWorstSeekMs` the worst one.
+   * `videoBufferingMs`: total time spent in `waiting` (starved buffer).
+   * Fed from VideoPlayer's element events; reset per row change.
+   */
+  videoLoadMs: number | null;
+  videoSeekMs: number | null;
+  videoSeeks: number;
+  videoWorstSeekMs: number;
+  videoBufferingMs: number;
   note: (patch: Partial<PerfState>) => void;
 }
 
@@ -33,8 +46,70 @@ export const usePerf = create<PerfState>((set) => ({
   longTasks: 0,
   longestMs: 0,
   blockedMs: 0,
+  videoLoadMs: null,
+  videoSeekMs: null,
+  videoSeeks: 0,
+  videoWorstSeekMs: 0,
+  videoBufferingMs: 0,
   note: (patch) => set(patch),
 }));
+
+/**
+ * Video timing probe — the stats live HERE (not in the component) so the
+ * profiler overlay and any future console dump read the same numbers.
+ * `perf.note` is a plain zustand set, so a burst of events is cheap.
+ */
+export const videoPerf = {
+  /** timestamp of the last `loadedmetadata` / row swap */
+  loadStart: 0,
+  /** timestamp of the last `seeking` (0 = no seek in flight) */
+  seekStart: 0,
+  /** timestamp the last `waiting` began (0 = not buffering) */
+  waitingStart: 0,
+};
+
+export function videoPerfReset() {
+  videoPerf.loadStart = performance.now();
+  videoPerf.seekStart = 0;
+  videoPerf.waitingStart = 0;
+  usePerf.getState().note({ videoLoadMs: null, videoSeekMs: null });
+}
+
+export function videoPerfLoaded() {
+  if (!videoPerf.loadStart) return;
+  usePerf
+    .getState()
+    .note({ videoLoadMs: Math.round(performance.now() - videoPerf.loadStart) });
+}
+
+export function videoPerfSeekStart() {
+  videoPerf.seekStart = performance.now();
+}
+
+export function videoPerfSeeked() {
+  if (!videoPerf.seekStart) return;
+  const ms = Math.round(performance.now() - videoPerf.seekStart);
+  const s = usePerf.getState();
+  usePerf.getState().note({
+    videoSeekMs: ms,
+    videoSeeks: s.videoSeeks + 1,
+    videoWorstSeekMs: Math.max(s.videoWorstSeekMs, ms),
+  });
+  videoPerf.seekStart = 0;
+}
+
+export function videoPerfWaiting(on: boolean) {
+  if (on) {
+    videoPerf.waitingStart = performance.now();
+    return;
+  }
+  if (!videoPerf.waitingStart) return;
+  const s = usePerf.getState();
+  usePerf
+    .getState()
+    .note({ videoBufferingMs: s.videoBufferingMs + Math.round(performance.now() - videoPerf.waitingStart) });
+  videoPerf.waitingStart = 0;
+}
 
 const SAMPLE_MS = 250;
 const LONG_TASK_MS = 300;

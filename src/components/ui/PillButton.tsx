@@ -3,19 +3,19 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const pillButtonVariants = cva(
-  // Chunky pill h-44, tonal, pressed .97, hover lift (DESIGN.md v2 §7, §8)
+  // Chunky pill h-44, tonal, pressed .97. NO hover translate lift — the
+  // jumping button read as instability (user note); shadow/bg carry hover.
   "inline-flex h-11 items-center justify-center gap-2 rounded-pill px-6 text-sm font-medium " +
     "transition-all duration-[160ms] ease-out " +
     "active:scale-[.97] disabled:pointer-events-none disabled:opacity-40 select-none whitespace-nowrap",
   {
     variants: {
       variant: {
-        // Primary: white bg + black text, elev-1, hover lift
+        // Primary: white bg + black text, elev-1, hover deepens the shadow
         primary:
-          "bg-white text-black shadow-elev1 hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(0,0,0,.4),0_0_0_1px_var(--accent-soft)] active:translate-y-0",
-        // Ghost: tonal surface-2 (no border), hover surface-3 + lift
-        ghost:
-          "bg-surface-2 text-tprimary hover:bg-surface-3 hover:-translate-y-0.5 hover:shadow-elev1 active:translate-y-0",
+          "bg-white text-black shadow-elev1 hover:shadow-[0_12px_28px_rgba(0,0,0,.4),0_0_0_1px_var(--accent-soft)]",
+        // Ghost: tonal surface-2 (no border), hover surface-3
+        ghost: "bg-surface-2 text-tprimary hover:bg-surface-3",
         danger: "bg-surface-2 text-danger hover:bg-surface-3",
       },
       size: {

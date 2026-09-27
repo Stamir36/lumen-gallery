@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * FAB v2 (DESIGN.md v2 §7, §10): 56px, radius 20, glass elev-2,
- * hover lift + glow. Accent glyph for the primary action.
+ * hover glow. NO translate lift — the jump read as instability (user note).
  */
 export interface FABProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   label: string;
@@ -18,8 +18,8 @@ export function FAB({ label, className, children, ...props }: FABProps) {
       className={cn(
         "glass inline-flex h-14 w-14 items-center justify-center rounded-[20px] " +
           "text-accent transition-all duration-[160ms] ease-out " +
-          "shadow-elev1 hover:-translate-y-1 hover:shadow-[0_12px_28px_rgba(0,0,0,.4),0_0_0_1px_var(--accent-strong),0_0_28px_-4px_var(--accent-soft)] " +
-          "active:translate-y-0 active:scale-[.97]",
+          "shadow-elev1 hover:shadow-[0_12px_28px_rgba(0,0,0,.4),0_0_0_1px_var(--accent-strong),0_0_28px_-4px_var(--accent-soft)] " +
+          "active:scale-[.97]",
         className,
       )}
       {...props}

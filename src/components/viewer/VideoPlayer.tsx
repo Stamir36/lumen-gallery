@@ -45,6 +45,13 @@ import { useMediaSource } from "@/lib/mediaSource";
 import { baseName } from "@/lib/format";
 import { readFile } from "@tauri-apps/plugin-fs";
 import { useAppSettings } from "@/lib/settings";
+import {
+  videoPerfLoaded,
+  videoPerfReset,
+  videoPerfSeeked,
+  videoPerfSeekStart,
+  videoPerfWaiting,
+} from "@/lib/perf";
 import { useViewer } from "@/state/viewer";
 import { Slider } from "@/components/ui/Slider";
 import { NavTooltip } from "@/components/ui/NavTooltip";
@@ -211,6 +218,10 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
   // for the snapshot; with the asset protocol frames are tainted: playback
   // fine, snapshot hidden (the button is simply not rendered).
   const { src, clean: srcClean } = useMediaSource(row.path);
+  // profiler: each new row restarts the load timer (source → first frame)
+  useEffect(() => {
+    videoPerfReset();
+  }, [row.id]);
   const mediaSrcTainted = !srcClean;
   // VR sources are name-driven (the library encodes it in file names): a
   // standalone "VR" token ("… 8K VR.mkv", "VR180 …"), or "SBS 180" PLUS an
@@ -629,6 +640,7 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
         className="relative z-10 h-full w-full object-contain"
         style={{ filter: "var(--video-filter, none)" }}
         onLoadedMetadata={(e) => {
+          videoPerfLoaded(); // source → first frame, for the profiler overlay
           setDuration(e.currentTarget.duration || 0);
           const vw = e.currentTarget.videoWidth;
           const vh = e.currentTarget.videoHeight;
@@ -657,6 +669,11 @@ export function VideoPlayer({ row }: { row: MediaRow }) {
           const b = e.currentTarget.buffered;
           if (b.length > 0) setBuffered(b.end(b.length - 1));
         }}
+        onSeeking={() => videoPerfSeekStart()}
+        onSeeked={() => videoPerfSeeked()}
+        onWaiting={() => videoPerfWaiting(true)}
+        onPlaying={() => videoPerfWaiting(false)}
+        onCanPlay={() => videoPerfWaiting(false)}
         onPlay={() => {
           setPlaying(true);
           poke();

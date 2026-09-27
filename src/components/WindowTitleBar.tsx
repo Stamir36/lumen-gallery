@@ -27,6 +27,23 @@ const btnBase =
   "flex h-10 w-10 shrink-0 items-center justify-center text-tsecondary " +
   "transition-all duration-[160ms] ease-out active:scale-[.97]";
 
+/**
+ * The empty strip that drags the frameless window. Exported so the tool pages
+ * with their own slim headers (duplicates, disk, play) can drop one into the
+ * header row — without it those pages were fixed chrome that could not be
+ * moved (user note: "не во всех окнах работает перетаскивание за TitleBar").
+ */
+export function DragRegion({ className }: { className?: string }) {
+  return (
+    <div
+      data-tauri-drag-region={isDesktop ? "true" : undefined}
+      className={cn("h-full min-w-6 flex-1 cursor-default", className)}
+      onMouseDown={isDesktop ? (e) => e.buttons === 1 && void win()?.startDragging() : undefined}
+      onDoubleClick={isDesktop ? () => void win()?.toggleMaximize() : undefined}
+    />
+  );
+}
+
 /** Chunky window controls for a frameless Tauri window (DESIGN.md v2.2 §6.7). */
 export function WindowTitleBar({
   title = "LUMEN",
@@ -64,12 +81,6 @@ export function WindowTitleBar({
   const minimize = () => win()?.minimize();
   const toggleMaximize = () => win()?.toggleMaximize();
   const close = () => win()?.close();
-
-  /** Start a native window drag on mousedown (reliable in Tauri v2). */
-  const startDrag = (e: React.MouseEvent) => {
-    if (e.buttons !== 1) return; // left button only
-    void win()?.startDragging();
-  };
 
   /** Swallow mousedown so controls never begin a window drag. */
   const stop = (e: React.MouseEvent) => e.stopPropagation();
@@ -115,12 +126,7 @@ export function WindowTitleBar({
       {/* drag spacer — empty area only; drags the window via startDragging().
           On mobile the OS owns window management, so this is a plain spacer
           and no touch is swallowed by a drag handler. */}
-      <div
-        data-tauri-drag-region={isDesktop ? "true" : undefined}
-        className="h-full flex-1 cursor-default"
-        onMouseDown={isDesktop ? startDrag : undefined}
-        onDoubleClick={isDesktop ? toggleMaximize : undefined}
-      />
+      <DragRegion />
 
       {/* app-level actions: kept out of the drag region */}
       {right && (

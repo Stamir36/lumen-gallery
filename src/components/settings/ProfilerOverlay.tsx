@@ -92,6 +92,11 @@ export function ProfilerOverlay() {
   const longTasks = usePerf((s) => s.longTasks);
   const longestMs = usePerf((s) => s.longestMs);
   const blockedMs = usePerf((s) => s.blockedMs);
+  const videoLoadMs = usePerf((s) => s.videoLoadMs);
+  const videoSeekMs = usePerf((s) => s.videoSeekMs);
+  const videoSeeks = usePerf((s) => s.videoSeeks);
+  const videoWorstSeekMs = usePerf((s) => s.videoWorstSeekMs);
+  const videoBufferingMs = usePerf((s) => s.videoBufferingMs);
   const [heap, setHeap] = useState<{ used: number; limit: number } | null>(null);
 
   useEffect(() => {
@@ -108,6 +113,13 @@ export function ProfilerOverlay() {
   }, [on]);
 
   const findings = useDiagnostics(fps, worstMs, longTasks, blockedMs, heap, t);
+  // video findings only when a video has actually been opened this session
+  if (videoSeekMs !== null && videoSeekMs > 800) {
+    findings.push({ level: "warn", text: t("profiler.diag_slow_seek", { ms: videoSeekMs }) });
+  }
+  if (videoLoadMs !== null && videoLoadMs > 2_000) {
+    findings.push({ level: "warn", text: t("profiler.diag_slow_video", { ms: videoLoadMs }) });
+  }
 
   if (!on) return null;
 
@@ -160,6 +172,39 @@ export function ProfilerOverlay() {
           {heapPct !== null && <span className="text-white/45"> · {heapPct}%</span>}
         </span>
       </div>
+
+      {/* VIDEO pipeline — visible after the first video of the session; answers
+          "why does it think after a seek": load = source→first frame, seek =
+          request→frame painted, buffering = total time starved for bytes */}
+      {(videoLoadMs !== null || videoSeeks > 0) && (
+        <div className="border-t border-white/[.08] px-3 py-2">
+          <div className="mb-1 text-[9px] uppercase tracking-[0.14em] text-white/40">
+            {t("profiler.video")}
+          </div>
+          <div className="grid grid-cols-[auto_1fr] gap-x-3">
+            <span className="text-white/45">load</span>
+            <span className="tabular-nums">
+              {videoLoadMs !== null ? `${videoLoadMs} ms` : "…"}
+            </span>
+            <span className="text-white/45">last seek</span>
+            <span
+              className={cn(
+                "tabular-nums",
+                videoSeekMs !== null && videoSeekMs > 800 && "text-amber-300",
+              )}
+            >
+              {videoSeekMs !== null ? `${videoSeekMs} ms` : "—"}
+            </span>
+            <span className="text-white/45">seeks</span>
+            <span className="tabular-nums">
+              {videoSeeks}
+              <span className="text-white/45"> · worst {videoWorstSeekMs} ms</span>
+            </span>
+            <span className="text-white/45">buffering</span>
+            <span className="tabular-nums">{videoBufferingMs} ms</span>
+          </div>
+        </div>
+      )}
 
       {/* auto-diagnostics: plain sentences, one per finding */}
       <div className="border-t border-white/[.08] px-3 py-2">

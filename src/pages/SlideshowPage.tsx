@@ -16,6 +16,7 @@ import {
 import { cn } from "@/lib/utils";
 import { readSetting, writeSetting } from "@/i18n";
 import { IconButton } from "@/components/ui/IconButton";
+import { DragRegion } from "@/components/WindowTitleBar";
 import { fileSrc, tauriAvailable } from "@/lib/assets";
 import { thumbSrc } from "@/lib/thumbs";
 import { useAppSettings } from "@/lib/settings";
@@ -309,6 +310,10 @@ export default function SlideshowPage() {
       {nextSrc && (
         <img src={nextSrc} alt="" aria-hidden className="hidden" data-ready={nextReady} />
       )}
+
+      {/* drag strip: the slideshow is a full-window route with no titlebar,
+          so without this the frameless window could not be moved at all */}
+      <DragRegion className="absolute inset-x-0 top-0 h-10" />
 
       {/* click anywhere toggles playback, like every other viewer */}
       <button

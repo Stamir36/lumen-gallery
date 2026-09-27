@@ -21,6 +21,7 @@ import {
 import { cn } from "@/lib/utils";
 import { IconButton } from "@/components/ui/IconButton";
 import { Segmented } from "@/components/ui/Segmented";
+import { DragRegion } from "@/components/WindowTitleBar";
 import { formatBytes, formatCount } from "@/lib/api";
 import { baseName, formatResolution } from "@/lib/format";
 import { enqueueRows, thumbSrc, useThumbStore } from "@/lib/thumbs";
@@ -341,12 +342,15 @@ export default function DuplicatesPage() {
 
   return (
     <div className="flex h-full flex-col bg-surface-1">
-      {/* titlebar row: identical chrome to the other tool pages (tools, disk) */}
+      {/* titlebar row: identical chrome to the other tool pages (tools, disk).
+          The drag region makes the frameless window draggable from this page
+          too — it was fixed-size chrome before (user note). */}
       <header className="flex h-14 shrink-0 items-center gap-3 border-b border-hairline px-4">
         <IconButton label={t("actions.back")} onClick={() => navigate(-1)}>
           <ArrowLeft size={18} />
         </IconButton>
         <span className="micro-label">{t("dupes.title")}</span>
+        <DragRegion />
         <Segmented
           aria-label={t("dupes.threshold")}
           size="sm"

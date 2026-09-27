@@ -356,9 +356,40 @@ export function SettingsContent() {
     <SettingsFilterProvider query={query}>
       <div className="flex items-start gap-10">
       {/* sticky section nav — never scrolls out of view. The search field is
-          PART of this column: a quiet input under the list, tone-matched to
-          the nav (no floating bar over the page). */}
+          PART of this column and sits at the TOP: first thing the eye meets,
+          tone-matched to the nav (no floating bar over the page). */}
       <nav className="sticky top-0 hidden w-[240px] shrink-0 flex-col gap-1 self-start md:flex">
+        {/* search: lives in the menu, tone-matched (surface-2, hairline ring
+            on focus) — no backdrop, no floating over content */}
+        <div className="relative mb-3 px-1">
+          <Search
+            size={15}
+            className="pointer-events-none absolute left-4.5 top-1/2 -translate-y-1/2 text-ttertiary"
+          />
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={t("settings.search_placeholder")}
+            aria-label={t("settings.search_placeholder")}
+            className="h-9 w-full rounded-control bg-surface-2 pl-9 pr-8 text-[13px] text-tprimary outline-none ring-1 ring-transparent transition-shadow placeholder:text-ttertiary focus-visible:ring-accent/40"
+          />
+          {query && (
+            <button
+              type="button"
+              aria-label={t("settings.search_clear")}
+              onClick={() => setQuery("")}
+              className="absolute right-3 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-pill text-ttertiary transition-colors hover:bg-white/[.08] hover:text-tprimary"
+            >
+              <X size={13} />
+            </button>
+          )}
+        </div>
+        {query.trim() && (
+          <p className="mb-2 px-2 font-mono text-[10px] text-ttertiary">
+            {t("settings.search_hint", { count: visibleSections })}
+          </p>
+        )}
         {navItems.map((n) => (
           <button
             key={n.id}
@@ -384,38 +415,6 @@ export function SettingsContent() {
             <span className="relative z-10">{n.label}</span>
           </button>
         ))}
-
-        {/* search: lives in the menu, tone-matched (surface-2, hairline ring
-            on focus) — no backdrop, no floating over content */}
-        <div className="relative mt-3 px-1">
-          <Search
-            size={15}
-            className="pointer-events-none absolute left-4.5 top-1/2 -translate-y-1/2 text-ttertiary"
-          />
-          <input
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={t("settings.search_placeholder")}
-            aria-label={t("settings.search_placeholder")}
-            className="h-9 w-full rounded-control bg-surface-2 pl-9 pr-8 text-[13px] text-tprimary outline-none ring-1 ring-transparent transition-shadow placeholder:text-ttertiary focus-visible:ring-accent/40"
-          />
-          {query && (
-            <button
-              type="button"
-              aria-label={t("settings.search_clear")}
-              onClick={() => setQuery("")}
-              className="absolute right-3 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-pill text-ttertiary transition-colors hover:bg-white/[.08] hover:text-tprimary"
-            >
-              <X size={13} />
-            </button>
-          )}
-        </div>
-        {query.trim() && (
-          <p className="px-2 pt-1 font-mono text-[10px] text-ttertiary">
-            {t("settings.search_hint", { count: visibleSections })}
-          </p>
-        )}
       </nav>
 
       {/* content cards fill the full column width */}
@@ -848,6 +847,16 @@ export function SettingsContent() {
                 {__BUILD_ID__ === "dev"
                   ? `v${APP_VERSION} · ${t("settings.about_dev_build")}`
                   : `v${APP_VERSION} · ${__BUILD_ID__}`}
+              </span>
+              {/* easter-egg hint: the gesture is undiscoverable otherwise
+                  (user note). Once unlocked it reads as the mode marker. */}
+              <span
+                className="mt-4 max-w-[42ch] text-[11px] leading-relaxed text-ttertiary"
+                title={devUnlocked ? undefined : t("settings.easter_egg_hint")}
+              >
+                {devUnlocked
+                  ? t("settings.easter_egg_unlocked_hint")
+                  : t("settings.easter_egg_hint")}
               </span>
             </div>
 
