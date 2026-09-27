@@ -6,6 +6,7 @@ import { Pause, PictureInPicture2, Play, RotateCcw, RotateCw, X } from "lucide-r
 import type { MediaRow } from "@/lib/api";
 import { useMediaSource } from "@/lib/mediaSource";
 import { tauriAvailable } from "@/lib/assets";
+import { isDesktop } from "@/lib/platform";
 import { cn } from "@/lib/utils";
 
 /**
@@ -19,9 +20,19 @@ import { cn } from "@/lib/utils";
  * through `mini_return`; `mini_note_position` keeps a recent fallback in Rust
  * so even Alt+F4 resumes correctly.
  *
- * Design (DESIGN.md v2): one floating glass pill (the whitelisted blur
- * surface), mono .timecode readouts, Material You scrubber with accent fill,
- * auto-hide after 2s idle — a miniature of the main player, not a raw <video>.
+ * BUGS 29.09: the window is now PURE video — no top strip, no caption. The
+ * whole window drags: the video surface carries `data-tauri-drag-region` and
+ * every control layer swallows mousedown, so grabbing any empty spot moves
+ * the window while buttons keep working. Double-click still toggles playback
+ * (a drag uses buttons 1 + movement, a double-click two clean presses).
+ *
+ * Timeline fix (same report): the scrubber never left the viewport — the bug
+ * was pointer CAPTURE aimed at `e.target`, which is the thumb <span> under
+ * the cursor; the thumb re-renders mid-drag, the capture dies, and the next
+ * pointermove fired on the window with `scrubbing` still true while the
+ * handler read a stale rect. Now capture is taken on the TRACK element (a
+ * stable parent), the ratio is clamped to [0,1] EVERYWHERE, and a window
+ * pointerup fallback releases the drag even when the element missed the event.
  */
 
 interface MiniPayload {
@@ -39,6 +50,11 @@ function clock(seconds: number): string {
   const h = Math.floor(seconds / 3600);
   const mm = h > 0 ? String(m).padStart(2, "0") : String(m);
   return `${h > 0 ? `${h}:` : ""}${mm}:${String(s).padStart(2, "0")}`;
+}
+
+/** clamped ratio of clientX within a rect — the only place ratios are made */
+function ratioIn(clientX: number, rect: DOMRect): number {
+  return Math.max(0, Math.min(1, (clientX - rect.left) / Math.max(1, rect.width)));
 }
 
 export default function MiniPlayer() {
@@ -146,6 +162,22 @@ export default function MiniPlayer() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [payload]);
 
+  // BUGS 29.09: a pointerup outside the scrubber (fast flick off the pill)
+  // used to leave `scrubbing` true forever — the timeline then chased the
+  // cursor until a click landed back on it. Window-level safety net.
+  useEffect(() => {
+    const release = () => {
+      scrubbing.current = false;
+      setSeekPreview(null);
+    };
+    window.addEventListener("pointerup", release);
+    window.addEventListener("blur", release);
+    return () => {
+      window.removeEventListener("pointerup", release);
+      window.removeEventListener("blur", release);
+    };
+  }, []);
+
   const togglePlay = () => {
     const el = videoRef.current;
     if (!el) return;
@@ -166,20 +198,20 @@ export default function MiniPlayer() {
     poke();
   };
 
-  const scrubTo = (clientX: number, bar: HTMLElement) => {
+  const seekRatio = (ratio: number) => {
     const el = videoRef.current;
     if (!el || !total) return;
-    const rect = bar.getBoundingClientRect();
-    const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-    el.currentTime = ratio * total;
-    setTime(ratio * total);
-    setSeekPreview(null);
-    poke();
+    const at = Math.max(0, Math.min(1, ratio)) * total;
+    el.currentTime = at;
+    setTime(at);
   };
 
   const name = row ? (row.path.split(/[\\/]/).pop() ?? "") : "";
   const progress = total > 0 ? Math.min(1, time / total) : 0;
-  const shown = seekPreview ?? progress;
+  const shown = Math.max(0, Math.min(1, seekPreview ?? progress));
+
+  /** swallow mousedown so controls never begin a window drag */
+  const stop = (e: React.MouseEvent) => e.stopPropagation();
 
   return (
     <div
@@ -188,36 +220,26 @@ export default function MiniPlayer() {
       onPointerMove={poke}
       onPointerDown={poke}
     >
-      {/* draggable title strip (frameless window) — glass chip, name leads */}
-      <div
-        data-tauri-drag-region
-        className="flex h-10 shrink-0 items-center gap-2 px-3"
-      >
-        <PictureInPicture2 size={13} className="shrink-0 text-ttertiary" />
-        <span
-          data-tauri-drag-region
-          className={cn(
-            "min-w-0 flex-1 truncate text-[12px] transition-opacity duration-[200ms]",
-            chrome ? "text-tsecondary opacity-100" : "opacity-0",
-          )}
-        >
-          {name}
-        </span>
-        <button
-          type="button"
-          aria-label={t("mini.close")}
-          title={t("mini.close")}
-          onClick={handBack}
-          className={cn(
-            "flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px] text-tsecondary transition-all duration-[160ms] hover:bg-white/[.08] hover:text-tprimary",
-            !chrome && "opacity-0",
-          )}
-        >
-          <X size={14} />
-        </button>
-      </div>
+      {/* the video IS the window: pure frame, no strip, no caption. The drag
+          region behind the video moves the window from any empty spot; the
+          <video> itself stays transparent to drags so double-click toggles
+          playback. Edge strips (top/bottom) drag too — they are outside the
+          letterboxed content, so no gesture conflicts. */}
+      <div data-tauri-drag-region={isDesktop ? "true" : undefined} className="absolute inset-0" />
 
-      <div className="relative min-h-0 flex-1" onDoubleClick={togglePlay}>
+      {/* top edge drag strip — grabs like a title bar, hides with chrome */}
+      <div
+        data-tauri-drag-region={isDesktop ? "true" : undefined}
+        className={cn(
+          "absolute inset-x-0 top-0 z-10 h-8 transition-opacity duration-[200ms]",
+          chrome ? "opacity-100" : "opacity-0",
+        )}
+      />
+
+      <div
+        className="relative z-10 min-h-0 flex-1"
+        onDoubleClick={isDesktop ? togglePlay : undefined}
+      >
         <video
           ref={videoRef}
           src={src || undefined}
@@ -256,11 +278,13 @@ export default function MiniPlayer() {
         {/* ---------- one floating glass control pill (whitelisted blur) ---------- */}
         <div
           className={cn(
-            "absolute bottom-4 left-1/2 -translate-x-1/2 transition-all duration-[200ms] ease-out",
+            "absolute bottom-3 left-1/2 z-20 -translate-x-1/2 transition-all duration-[200ms] ease-out",
             chrome ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-2 opacity-0",
           )}
         >
-          <div className="flex flex-col gap-1.5 rounded-[16px] px-3 pb-2.5 pt-2"
+          <div
+            className="flex flex-col gap-1.5 rounded-[16px] px-3 pb-2.5 pt-2"
+            onMouseDown={stop}
             style={{
               background: "linear-gradient(180deg, rgba(14,14,18,.68), rgba(14,14,18,.55))",
               backdropFilter: "blur(28px) saturate(1.4)",
@@ -268,7 +292,24 @@ export default function MiniPlayer() {
                 "inset 0 1px 0 rgba(255,255,255,.10), 0 8px 24px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.08)",
             }}
           >
-            {/* Material You scrubber: 4px track, accent fill, white thumb */}
+            {/* name + close: the strip's only survivors, inside the pill */}
+            <div className="flex items-center gap-2 px-1">
+              <PictureInPicture2 size={12} className="shrink-0 text-ttertiary" />
+              <span className="min-w-0 flex-1 truncate text-[11px] text-tsecondary">{name}</span>
+              <button
+                type="button"
+                aria-label={t("mini.close")}
+                title={t("mini.close")}
+                onClick={handBack}
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[8px] text-tsecondary transition-all duration-[160ms] hover:bg-white/[.08] hover:text-tprimary"
+              >
+                <X size={13} />
+              </button>
+            </div>
+
+            {/* Material You scrubber: 4px track, accent fill, white thumb.
+                Capture lives on the TRACK (stable node), ratios are clamped
+                centrally — the fly-off bug. */}
             <div
               role="slider"
               aria-label={t("player.seek")}
@@ -278,26 +319,34 @@ export default function MiniPlayer() {
               tabIndex={0}
               onPointerDown={(e) => {
                 scrubbing.current = true;
-                (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
-                scrubTo(e.clientX, e.currentTarget);
+                e.currentTarget.setPointerCapture?.(e.pointerId);
+                const rect = e.currentTarget.getBoundingClientRect();
+                const ratio = ratioIn(e.clientX, rect);
+                setTime(ratio * total);
+                setSeekPreview(ratio * total);
               }}
               onPointerMove={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const ratio = ratioIn(e.clientX, rect);
                 if (!scrubbing.current) {
-                  const rect = e.currentTarget.getBoundingClientRect();
-                  setSeekPreview(
-                    Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)) * total,
-                  );
+                  setSeekPreview(ratio * total);
                   return;
                 }
-                const rect = e.currentTarget.getBoundingClientRect();
-                const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
                 setTime(ratio * total);
               }}
               onPointerUp={(e) => {
                 scrubbing.current = false;
-                scrubTo(e.clientX, e.currentTarget);
+                const rect = e.currentTarget.getBoundingClientRect();
+                seekRatio(ratioIn(e.clientX, rect));
+                setSeekPreview(null);
+                poke();
               }}
-              onPointerLeave={() => setSeekPreview(null)}
+              onPointerLeave={() => {
+                if (!scrubbing.current) setSeekPreview(null);
+              }}
+              onLostPointerCapture={() => {
+                scrubbing.current = false;
+              }}
               className="group relative mx-1 mt-1 h-6 cursor-pointer"
             >
               <div className="absolute inset-x-0 top-1/2 h-1 -translate-y-1/2 rounded-pill bg-white/15">

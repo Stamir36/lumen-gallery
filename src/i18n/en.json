@@ -630,6 +630,7 @@
     "diag_heap": "JS heap is large ({mb} MB) — many rows or images in memory",
     "video": "Video",
     "diag_slow_seek": "Last seek took {ms} ms — source is slow to decode/seek",
-    "diag_slow_video": "Video took {ms} ms to first frame — slow source or storage"
+    "diag_slow_video": "Video took {ms} ms to first frame — slow source or storage",
+    "history": "fps · last 30 s"
   }
 }

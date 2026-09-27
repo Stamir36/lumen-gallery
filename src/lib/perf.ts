@@ -55,6 +55,45 @@ export const usePerf = create<PerfState>((set) => ({
 }));
 
 /**
+ * HISTORY ring buffers (profiler sparklines). Everything lives OUTSIDE the
+ * zustand store on purpose: the graphs need ~120 points that change 4×/s, and
+ * pushing that through the store would re-render every subscriber for data
+ * only the overlay reads. The overlay samples on its own 1 Hz cadence and
+ * re-renders itself — the watchdog just appends here.
+ */
+export const PERF_HISTORY_CAP = 120;
+
+export interface HistoryPoint {
+  fps: number;
+  /** worst frame of the window, ms */
+  worstMs: number;
+}
+
+export const perfHistory: HistoryPoint[] = [];
+
+/** one event marker on the timeline (load finished, a seek, a stall) */
+export interface HistoryEvent {
+  /** index into perfHistory at append time (drifts left as the ring advances) */
+  at: number;
+  kind: "load" | "seek" | "stall";
+  /** payload ms (load/seek latency) — rendered in the tooltip row */
+  ms?: number;
+}
+
+export const perfEvents: HistoryEvent[] = [];
+
+function pushHistory(p: HistoryPoint) {
+  perfHistory.push(p);
+  if (perfHistory.length > PERF_HISTORY_CAP) perfHistory.shift();
+}
+
+function pushEvent(kind: HistoryEvent["kind"], ms?: number) {
+  perfEvents.push({ at: perfHistory.length, kind, ms });
+  // events older than the visible window are meaningless — keep the list short
+  if (perfEvents.length > PERF_HISTORY_CAP) perfEvents.splice(0, perfEvents.length - PERF_HISTORY_CAP);
+}
+
+/**
  * Video timing probe — the stats live HERE (not in the component) so the
  * profiler overlay and any future console dump read the same numbers.
  * `perf.note` is a plain zustand set, so a burst of events is cheap.
@@ -77,9 +116,9 @@ export function videoPerfReset() {
 
 export function videoPerfLoaded() {
   if (!videoPerf.loadStart) return;
-  usePerf
-    .getState()
-    .note({ videoLoadMs: Math.round(performance.now() - videoPerf.loadStart) });
+  const ms = Math.round(performance.now() - videoPerf.loadStart);
+  usePerf.getState().note({ videoLoadMs: ms });
+  pushEvent("load", ms);
 }
 
 export function videoPerfSeekStart() {
@@ -96,10 +135,12 @@ export function videoPerfSeeked() {
     videoWorstSeekMs: Math.max(s.videoWorstSeekMs, ms),
   });
   videoPerf.seekStart = 0;
+  pushEvent("seek", ms);
 }
 
 export function videoPerfWaiting(on: boolean) {
   if (on) {
+    if (!videoPerf.waitingStart) pushEvent("stall");
     videoPerf.waitingStart = performance.now();
     return;
   }
@@ -175,10 +216,10 @@ export function startPerfWatchdog(): () => void {
     frames += 1;
     if (delta > worst) worst = delta;
     if (now - windowStart >= 4 * SAMPLE_MS) {
-      note({
-        fps: Math.round((frames * 1000) / (now - windowStart)),
-        worstMs: Math.round(worst),
-      });
+      const fps = Math.round((frames * 1000) / (now - windowStart));
+      const worstMs = Math.round(worst);
+      note({ fps, worstMs });
+      pushHistory({ fps, worstMs });
       frames = 0;
       worst = 0;
       windowStart = now;

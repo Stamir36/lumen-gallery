@@ -1,10 +1,16 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   useAppSettings,
   type ProfilerCorner,
 } from "@/lib/settings";
-import { usePerf } from "@/lib/perf";
+import {
+  perfEvents,
+  perfHistory,
+  PERF_HISTORY_CAP,
+  usePerf,
+  type HistoryEvent,
+} from "@/lib/perf";
 import { cn } from "@/lib/utils";
 
 /**
@@ -36,6 +42,91 @@ const CORNER_CLASS: Record<ProfilerCorner, string> = {
 function formatMb(bytes: number | undefined) {
   if (!bytes) return "—";
   return `${Math.round(bytes / 1024 / 1024)} MB`;
+}
+
+/**
+ * FPS sparkline — a 1 Hz snapshot of the ring buffer in one SVG polyline.
+ * 60 fps sits at 3/4 height; the line CLIPS at the top rather than squashing,
+ * so a healthy run and a stuttered run look different at a glance. Renders
+ * from the shared buffers directly (no react state per point), re-drawn on
+ * the component's 1 Hz tick + a rAF-aligned tick while the tab is visible.
+ */
+const SPARK_W = 224;
+const SPARK_H = 34;
+
+function Sparkline({ tick, label }: { tick: number; label: string }) {
+  // `tick` is a render nonce: the parent bumps it 1×/s so the polyline tracks
+  // the moving ring buffer. perfHistory is read directly on each render.
+  void tick;
+  const n = perfHistory.length;
+  const step = SPARK_W / Math.max(1, PERF_HISTORY_CAP - 1);
+  const left = (PERF_HISTORY_CAP - n) * step; // partial window starts at the left
+  const pts = perfHistory
+    .map((p, i) => {
+      const x = left + i * step;
+      const y = SPARK_H - (Math.min(p.fps, 80) / 80) * (SPARK_H - 2) - 1;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(" ");
+  return (
+    <div className="px-3 pb-2">
+      <div className="mb-0.5 flex items-baseline justify-between">
+        <span className="text-[9px] uppercase tracking-[0.14em] text-white/40">{label}</span>
+        <span className="text-white/30">0–80</span>
+      </div>
+      <svg
+        aria-hidden
+        width="100%"
+        height={SPARK_H}
+        viewBox={`0 0 ${SPARK_W} ${SPARK_H}`}
+        preserveAspectRatio="none"
+        className="block"
+      >
+        {/* 60 fps guide line — the eye needs a reference to read "fine" vs "slow" */}
+        <line
+          x1={0}
+          x2={SPARK_W}
+          y1={SPARK_H - (60 / 80) * (SPARK_H - 2) - 1}
+          y2={SPARK_H - (60 / 80) * (SPARK_H - 2) - 1}
+          stroke="rgba(255,255,255,.12)"
+          strokeDasharray="3 3"
+          strokeWidth={1}
+        />
+        {n > 1 && <polyline points={pts} fill="none" stroke="#6ee7b7" strokeWidth={1.4} />}
+      </svg>
+    </div>
+  );
+}
+
+/**
+ * Event strip — load / seek / stall markers under the sparkline, positioned by
+ * their ring index. Read left = old, right = now; hovering is not needed, the
+ * counts live in the VIDEO block above.
+ */
+function EventStrip({ tick }: { tick: number }) {
+  void tick;
+  const n = perfHistory.length;
+  if (n === 0) return null;
+  const step = SPARK_W / Math.max(1, PERF_HISTORY_CAP - 1);
+  const left = (PERF_HISTORY_CAP - n) * step;
+  const cut = perfEvents.length > PERF_HISTORY_CAP ? perfEvents.length - PERF_HISTORY_CAP : 0;
+  const visible = perfEvents.slice(cut);
+  const color: Record<HistoryEvent["kind"], string> = {
+    load: "bg-sky-300",
+    seek: "bg-violet-300",
+    stall: "bg-amber-300",
+  };
+  return (
+    <div aria-hidden className="relative mx-3 mb-2 h-1.5 rounded-pill bg-white/[.06]">
+      {visible.map((e, i) => (
+        <span
+          key={`${e.at}-${e.kind}-${i}`}
+          className={cn("absolute top-1/2 h-1.5 w-[3px] -translate-y-1/2 rounded-pill", color[e.kind])}
+          style={{ left: `${left + e.at * step}px` }}
+        />
+      ))}
+    </div>
+  );
 }
 
 /** One plain-language finding of the auto-diagnostics. */
@@ -98,6 +189,10 @@ export function ProfilerOverlay() {
   const videoWorstSeekMs = usePerf((s) => s.videoWorstSeekMs);
   const videoBufferingMs = usePerf((s) => s.videoBufferingMs);
   const [heap, setHeap] = useState<{ used: number; limit: number } | null>(null);
+  /** render nonce for the sparkline: history lives outside the store, so the
+   *  overlay needs its own cadence to redraw the moving ring buffer */
+  const [tick, setTick] = useState(0);
+  const tickRef = useRef(0);
 
   useEffect(() => {
     if (!on) return;
@@ -108,6 +203,8 @@ export function ProfilerOverlay() {
         }
       ).memory;
       if (mem) setHeap({ used: mem.usedJSHeapSize, limit: mem.jsHeapSizeLimit });
+      tickRef.current += 1;
+      setTick(tickRef.current);
     }, 1000);
     return () => window.clearInterval(id);
   }, [on]);
@@ -172,6 +269,10 @@ export function ProfilerOverlay() {
           {heapPct !== null && <span className="text-white/45"> · {heapPct}%</span>}
         </span>
       </div>
+
+      {/* history: FPS sparkline + video event markers (ring buffer, 30 s) */}
+      <Sparkline tick={tick} label={t("profiler.history")} />
+      <EventStrip tick={tick} />
 
       {/* VIDEO pipeline — visible after the first video of the session; answers
           "why does it think after a seek": load = source→first frame, seek =

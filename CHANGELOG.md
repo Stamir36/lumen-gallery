@@ -8,6 +8,12 @@ All notable changes to LUMEN are recorded here. The format follows
 
 ### Added
 
+- **Profiler history graphs** (Developer overlay) — an FPS sparkline over the
+  last 30 s (ring buffer, 120 points, 60 fps guide line) plus an event strip
+  marking video loads, seeks and buffering stalls on the same timeline. The
+  history lives outside the React store, so graphing it adds no per-frame
+  re-renders. A screenshot of the overlay now shows the TREND, not just the
+  current numbers.
 - **Video profiling** (Developer overlay) — the profiler now watches the video
   player: source→first-frame load time, last-seek latency, seek count/worst and
   buffering stalls, each turned into a plain-language diagnostics finding
@@ -48,6 +54,12 @@ All notable changes to LUMEN are recorded here. The format follows
 
 ### Fixed
 
+- **Mini-player rebuilt** (user bug report): the timeline chased the cursor
+  off-screen while scrubbing (pointer capture was taken on the thumb, which
+  re-renders mid-drag — capture now lives on the track, ratios are clamped,
+  and a window pointerup releases the drag); the top strip is gone (name +
+  close moved into the glass pill) and the whole window now drags from any
+  empty spot, not just the caption.
 - **Memory game restarts by itself** — the deck was derived from the live media
   query, so every background refetch re-dealt the board mid-game. The deck is
   now snapshotted into state when a round starts and is never rebuilt from
